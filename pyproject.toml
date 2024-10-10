@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "asyncapi-python"
+version = "0.1.0"
+description = ""
+authors = ["Yaroslav Petrov <yaroslav.v.petrov@gmail.com>"]
+readme = "README.md"
+packages = [{ include = "asyncapi_python", from = "src" }]
+
+[tool.poetry.scripts]
+asyncapi-python = "asyncapi_python:app"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+jinja2 = "^3.1.4"
+typer = { extras = ["all"], version = "^0.12.5" }
+pydantic = ">=2"
+datamodel-code-generator = { extras = ["http"], version = "^0.26.1" }
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.10.0"
+mypy = "^1.11.2"
+isort = "^5.13.2"
+types-pyyaml = "^6.0.12.20240917"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
