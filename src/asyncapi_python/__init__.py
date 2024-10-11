@@ -4,7 +4,7 @@ from typing import Literal
 
 import yaml
 
-from .parser import populate_refs, Document
+from .parser import expand_refs, Document
 from . import generators as g
 
 app = typer.Typer()
@@ -24,7 +24,7 @@ def generate(
         parsed_yaml = yaml.safe_load(f)
 
     # Go recursive, populating refs
-    populated_yaml = populate_refs(parsed_yaml)
+    populated_yaml = expand_refs(parsed_yaml)
 
     # Produce Document instance
     document = Document.model_validate(populated_yaml)

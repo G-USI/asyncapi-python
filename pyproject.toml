@@ -21,6 +21,7 @@ black = "^24.10.0"
 mypy = "^1.11.2"
 isort = "^5.13.2"
 types-pyyaml = "^6.0.12.20240917"
+pytest = "^8.3.3"
 
 [build-system]
 requires = ["poetry-core"]
