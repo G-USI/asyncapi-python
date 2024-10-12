@@ -16,7 +16,7 @@
 			],
 			"settings": {
 				"yaml.schemas": {
-					"https://www.asyncapi.com/schema-store/all.schema-store.json": [
+					"https://asyncapi.com/schema-store/3.0.0-without-$id.json": [
 						"file:///workspaces/asyncapi-python/examples/*.yaml"
 					]
 				}
