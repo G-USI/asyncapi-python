@@ -1,0 +1,21 @@
+asyncapi: 3.0.0
+info:
+  title: Basic AMQP Application
+  version: 1.0.0
+  description: A simple AsyncAPI 3.0.0 specification for AMQP
+
+channels:
+  test-work-queue:
+    description: |
+      Produces post to a queue.
+      Consumers read from the queue.
+    messages:
+      test-message:
+        payload:
+          type: object
+          properties:
+            message:
+              type: string
+            date:
+              type: string
+              format: date-time

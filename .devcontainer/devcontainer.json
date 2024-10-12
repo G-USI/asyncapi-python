@@ -13,7 +13,14 @@
 				"ms-python.black-formatter",
 				"ms-python.isort",
 				"redhat.vscode-yaml"
-			]
+			],
+			"settings": {
+				"yaml.schemas": {
+					"https://www.asyncapi.com/schema-store/all.schema-store.json": [
+						"file:///workspaces/asyncapi-python/examples/*.yaml"
+					]
+				}
+			}
 		}
 	}
 }
