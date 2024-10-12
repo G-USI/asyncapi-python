@@ -1,3 +1,4 @@
+from functools import cache
 from typing import Any, Callable, TypedDict, cast
 
 
