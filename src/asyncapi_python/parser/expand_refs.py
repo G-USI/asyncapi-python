@@ -1,8 +1,4 @@
-from copy import deepcopy
-from functools import cache
-from pathlib import Path
 from typing import Any, Callable, TypedDict, cast
-from .document import Document
 
 
 RefPath = str
@@ -36,10 +32,15 @@ def ref_expander(root: RefDict, sep: str = "/") -> RefExpander:
         _, *path = ref.split(sep)
         part = root
         for p in path:
-            part = part[p]
+            part = cast(dict, part)[p]
+
         match part:
             case {"$ref": x, **rest}:
                 return get_by_ref(x)
+            case [*items]:
+                return {i: get_by_ref(f"{ref}/{i}") for i, _ in enumerate(items)}
+            case {**items}:
+                return {i: get_by_ref(f"{ref}/{i}") for i in items}
             case _:
                 return part
 
