@@ -16,6 +16,7 @@ channels:
     messages:
       test-notification:
         payload:
+          title: TestNotification
           type: object
           properties:
             notification:
@@ -23,3 +24,25 @@ channels:
             date:
               type: string
               format: date-time
+          required:
+            - notification
+            - date
+
+  test-work-queue:
+    description: |
+      Produces post to a queue.
+      Consumers read from the queue.
+    messages:
+      test-message:
+        payload:
+          title: TestMessage
+          type: object
+          properties:
+            message:
+              type: string
+            date:
+              type: string
+              format: date-time
+          required:
+            - message
+            - date
