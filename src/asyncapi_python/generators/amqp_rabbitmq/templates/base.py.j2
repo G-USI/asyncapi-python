@@ -1,0 +1,73 @@
+from pydantic import BaseModel
+from typing_extensions import Self
+import aio_pika
+from aio_pika.robust_connection import AbstractRobustConnection
+from aio_pika.robust_channel import AbstractRobustChannel
+from abc import ABC, abstractmethod
+
+
+class BaseClient(ABC):
+    @classmethod
+    async def create(cls, amqp_uri: str) -> Self:
+        # Get channel
+        channel = (await connection(amqp_uri)).channel()
+
+        # Declare queues and exchanges
+        # TODO: Set exchange/queue props up
+        for name, _ in cls._queues().items():
+            await channel.declare_queue(name)
+        for name, _ in cls._exchanges().items():
+            await channel.declare_exchange(name)
+
+        # Construct object
+        return cls(channel=channel)
+
+    def __init__(self, *, channel: AbstractRobustChannel):
+        self.__channel = channel
+
+    @classmethod
+    @abstractmethod
+    def _queues(cls) -> dict[str, dict]:
+        raise NotImplementedError
+
+    @classmethod
+    @abstractmethod
+    def _exchanges(cls) -> dict[str, dict]:
+        raise NotImplementedError
+
+    @property
+    def _channel(self) -> AbstractRobustChannel:
+        return self.__channel
+
+
+class BaseProducer(BaseClient, ABC):
+    async def _queue_send(
+        self,
+        routing_key: str,
+        message: BaseModel,
+    ) -> None:
+        await self._channel.default_exchange.publish(
+            aio_pika.Message(body=message.model_dump_json().encode()),
+            routing_key,
+        )
+
+    async def _exchange_send(
+        self,
+        exchange: str,
+        message: BaseModel,
+        routing_key: str = "",
+    ) -> None:
+        await (await self._channel.get_exchange(exchange)).publish(
+            aio_pika.Message(body=message.model_dump_json().encode()),
+            routing_key,
+        )
+
+
+GLOBAL_AMQP_CONNECTIONS: dict[str, AbstractRobustConnection] = {}
+
+
+async def connection(amqp_uri: str) -> AbstractRobustConnection:
+    if amqp_uri not in GLOBAL_AMQP_CONNECTIONS:
+        GLOBAL_AMQP_CONNECTIONS[amqp_uri] = await aio_pika.connect_robust(amqp_uri)
+    return GLOBAL_AMQP_CONNECTIONS[amqp_uri]
+

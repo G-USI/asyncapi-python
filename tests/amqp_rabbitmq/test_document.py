@@ -12,4 +12,4 @@ def test_amqp_example(example: str):
     for channel in doc.channels.values():
         for message in channel.messages.values():
             message.payload.title
-    doc.dto_code
+    doc.messages_code

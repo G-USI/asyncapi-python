@@ -6,6 +6,8 @@ import subprocess
 from io import StringIO
 import json
 
+from .channel import Channel
+
 
 class Document(BaseModel):
     asyncapi: Literal["3.0.0"]
@@ -23,7 +25,7 @@ class Document(BaseModel):
 
     @computed_field  # type: ignore[misc]
     @cached_property
-    def dto_code(self) -> str:
+    def messages_code(self) -> str:
         return subprocess.run(
             check=True,
             capture_output=True,
@@ -39,30 +41,3 @@ class Document(BaseModel):
 class Info(BaseModel):
     version: str
     description: str | None = None
-
-
-class Channel(BaseModel):
-    messages: dict[str, Message]
-
-
-class Message(BaseModel):
-    payload: MessageSchema
-
-
-class MessageSchema(RootModel):
-    root: dict[str, Any]
-
-    @field_validator("root")
-    @classmethod
-    def title_is_present(cls, v: dict[str, Any]) -> dict[str, Any]:
-        err = (
-            "All message payload schemas must have",
-            "`title` field to derive typenames in the code",
-        )
-        assert "title" in v, " ".join(err)
-        return v
-
-    @computed_field  # type: ignore[misc]
-    @property
-    def title(self) -> str:
-        return self.root["title"]

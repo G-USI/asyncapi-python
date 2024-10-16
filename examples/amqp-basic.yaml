@@ -11,6 +11,7 @@ channels:
       Creates consumer that makes an anonymous temporary queue, and binds it to the exchange.
     bindings:
       amqp:
+        is: routingKey
         exchange:
           type: fanout
     messages:
