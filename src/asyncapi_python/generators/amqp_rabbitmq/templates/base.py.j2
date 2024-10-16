@@ -10,7 +10,7 @@ class BaseClient(ABC):
     @classmethod
     async def create(cls, amqp_uri: str) -> Self:
         # Get channel
-        channel = (await connection(amqp_uri)).channel()
+        channel = await (await connection(amqp_uri)).channel()
 
         # Declare queues and exchanges
         # TODO: Set exchange/queue props up
