@@ -1,8 +1,11 @@
 {
-	"name": "poetry3-poetry-pyenv",
-	"build": {
-		"dockerfile": "Dockerfile"
-	},
+	"name": "AsyncAPI-Python",
+	"dockerComposeFile": "docker-compose.yml",
+	"service": "devcontainer",
+	"workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+	"forwardPorts": [
+		"rabbitmq:15672"
+	],
 	"customizations": {
 		"vscode": {
 			"extensions": [
