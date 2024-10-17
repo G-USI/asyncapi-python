@@ -1,1 +1,34 @@
-class Consumer: ...
+from .messages import *
+from .base import BaseConsumer
+from typing import Callable, Any, Awaitable
+
+
+class Consumer(BaseConsumer):
+    async def run(self):
+        print("running forever")
+        raise NotImplementedError
+
+    {%- for channel in exchange_channels %}
+    def {{ channel.field_name }}(self, callback: Callable[[{{channel.schema}}], Awaitable[Any]]) -> None:
+        raise NotImplementedError
+    {% endfor %}
+    {%- for channel in queue_channels %}
+    def {{ channel.field_name }}(self, callback: Callable[[{{channel.schema}}], Awaitable[Any]]) -> None:
+        raise NotImplementedError
+    {% endfor %}
+
+    @classmethod
+    def _exchanges(cls):
+        return {
+            {%- for channel in exchange_channels%}
+            "{{channel.channel_name}}": {},
+            {%- endfor %}
+        }
+
+    @classmethod
+    def _queues(cls):
+        return {
+            {%- for channel in queue_channels%}
+            "{{channel.channel_name}}": {},
+            {%- endfor %}
+        }

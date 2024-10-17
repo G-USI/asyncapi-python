@@ -1,4 +1,5 @@
-from pydantic import BaseModel
+from typing import Any, Awaitable, Callable
+from pydantic import BaseModel, ValidationError
 from typing_extensions import Self
 import aio_pika
 from aio_pika.robust_connection import AbstractRobustConnection
@@ -63,6 +64,48 @@ class BaseProducer(BaseClient, ABC):
         )
 
 
+class BaseConsumer(BaseClient):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__callbacks: dict[
+            str,
+            tuple[
+                type[BaseModel],
+                Callable[[Any], Awaitable[Any]],
+            ],
+        ] = {}
+
+    def _set_callback(
+        self,
+        key: str,
+        schema: type[BaseModel],
+        callback: Callable[[Any], Awaitable[Any]],
+    ):
+        if key in self.__callbacks:
+            raise ValueError(f"@consumer.{key} has been used more than once")
+        self.__callbacks[key] = schema, callback
+
+    async def _handle_queue(
+        self,
+        queue_name: str,
+        message_schema: type[BaseModel],
+        callback: Callable[[Any], Awaitable[Any]],
+        **queue_params,
+    ) -> None:
+        queue = await self._channel.declare_queue(queue_name, **queue_params)
+        async with queue.iterator() as queue_iter:
+            async for message in queue_iter:
+                try:
+                    body = message_schema.model_validate_json(message.body)
+                    await callback(body)
+                    await message.ack()
+                except Exception as e:
+                    print(e)
+
+    async def run(self) -> None:
+        raise NotImplementedError
+
+
 GLOBAL_AMQP_CONNECTIONS: dict[str, AbstractRobustConnection] = {}
 
 
@@ -70,4 +113,3 @@ async def connection(amqp_uri: str) -> AbstractRobustConnection:
     if amqp_uri not in GLOBAL_AMQP_CONNECTIONS:
         GLOBAL_AMQP_CONNECTIONS[amqp_uri] = await aio_pika.connect_robust(amqp_uri)
     return GLOBAL_AMQP_CONNECTIONS[amqp_uri]
-
