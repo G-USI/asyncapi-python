@@ -16,6 +16,7 @@ typer = { extras = ["all"], version = "^0.12.5" }
 pydantic = ">=2"
 datamodel-code-generator = { extras = ["http"], version = "^0.26.1" }
 aio-pika = "^9.4.3"
+pytz = "^2024.2"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.10.0"
@@ -23,6 +24,7 @@ mypy = "^1.11.2"
 isort = "^5.13.2"
 types-pyyaml = "^6.0.12.20240917"
 pytest = "^8.3.3"
+types-pytz = "^2024.2.0.20241003"
 
 [build-system]
 requires = ["poetry-core"]
