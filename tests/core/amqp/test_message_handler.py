@@ -1,4 +1,3 @@
-from typing import AsyncGenerator
 from asyncapi_python.amqp.message_handler import MessageHandler, RpcMessageHandler
 from asyncapi_python.amqp.utils import encode_message, decode_message
 from asyncapi_python.amqp.connection import channel_pool
