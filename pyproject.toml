@@ -4,19 +4,28 @@ version = "0.1.0"
 description = ""
 authors = ["Yaroslav Petrov <yaroslav.v.petrov@gmail.com>"]
 readme = "README.md"
-packages = [{ include = "asyncapi_python", from = "src" }]
+packages = [
+    { include = "asyncapi_python_codegen", from = "src" },
+    { include = "asyncapi_python", from = "src" },
+]
 
 [tool.poetry.scripts]
-asyncapi-python = "asyncapi_python:app"
+asyncapi-python = "asyncapi_python_codegen:app"
+
+[tool.poetry.extras]
+codegen = ["jinja2", "typer", "asyncapi_python_codegen"]
+amqp = ["aio-pika"]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
-jinja2 = "^3.1.4"
-typer = { extras = ["all"], version = "^0.12.5" }
 pydantic = ">=2"
-datamodel-code-generator = { extras = ["http"], version = "^0.26.1" }
-aio-pika = "^9.4.3"
-pytz = "^2024.2"
+pytz = "*"
+jinja2 = { version = "^3.1.4", optional = true }
+typer = { extras = ["all"], version = "^0.12.5", optional = true }
+datamodel-code-generator = { extras = [
+    "http",
+], version = "^0.26.1", optional = true }
+aio-pika = { version = "^9.4.3", optional = true }
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.10.0"

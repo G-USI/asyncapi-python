@@ -1,4 +1,4 @@
-from asyncapi_python.generators.amqp_rabbitmq.document import Document
+from asyncapi_python_codegen.generators.amqp_rabbitmq.document import Document
 from pathlib import Path
 import pytest
 import yaml

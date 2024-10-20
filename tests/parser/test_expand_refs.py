@@ -1,4 +1,4 @@
-from asyncapi_python.parser import expand_refs
+from asyncapi_python_codegen.parser import expand_refs
 import pytest
 
 
