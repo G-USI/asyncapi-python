@@ -34,6 +34,7 @@ isort = "^5.13.2"
 types-pyyaml = "^6.0.12.20240917"
 pytest = "^8.3.3"
 types-pytz = "^2024.2.0.20241003"
+pytest-asyncio = "^0.24.0"
 
 [build-system]
 requires = ["poetry-core"]
