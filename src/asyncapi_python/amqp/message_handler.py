@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from aio_pika.message import AbstractIncomingMessage, Message
+from aio_pika.abc import AbstractChannel
 from typing import Awaitable, Callable, Generic, TypeVar
 from pydantic import BaseModel
 from logging import getLogger
@@ -54,10 +55,12 @@ class RpcMessageHandler(AbstractMessageHandler[T, V]):
         callback: Callable[[T], Awaitable[V]],
         input_type: type[T],
         output_type: type[V],
+        channel: AbstractChannel,
     ):
         super().__init__(name, callback)
         self._input_type = input_type
         self._output_type = output_type
+        self._channel = channel
 
     async def on_call(self, message: AbstractIncomingMessage) -> None:
         if message.correlation_id is None:
@@ -66,11 +69,10 @@ class RpcMessageHandler(AbstractMessageHandler[T, V]):
             raise AssertionError("RPC Call got empty reply_to header")
         message_body = decode_message(message.body, self._input_type)
         result = await self._callback(message_body)
-        async with channel_pool().acquire() as channel:
-            await channel.default_exchange.publish(
-                Message(
-                    encode_message(result),
-                    correlation_id=message.correlation_id,
-                ),
-                message.reply_to,
-            )
+        await self._channel.default_exchange.publish(
+            Message(
+                encode_message(result),
+                correlation_id=message.correlation_id,
+            ),
+            message.reply_to,
+        )
