@@ -22,3 +22,6 @@ def channel_pool(amqp_uri: str) -> Pool[AbstractRobustChannel]:
             return await connection.channel()
 
     return Pool(get_channel, max_size=10)
+
+
+AmqpPool = Pool[AbstractRobustChannel]

@@ -29,13 +29,17 @@ class Producer:
         self._pool = channel_pool
         self._replies: dict[str, Future[AbstractIncomingMessage]] = {}
         self._reply_queue = reply_queue
+        self._reply_consumer_tag: str | None = None
 
-    async def on_reply(self, msg: AbstractIncomingMessage):
+    async def _on_reply(self, msg: AbstractIncomingMessage):
         await msg.ack()
         if msg.correlation_id is None or msg.correlation_id not in self._replies:
             return
         future = self._replies.pop(msg.correlation_id)
         future.set_result(msg)
+
+    async def run(self):
+        self._reply_consumer_tag = await self._reply_queue.consume(self._on_reply)
 
     async def publish(
         self,
@@ -45,7 +49,6 @@ class Producer:
     ):
         outbound_message = Message(
             body=encode_message(message),
-            reply_to=self._reply_queue.name,
         )
         async with self._pool.acquire() as channel:
             await (
@@ -61,6 +64,10 @@ class Producer:
         routing_key: str,
         output_type: type[U],
     ) -> U:
+        if not self._reply_consumer_tag:
+            raise AssertionError(
+                "Cannot make requests that expect replies before Consumer::start is called"
+            )
         corr_id = str(uuid4())
         outbound_message = Message(
             body=encode_message(message),
@@ -74,5 +81,8 @@ class Producer:
                 if exchange is not None
                 else channel.default_exchange
             ).publish(outbound_message, routing_key)
+            self._logger.info(f"Sent request {message}")
             self._replies[corr_id] = reply_future
-        return decode_message((await reply_future).body, output_type)
+        res = decode_message((await reply_future).body, output_type)
+        self._logger.info(f"Got response {res}")
+        return res

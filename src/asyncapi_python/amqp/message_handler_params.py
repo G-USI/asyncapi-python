@@ -1,18 +1,23 @@
-from pydantic import RootModel, BaseModel, ConfigDict
+from pydantic import RootModel, BaseModel, ConfigDict, computed_field
 from typing import Literal
 from aio_pika.abc import AbstractRobustChannel
 from .message_handler import AbstractMessageHandler
 
 
 class ExchangeHandlerParams(BaseModel):
-    kind: Literal["exchange"]
+    model_config = ConfigDict(frozen=True)
+    kind: Literal["exchange"] = "exchange"
     name: str
     routing_key: str
 
 
 class QueueHandlerParams(BaseModel):
-    kind: Literal["queue"]
+    model_config = ConfigDict(frozen=True)
+    kind: Literal["queue"] = "queue"
     name: str
+    exclusive: bool = False
+    auto_delete: bool = False
+    durable: bool = False
 
 
 class MessageHandlerParams(RootModel):
@@ -25,12 +30,14 @@ class MessageHandlerParams(RootModel):
         channel: AbstractRobustChannel,
     ):
         match self.root:
-            case ExchangeHandlerParams(name, routing_key):
+            case ExchangeHandlerParams(name=name, routing_key=rk):
                 exchange = await channel.declare_exchange(name)
                 queue = await channel.declare_queue(exclusive=True)
-                await queue.bind(exchange, routing_key)
-            case QueueHandlerParams(name):
-                queue = await channel.declare_queue(name)
+                await queue.bind(exchange, rk)
+            case QueueHandlerParams(name=name, exclusive=ex, auto_delete=ad, durable=d):
+                queue = await channel.declare_queue(
+                    name, exclusive=ex, auto_delete=ad, durable=d
+                )
             case _:
                 raise NotImplementedError
         await queue.consume(handler)

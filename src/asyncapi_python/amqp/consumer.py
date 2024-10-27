@@ -21,11 +21,17 @@ class Consumer:
         self._logger = getLogger(__name__)
         self._pool = channel_pool
 
-    async def run(self, timeout: float | None = None):
+    async def run_blocking(self, timeout: int | float | None):
+        await self.run()
+        if timeout is not None:
+            await asyncio.sleep(timeout)
+        else:
+            await Future()
+
+    async def run(self):
         async with self._pool.acquire() as channel:
             for params, handler in self._handlers.items():
                 await params.setup_consume(handler, channel)
-        await asyncio.sleep(timeout) if timeout is not None else Future()
 
     async def _reply_callback(self, message: Message, routing_key: str):
         async with self._pool.acquire() as channel:
