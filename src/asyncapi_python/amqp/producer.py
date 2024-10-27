@@ -57,7 +57,7 @@ class Producer:
                 else channel.default_exchange
             ).publish(outbound_message, routing_key)
 
-    async def publish_reply(
+    async def request(
         self,
         message: T,
         exchange: str | None,

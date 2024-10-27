@@ -1,20 +1,15 @@
 from asyncapi_python.amqp.message_handler_params import (
     MessageHandlerParams,
     QueueHandlerParams,
-    ExchangeHandlerParams,
 )
 from asyncapi_python.amqp import Producer, Consumer, AmqpPool
 from pydantic import BaseModel
-import datetime
 import asyncio
-import pytest
-import pytest_asyncio
-from aio_pika import Message
 import random
 from itertools import product
 
 
-async def test_producer_consumer_reply(
+async def test_request_response(
     producer: Producer, consumer: Consumer, amqp_pool: AmqpPool
 ):
     a, b = range(10), range(10)
@@ -52,18 +47,6 @@ async def test_producer_consumer_reply(
     assert expected_sub == [res.result for res in actual_sub_response]
 
 
-@pytest_asyncio.fixture(scope="function")
-async def producer(amqp_pool: AmqpPool) -> Producer:
-    async with amqp_pool.acquire() as channel:
-        queue = await channel.declare_queue(exclusive=True)
-    return Producer(channel_pool=amqp_pool, reply_queue=queue)
-
-
-@pytest_asyncio.fixture(scope="function")
-async def consumer(amqp_pool: AmqpPool) -> Consumer:
-    return Consumer(channel_pool=amqp_pool)
-
-
 class Request(BaseModel):
     a: int
     b: int
@@ -85,7 +68,7 @@ async def post_requests(
     producer: Producer, reqs: list[Request], exchange: str | None, routing_key: str
 ) -> list[Response]:
     reqs_futures = [
-        producer.publish_reply(
+        producer.request(
             message=req,
             exchange=exchange,
             routing_key=routing_key,
