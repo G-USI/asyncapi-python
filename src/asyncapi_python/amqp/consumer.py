@@ -1,8 +1,13 @@
-import asyncio
 from .message_handler import AbstractMessageHandler, MessageHandler, RpcMessageHandler
-from .connection import connection_pool
+from .message_handler_params import MessageHandlerParams
+from .utils import encode_message, decode_message
+
+import asyncio
+from aio_pika import Message
+from aio_pika.pool import Pool
+from aio_pika.abc import AbstractRobustChannel
 from asyncio import Future
-from typing import Awaitable, Callable, TypeVar
+from typing import Callable, TypeVar
 from pydantic import BaseModel
 from logging import getLogger
 
@@ -11,37 +16,44 @@ U = TypeVar("U", bound=BaseModel)
 
 
 class Consumer:
-    def __init__(self, amqp_uri: str):
-        self.__amqp_uri = amqp_uri
-        self.__handlers: dict[str, AbstractMessageHandler] = {}
-        self.__logger = getLogger(__name__)
+    def __init__(self, channel_pool: Pool[AbstractRobustChannel]):
+        self._handlers: dict[MessageHandlerParams, AbstractMessageHandler] = {}
+        self._logger = getLogger(__name__)
+        self._pool = channel_pool
 
     async def run(self, timeout: float | None = None):
-        conn = connection_pool(self.__amqp_uri)
-        if timeout is not None:
-            await asyncio.sleep(timeout)
-        else:
-            await Future()
+        async with self._pool.acquire() as channel:
+            for params, handler in self._handlers.items():
+                await params.setup_consume(handler, channel)
+        await asyncio.sleep(timeout) if timeout is not None else Future()
+
+    async def _reply_callback(self, message: Message, routing_key: str):
+        async with self._pool.acquire() as channel:
+            await channel.default_exchange.publish(message, routing_key)
 
     def on(
         self,
         *,
-        key: str,
+        params: MessageHandlerParams,
         input_type: type[T],
         output_type: type[U] | None,
         callback: Callable,
     ):
         handler: AbstractMessageHandler
-        if key in self.__handlers:
-            raise AssertionError(f"Only one handler for `{key}` is allowed")
+        if params in self._handlers:
+            raise AssertionError(f"Only one handler for `{params}` is allowed")
         if output_type is None:
-            handler = MessageHandler(key, callback=callback, input_type=input_type)
+            handler = MessageHandler(
+                name=params.root.name,
+                callback=callback,
+                decode_message=lambda x: decode_message(x, input_type),
+            )
         else:
             handler = RpcMessageHandler(
-                key,
+                name=params.root.name,
                 callback=callback,
-                input_type=input_type,
-                output_type=output_type,
-                channel=None,
+                reply_callback=self._reply_callback,
+                encode_message=encode_message,
+                decode_message=lambda x: decode_message(x, input_type),
             )
-        self.__handlers[key] = handler
+        self._handlers[params] = handler

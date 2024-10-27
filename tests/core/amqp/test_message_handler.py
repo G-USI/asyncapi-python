@@ -31,7 +31,11 @@ async def test_message_handler(amqp: AbstractRobustChannel, users: list[User]):
     async def callback(u: User):
         surnames.append(u.surname)
 
-    handler = MessageHandler("userLoggedIn", input_type=User, callback=callback)
+    handler = MessageHandler(
+        "userLoggedIn",
+        decode_message=lambda x: decode_message(x, User),
+        callback=callback,
+    )
     req_queue = await amqp.declare_queue(exclusive=True)
     for user in users:
         message = Message(body=encode_message(user))
@@ -45,18 +49,21 @@ async def test_message_handler(amqp: AbstractRobustChannel, users: list[User]):
 
 @pytest.mark.asyncio
 async def test_rpc_message_handler(amqp: AbstractRobustChannel, users: list[User]):
-    req_queue = await amqp.declare_queue("req")
-    res_queue = await amqp.declare_queue("res")
+    req_queue = await amqp.declare_queue(exclusive=True)
+    res_queue = await amqp.declare_queue(exclusive=True)
 
     async def rpc_callback(u: User) -> UserSurname:
         return UserSurname(surname=u.surname)
 
+    async def reply_callback(x: Message, k: str):
+        await amqp.default_exchange.publish(x, k)
+
     handler = RpcMessageHandler(
         "getUserSurname",
         rpc_callback,
-        input_type=User,
-        output_type=UserSurname,
-        channel=amqp,
+        encode_message=encode_message,
+        decode_message=lambda x: decode_message(x, User),
+        reply_callback=reply_callback,
     )
 
     for i, user in enumerate(users):
@@ -72,7 +79,11 @@ async def test_rpc_message_handler(amqp: AbstractRobustChannel, users: list[User
     async def res_callback(s: UserSurname) -> None:
         surnames.append(s)
 
-    res_handler = MessageHandler("onUserSurnameResponse", res_callback, UserSurname)
+    res_handler = MessageHandler(
+        "onUserSurnameResponse",
+        res_callback,
+        decode_message=lambda x: decode_message(x, UserSurname),
+    )
 
     await res_queue.consume(res_handler)
     await req_queue.consume(handler)

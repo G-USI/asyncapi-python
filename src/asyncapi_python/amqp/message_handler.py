@@ -1,12 +1,8 @@
 from abc import ABC, abstractmethod
 from aio_pika.message import AbstractIncomingMessage, Message
-from aio_pika.abc import AbstractChannel
 from typing import Awaitable, Callable, Generic, TypeVar
 from pydantic import BaseModel
 from logging import getLogger
-from .utils import decode_message, encode_message
-from .connection import channel_pool
-from asyncio import Future
 
 
 T = TypeVar("T", bound=BaseModel)
@@ -38,13 +34,13 @@ class MessageHandler(AbstractMessageHandler[T, None]):
         self,
         name: str,
         callback: Callable[[T], Awaitable[None]],
-        input_type: type[T],
+        decode_message: Callable[[bytes], T],
     ):
         super().__init__(name, callback)
-        self._input_type = input_type
+        self._decode_message = decode_message
 
     async def on_call(self, message: AbstractIncomingMessage) -> None:
-        message_body = decode_message(message.body, self._input_type)
+        message_body = self._decode_message(message.body)
         await self._callback(message_body)
 
 
@@ -53,25 +49,25 @@ class RpcMessageHandler(AbstractMessageHandler[T, V]):
         self,
         name: str,
         callback: Callable[[T], Awaitable[V]],
-        input_type: type[T],
-        output_type: type[V],
-        channel: AbstractChannel,
+        reply_callback: Callable[[Message, str], Awaitable[None]],
+        decode_message: Callable[[bytes], T],
+        encode_message: Callable[[V], bytes],
     ):
         super().__init__(name, callback)
-        self._input_type = input_type
-        self._output_type = output_type
-        self._channel = channel
+        self._reply_callback = reply_callback
+        self._decode_message = decode_message
+        self._encode_message = encode_message
 
     async def on_call(self, message: AbstractIncomingMessage) -> None:
         if message.correlation_id is None:
             raise AssertionError("RPC Call got empty correlation_id")
         if message.reply_to is None:
             raise AssertionError("RPC Call got empty reply_to header")
-        message_body = decode_message(message.body, self._input_type)
+        message_body = self._decode_message(message.body)
         result = await self._callback(message_body)
-        await self._channel.default_exchange.publish(
+        await self._reply_callback(
             Message(
-                encode_message(result),
+                self._encode_message(result),
                 correlation_id=message.correlation_id,
             ),
             message.reply_to,
