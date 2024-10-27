@@ -6,6 +6,7 @@ import datetime
 import asyncio
 import pytest
 from aio_pika.abc import AbstractRobustChannel
+from aio_pika.pool import Pool
 from aio_pika import Message
 
 
@@ -25,7 +26,9 @@ def users():
 
 
 @pytest.mark.asyncio
-async def test_message_handler(amqp: AbstractRobustChannel, users: list[User]):
+async def test_message_handler(
+    amqp_pool: Pool[AbstractRobustChannel], users: list[User]
+):
     surnames: list[str] = []
 
     async def callback(u: User):
@@ -36,27 +39,32 @@ async def test_message_handler(amqp: AbstractRobustChannel, users: list[User]):
         decode_message=lambda x: decode_message(x, User),
         callback=callback,
     )
-    req_queue = await amqp.declare_queue(exclusive=True)
-    for user in users:
-        message = Message(body=encode_message(user))
-        await amqp.default_exchange.publish(message, routing_key=req_queue.name)
-
-    await req_queue.consume(handler)
+    async with amqp_pool.acquire() as amqp:
+        req_queue = await amqp.declare_queue(exclusive=True)
+        for user in users:
+            message = Message(body=encode_message(user))
+            await amqp.default_exchange.publish(message, routing_key=req_queue.name)
+        await req_queue.consume(handler)
     await asyncio.sleep(0.5)
     assert surnames == ["Doe"] * 3
     print(surnames)
 
 
 @pytest.mark.asyncio
-async def test_rpc_message_handler(amqp: AbstractRobustChannel, users: list[User]):
-    req_queue = await amqp.declare_queue(exclusive=True)
-    res_queue = await amqp.declare_queue(exclusive=True)
-
+async def test_rpc_message_handler(
+    amqp_pool: Pool[AbstractRobustChannel],
+    users: list[User],
+):
     async def rpc_callback(u: User) -> UserSurname:
         return UserSurname(surname=u.surname)
 
     async def reply_callback(x: Message, k: str):
-        await amqp.default_exchange.publish(x, k)
+        async with amqp_pool.acquire() as amqp:
+            await amqp.default_exchange.publish(x, k)
+
+    async with amqp_pool.acquire() as amqp:
+        req_queue = await amqp.declare_queue(exclusive=True)
+        res_queue = await amqp.declare_queue(exclusive=True)
 
     handler = RpcMessageHandler(
         "getUserSurname",
