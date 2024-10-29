@@ -1,9 +1,18 @@
+from typing import TypedDict
 import yaml
 from pathlib import Path
 from .document import Document
 from re import sub
 from jinja2 import Template
 from contextlib import ExitStack
+
+
+class Channel(TypedDict):
+    channel_name: str
+    field_name: str
+    schema: str
+    type: str
+    exchange_type: str | None
 
 
 def generate(*, input_path: Path, output_path: Path) -> dict[Path, str]:
@@ -17,7 +26,7 @@ def generate(*, input_path: Path, output_path: Path) -> dict[Path, str]:
 
     with input_path.open() as f:
         doc = Document.model_validate(yaml.safe_load(f))
-    channels = [
+    channels: list[Channel] = [
         {
             "channel_name": (
                 (
@@ -32,7 +41,7 @@ def generate(*, input_path: Path, output_path: Path) -> dict[Path, str]:
             "type": (
                 "queue" if channel.bindings.amqp.root.type == "queue" else "exchange"
             ),
-            "exchage_type": (
+            "exchange_type": (
                 channel.bindings.amqp.root.exchange.type
                 if channel.bindings.amqp.root.type == "routingKey"
                 else None
