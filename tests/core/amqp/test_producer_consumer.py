@@ -1,0 +1,63 @@
+from asyncapi_python.amqp.message_handler_params import (
+    MessageHandlerParams,
+    ExchangeHandlerParams,
+)
+from asyncapi_python.amqp import Producer, Consumer
+from pydantic import BaseModel
+from functools import partial
+import asyncio
+import random
+
+
+async def test_producer_consumer(
+    producer: Producer,
+    consumer: Consumer,
+    consumer2: Consumer,
+):
+    exchange_name = f"test_exchange_{random.randint(10000, 99999)}"
+    users = [
+        UserRegisteredEvent.model_validate(x)
+        for x in [
+            dict(id=0, username="zero"),
+            dict(id=1, username="one"),
+            dict(id=2, username="two"),
+        ]
+    ]
+
+    # Setup consumers
+    states: list[dict[int, str]] = [{} for _ in range(2)]
+    for cons, s in zip([consumer, consumer2], states):
+        cons.on(
+            params=MessageHandlerParams(
+                root=ExchangeHandlerParams(
+                    type="fanout",
+                    name=exchange_name,
+                    auto_delete=True,
+                    routing_key=None,
+                )
+            ),
+            input_type=UserRegisteredEvent,
+            output_type=None,
+            callback=partial(on_user_registered, s),
+        )
+        await cons.run()
+    await asyncio.sleep(3)
+
+    # Send messages
+    await asyncio.gather(
+        *(producer.publish(u, exchange=exchange_name, routing_key=None) for u in users)
+    )
+    await asyncio.sleep(3)
+
+    expected = {0: "zero", 1: "one", 2: "two"}
+    assert states[0] == expected
+    assert states[1] == expected
+
+
+class UserRegisteredEvent(BaseModel):
+    id: int
+    username: str
+
+
+async def on_user_registered(state: dict[int, str], x: UserRegisteredEvent):
+    state[x.id] = x.username

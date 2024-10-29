@@ -45,7 +45,7 @@ class Producer:
         self,
         message: T,
         exchange: str | None,
-        routing_key: str,
+        routing_key: str | None,
     ):
         outbound_message = Message(
             body=encode_message(message),
@@ -55,13 +55,13 @@ class Producer:
                 await channel.get_exchange(exchange)
                 if exchange is not None
                 else channel.default_exchange
-            ).publish(outbound_message, routing_key)
+            ).publish(outbound_message, routing_key or "")
 
     async def request(
         self,
         message: T,
         exchange: str | None,
-        routing_key: str,
+        routing_key: str | None,
         output_type: type[U],
     ) -> U:
         if not self._reply_consumer_tag:
@@ -80,7 +80,7 @@ class Producer:
                 await channel.get_exchange(exchange)
                 if exchange is not None
                 else channel.default_exchange
-            ).publish(outbound_message, routing_key)
+            ).publish(outbound_message, routing_key or "")
             self._logger.info(f"Sent request {message}")
             self._replies[corr_id] = reply_future
         res = decode_message((await reply_future).body, output_type)
