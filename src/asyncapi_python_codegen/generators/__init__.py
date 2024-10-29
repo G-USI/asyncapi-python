@@ -1,1 +1,1 @@
-from . import amqp_rabbitmq
+from . import amqp
