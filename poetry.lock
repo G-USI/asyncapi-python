@@ -1299,9 +1299,9 @@ propcache = ">=0.2.0"
 
 [extras]
 amqp = ["aio-pika"]
-codegen = ["jinja2", "typer"]
+codegen = ["datamodel-code-generator", "jinja2", "pyyaml", "typer"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "4f2a48cace4ab6efb7f4b20b6bb576388ac8d651c06b520c597709298a218c7a"
+content-hash = "449f5a6aad036e50e5ec529b4154464d05d17275240865acfa91afe6918b39f6"
