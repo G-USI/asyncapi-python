@@ -1,5 +1,6 @@
 from pydantic._internal._generics import get_args  # TODO: Internal API, this may break
-from pydantic import BaseModel, Field, RootModel
+from pydantic import Field
+from .base import BaseModel, RootModel
 from typing import Any, Callable, Generic, TypeVar, Annotated
 
 T = TypeVar("T", bound=BaseModel)

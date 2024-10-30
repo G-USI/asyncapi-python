@@ -1,6 +1,7 @@
 from __future__ import annotations
-from pydantic import BaseModel
-from typing import Literal
+from functools import cache
+from .base import BaseModel
+from typing import Any, Literal
 from .bindings import Bindings
 from .components import Components, Message
 from .ref import MaybeRef, Ref
@@ -12,6 +13,14 @@ class Document(BaseModel):
     channels: dict[str, Channel] = {}
     operations: dict[str, Operation] = {}
     components: Components = Components()
+
+    def local_context(self, path: str) -> Any:
+        res = self.model_dump(by_alias=True)
+        h, *paths = path.split("/")
+        if h != "#":
+            raise ValueError("local context function got non-local request: {path}")
+        *_, res = (res := res[p] for p in paths)
+        return res
 
 
 class Info(BaseModel):

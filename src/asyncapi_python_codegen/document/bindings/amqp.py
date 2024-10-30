@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field, RootModel
 
 
 class Exchange(BaseModel):
-    name: str = ""
+    name: str | None = None
     type: Literal["topic", "direct", "fanout", "default", "headers"] = "default"
     durable: bool = False
     auto_delete: bool = Field(alias="autoDelete", default=False)

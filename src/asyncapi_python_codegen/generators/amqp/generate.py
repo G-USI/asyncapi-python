@@ -1,10 +1,13 @@
+from functools import partial
 import json
 import yaml
 import subprocess
 from itertools import chain
-from typing import Any, Generator, TypedDict
+from typing import Any, Generator, Literal, TypedDict
 from pathlib import Path
+
 from .utils import snake_case, camel_case
+from ... import document
 from ...document import Document
 
 
@@ -17,16 +20,111 @@ def generate(
     result: dict[Path, str] = {}
 
     doc = load_document(input_path)
-    schemas = get_structs(doc)
-    result[output_path / "models.py"] = generate_models(schemas)
+    models = get_models(doc)
+    result[output_path / "models.py"] = generate_models(models)
+    ops = get_operations(doc, models)
 
     return result
+
+
+class Operation(TypedDict):
+    field_name: str
+    action: Literal["send", "receive"]
+    exchange: str | None
+    routing_key: str | None
+    input_types: list[str]
+    output_types: list[str]
+    has_reply: bool
 
 
 class JsonSchema(TypedDict):
     path: str
     name: str
     schema: Any
+
+
+def get_operations(
+    doc: Document,
+    models: list[JsonSchema],
+) -> list[Operation]:
+    result: list[Operation] = []
+    for name, op in doc.operations.items():
+        action = op.action
+        channel = op.channel.get(doc.local_context)
+
+        # Get channel properties
+        exchange: str | None
+        routing_key: str | None
+        addr = lambda x: x or channel.address or name
+        match channel.bindings:
+            case None:
+                # Default exchange + named queues
+                exchange = None
+                routing_key = addr(None)
+            case bind if bind.amqp.root.type == "queue":
+                # Default exchange + named queues
+                exchange = None
+                routing_key = addr(bind.amqp.root.queue.name)
+            case bind if bind.amqp.root.type == "routingKey":
+                # Named exchange + exclusive queues
+                exchange = addr(bind.amqp.root.exchange.name)
+                routing_key = None
+
+        get_types = partial(get_channel_message_types, models)
+        input_types: list[str] = get_types(channel)
+
+        # Get reply channel properties
+        if has_reply := op.reply is not None:
+            reply_ch = op.reply.channel.get(doc.local_context)
+            if reply_ch.address:
+                raise NotImplementedError(
+                    "Reply channel with static address is not supported"
+                )
+            if reply_ch.bindings is not None:
+                if reply_ch.bindings.amqp.root.type != "queue":
+                    raise NotImplementedError(
+                        "Reply channel that is not of a queue type is not supported"
+                    )
+                if reply_ch.bindings.amqp.root.queue.name is not None:
+                    raise NotImplementedError(
+                        "As of now, reply channel must be a queue without name"
+                    )
+            output_types = get_types(reply_ch)
+        else:
+            output_types = []
+
+        result.append(
+            {
+                "action": action,
+                "exchange": exchange,
+                "field_name": snake_case(name),
+                "input_types": input_types,
+                "routing_key": routing_key,
+                "has_reply": has_reply,
+                "output_types": output_types,
+            }
+        )
+
+    return result
+
+
+def get_channel_message_types(
+    models: list[JsonSchema],
+    ch: document.Channel,
+) -> list[str]:
+    res = []
+    for m_ref in ch.messages.values():
+        if not isinstance(m_ref.root, document.Ref):
+            raise NotImplementedError(
+                "Inline message schemas are not supported right now, use $ref inside channels"
+            )
+        if not (name := next(m["name"] for m in models if m_ref.root.ref == m["path"])):
+            raise AssertionError(
+                f"Channel declares message ref {m_ref.root.ref} that has "
+                + "not been captured by data model generator"
+            )
+        res.append(name)
+    return res
 
 
 def generate_models(schemas: list[JsonSchema]) -> str:
@@ -43,7 +141,7 @@ def generate_models(schemas: list[JsonSchema]) -> str:
     ).stdout.decode()
 
 
-def get_structs(doc: Document) -> list[JsonSchema]:
+def get_models(doc: Document) -> list[JsonSchema]:
     # Find schemas in messages
     message_schemas: Generator[JsonSchema, None, None] = (
         {

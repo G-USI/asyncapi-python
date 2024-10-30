@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pydantic import BaseModel
+from .base import BaseModel
 from typing import Any
 from .ref import MaybeRef
 
