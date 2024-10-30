@@ -10,4 +10,3 @@ def test_generate(tmp_path: Path, example: str):
     for path, code in result.items():
         with path.open("w") as f:
             f.write(code)
-    raise Exception(result)
