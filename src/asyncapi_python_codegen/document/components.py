@@ -1,6 +1,7 @@
 from __future__ import annotations
 from pydantic import BaseModel
 from typing import Any
+from .ref import MaybeRef
 
 
 class Components(BaseModel):
@@ -8,12 +9,16 @@ class Components(BaseModel):
     correlation_ids: dict[str, CorrelationId] = {}
 
 
-JsonSchema = Any
+class JsonSchema(BaseModel):
+    # TODO: Create a better parser for JsonSchema
+    type: str
+    properties: dict[str, Any]
+    required: list[str] | None = None
 
 
 class Message(BaseModel):
-    headers: JsonSchema
-    payload: JsonSchema
+    headers: MaybeRef[JsonSchema] | None = None
+    payload: MaybeRef[JsonSchema]
 
 
 class CorrelationId(BaseModel):
