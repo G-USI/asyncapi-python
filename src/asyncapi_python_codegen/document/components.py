@@ -13,7 +13,7 @@ class JsonSchema(BaseModel):
     # TODO: Create a better parser for JsonSchema
     type: str
     properties: dict[str, Any]
-    required: list[str] | None = None
+    required: list[str] = []
 
 
 class Message(BaseModel):

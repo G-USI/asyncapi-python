@@ -12,7 +12,7 @@ def generate(
     *,
     input_path: Path,
     output_path: Path,
-    template_path: Path = Path(__file__).parent / "templates",
+    template_dir: Path = Path(__file__).parent / "templates",
 ) -> dict[Path, str]:
     result: dict[Path, str] = {}
 
@@ -32,12 +32,15 @@ class JsonSchema(TypedDict):
 def generate_models(schemas: list[JsonSchema]) -> str:
     args = """datamodel-codegen
     --output-model-type pydantic_v2.BaseModel
-    --input-file-type json
+    --input-file-type jsonschema
     """.split()
-    inp = {x["name"]: x["schema"] for x in schemas}
+    inp = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$defs": {x["name"]: x["schema"] for x in schemas},
+    }
     return subprocess.run(
-        args=args, capture_output=True, check=True, input=json.dumps(inp)
-    ).stdout
+        args=args, capture_output=True, check=True, input=json.dumps(inp).encode()
+    ).stdout.decode()
 
 
 def get_structs(doc: Document) -> list[JsonSchema]:
@@ -46,16 +49,16 @@ def get_structs(doc: Document) -> list[JsonSchema]:
         {
             "name": camel_case("upper", name),
             "path": f"#/components/messages/{name}",
-            "schema": msg.model_dump(),
+            "schema": msg.payload.model_dump(),
         }
         for name, msg in doc.components.messages.items()
     )
 
     # Return results
-    # TODO: Find more places where schemas might be stored
     return list(
         chain(
-            message_schemas,
+            # TODO: Find more places, where schemas might be stored
+            message_schemas
         )
     )
 
