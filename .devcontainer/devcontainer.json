@@ -15,7 +15,8 @@
 				"ms-python.mypy-type-checker",
 				"ms-python.black-formatter",
 				"ms-python.isort",
-				"redhat.vscode-yaml"
+				"redhat.vscode-yaml",
+				"streetsidesoftware.code-spell-checker"
 			],
 			"settings": {
 				"yaml.schemas": {
