@@ -24,7 +24,7 @@ class Channel(BaseModel):
     address: str | None = None
     title: str | None = None
     description: str | None = None
-    bindings: Bindings
+    bindings: Bindings | None = None
     messages: dict[str, Message | Ref[Message]]
 
 

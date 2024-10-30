@@ -1,7 +1,7 @@
 from typing import TypedDict
 import yaml
 from pathlib import Path
-from .document import Document
+from ...document import Document
 from re import sub
 from jinja2 import Template
 from contextlib import ExitStack
