@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import Literal
 from .bindings import Bindings
 from .components import Components, Message
-from .ref import Ref
+from .ref import MaybeRef, Ref
 
 
 class Document(BaseModel):
@@ -25,7 +25,7 @@ class Channel(BaseModel):
     title: str | None = None
     description: str | None = None
     bindings: Bindings | None = None
-    messages: dict[str, Message | Ref[Message]]
+    messages: dict[str, MaybeRef[Message]]
 
 
 class Operation(BaseModel):

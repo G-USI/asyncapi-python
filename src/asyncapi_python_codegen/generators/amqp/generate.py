@@ -1,4 +1,6 @@
+import json
 import yaml
+import subprocess
 from itertools import chain
 from typing import Any, Generator, TypedDict
 from pathlib import Path
@@ -12,16 +14,30 @@ def generate(
     output_path: Path,
     template_path: Path = Path(__file__).parent / "templates",
 ) -> dict[Path, str]:
-    doc = load_document(input_path)
-    structs = get_structs(doc)
+    result: dict[Path, str] = {}
 
-    raise NotImplementedError
+    doc = load_document(input_path)
+    schemas = get_structs(doc)
+    result[output_path / "models.py"] = generate_models(schemas)
+
+    return result
 
 
 class JsonSchema(TypedDict):
     path: str
     name: str
     schema: Any
+
+
+def generate_models(schemas: list[JsonSchema]) -> str:
+    args = """datamodel-codegen
+    --output-model-type pydantic_v2.BaseModel
+    --input-file-type json
+    """.split()
+    inp = {x["name"]: x["schema"] for x in schemas}
+    return subprocess.run(
+        args=args, capture_output=True, check=True, input=json.dumps(inp)
+    ).stdout
 
 
 def get_structs(doc: Document) -> list[JsonSchema]:
