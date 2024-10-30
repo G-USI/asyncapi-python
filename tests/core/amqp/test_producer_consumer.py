@@ -41,13 +41,12 @@ async def test_producer_consumer(
             callback=partial(on_user_registered, s),
         )
         await cons.run()
-    await asyncio.sleep(3)
 
     # Send messages
     await asyncio.gather(
         *(producer.publish(u, exchange=exchange_name, routing_key=None) for u in users)
     )
-    await asyncio.sleep(3)
+    await asyncio.sleep(0.5)
 
     expected = {0: "zero", 1: "one", 2: "two"}
     assert states[0] == expected
