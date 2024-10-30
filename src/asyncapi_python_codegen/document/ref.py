@@ -18,7 +18,7 @@ class Ref(BaseModel, Generic[T]):
         return self.type().model_validate(context(self.ref))
 
 
-class MaybeRef(RootModel, Generic[T]):
+class MaybeRef(RootModel[Ref[T] | T], Generic[T]):
     root: Ref[T] | T
 
     def get(self, context: ContextFunction) -> T:
