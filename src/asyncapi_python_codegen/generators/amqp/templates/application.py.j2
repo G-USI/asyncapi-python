@@ -12,11 +12,24 @@ class Application(BaseApplication):
     {%- set out_type = op.output_types | join(" | ") if op.output_types else "None" -%}
     {%- set callback_type = "Callable[["+ in_type + "], Awaitable[" + out_type + "]" + "]" -%}
     {%- set send_method = "publish" if out_type == "None" else "request" -%}
+    {%- set routing_key_literal = '"' + op.routing_key + '"' if op.routing_key else "None" -%}
 
     {%- if op.action == "receive" -%}
     def receive_{{ op.field_name }}(self, callback: {{ callback_type }}) -> None:
         {%- if op.exchange %}
-        raise NotImplementedError
+        self._consumer.on(
+            MessageHandlerParams.model_validate(
+                {
+                    "kind": "exchange", 
+                    "type": "fanout",
+                    "name": "{{op.exchange}}",
+                    "routing_key": {{ routing_key_literal }},
+                }
+            ),
+            input_type={{in_type}},
+            output_type={{out_type}},
+            callback=callback,
+        )
         {% else %}
         self._consumer.on(
             MessageHandlerParams.model_validate({"kind": "queue", "name": "{{op.routing_key}}"}),
@@ -31,7 +44,7 @@ class Application(BaseApplication):
         return await self._producer.{{ send_method }}(
             message=message,
             exchange={{ '"' + op.exchange + '"' if op.exchange else "None" }},
-            routing_key={{ '"' + op.routing_key+ '"' if op.routing_key else "None" }},
+            routing_key={{ routing_key_literal }},
             {%- if send_method == "request" %}
             output_type={{ out_type }},
             {%- endif %}
