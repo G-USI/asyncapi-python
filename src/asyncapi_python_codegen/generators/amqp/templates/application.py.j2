@@ -1,0 +1,40 @@
+from .models import *
+from asyncapi_python.amqp import BaseApplication
+from asyncapi_python.amqp.message_handler_params import MessageHandlerParams
+from typing import Callable, Awaitable
+
+
+class Application(BaseApplication):
+    """TODO: Render asyncapi docs here"""
+
+    {% for op in ops -%}
+    {%- set in_type = op.input_types | join(" | ") -%}
+    {%- set out_type = op.output_types | join(" | ") if op.output_types else "None" -%}
+    {%- set callback_type = "Callable[["+ in_type + "], Awaitable[" + out_type + "]" + "]" -%}
+    {%- set send_method = "publish" if out_type == "None" else "request" -%}
+
+    {%- if op.action == "receive" -%}
+    def receive_{{ op.field_name }}(self, callback: {{ callback_type }}) -> None:
+        {%- if op.exchange %}
+        raise NotImplementedError
+        {% else %}
+        self._consumer.on(
+            MessageHandlerParams.model_validate({"kind": "queue", "name": "{{op.routing_key}}"}),
+            input_type={{in_type}},
+            output_type={{out_type}},
+            callback=callback,
+        )
+        {%- endif %}
+
+    {%- elif op.action == "send" -%}
+    async def send_{{ op.field_name }}(self, message: {{ in_type }}) -> {{ out_type }}:
+        return await self._producer.{{ send_method }}(
+            message=message,
+            exchange={{ '"' + op.exchange + '"' if op.exchange else "None" }},
+            routing_key={{ '"' + op.routing_key+ '"' if op.routing_key else "None" }},
+            {%- if send_method == "request" %}
+            output_type={{ out_type }},
+            {%- endif %}
+        )
+    {% endif %}
+    {% endfor %}

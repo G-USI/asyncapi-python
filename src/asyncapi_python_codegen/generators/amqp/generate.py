@@ -1,7 +1,9 @@
+from contextlib import ExitStack
 from functools import partial
 import json
 import yaml
 import subprocess
+import jinja2 as j2
 from itertools import chain
 from typing import Any, Generator, Literal, TypedDict
 from pathlib import Path
@@ -15,14 +17,14 @@ def generate(
     *,
     input_path: Path,
     output_path: Path,
-    template_dir: Path = Path(__file__).parent / "templates",
 ) -> dict[Path, str]:
     result: dict[Path, str] = {}
 
     doc = load_document(input_path)
     models = get_models(doc)
-    result[output_path / "models.py"] = generate_models(models)
     ops = get_operations(doc, models)
+    result.update({output_path / p: s for p, s in generate_application(ops).items()})
+    result[output_path / "models.py"] = generate_models(models)
 
     return result
 
@@ -41,6 +43,19 @@ class JsonSchema(TypedDict):
     path: str
     name: str
     schema: Any
+
+
+def generate_application(
+    ops: list[Operation],
+    template_dir: Path = Path(__file__).parent / "templates",
+    filenames: list[str] = ["__init__.py", "application.py"],
+) -> dict[str, str]:
+    render_args = dict(ops=ops)
+    with ExitStack() as s:
+        paths = (template_dir / f"{f}.j2" for f in filenames)
+        contents = (s.enter_context(f.open()).read() for f in paths)
+        templates = (j2.Template(c) for c in contents)
+        return {f: t.render(**render_args) for t, f in zip(templates, filenames)}
 
 
 def get_operations(
