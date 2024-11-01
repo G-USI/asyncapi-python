@@ -12,9 +12,13 @@ class Application(BaseApplication):
     Version: {{ version }}
     """
 
-    def __init__(self, amqp_uri: str):
+    def __init__(self, amqp_uri: str, check_impl: bool = True):
         super().__init__(amqp_uri)
-        self.consumer = ConsumerWrapper(self._consumer)
+        self.consumer = ConsumerWrapper(self._consumer, check_impl)
+
+    async def start(self):
+        await self.consumer.start()
+        await super().start()
     
     {% for op in ops if op.action == "send" -%}
     {%- set in_type = op.input_types | join(" | ") -%}
@@ -23,6 +27,7 @@ class Application(BaseApplication):
     {%- set send_method = "publish" if out_type == "None" else "request" -%}
     {%- set routing_key_literal = '"' + op.routing_key + '"' if op.routing_key else "None" -%}
     async def {{ op.field_name }}(self, message: {{ in_type }}) -> {{ out_type }}:
+        self._assert_started()
         return await self._producer.{{ send_method }}(
             message=message,
             exchange={{ '"' + op.exchange + '"' if op.exchange else "None" }},
@@ -34,15 +39,34 @@ class Application(BaseApplication):
     {% endfor %}
 
 class ConsumerWrapper:
-    def __init__(self, consumer: Consumer):
+    def __init__(self, consumer: Consumer, check_impl: bool):
         self._inner = consumer
+        self._check_impl = check_impl
+        self._impls: set[str] = set()
+        self._required_impls = {
+            {%- for op in ops if op.action == "receive" %}
+            "{{ op.field_name }}",
+            {%- endfor %}
+        }
+    
+    async def start(self):
+        if not self._check_impl:
+            return
+        if diff := self._required_impls - self._impls:
+            raise AssertionError(
+                f"The following operations have not been implemented: {diff}"
+            )
 
+    
     {% for op in ops if op.action == "receive" %}
     {%- set in_type = op.input_types | join(" | ") -%}
     {%- set out_type = op.output_types | join(" | ") if op.output_types else "None" -%}
     {%- set callback_type = "Callable[["+ in_type + "], Awaitable[" + out_type + "]" + "]" -%}
     {%- set routing_key_literal = '"' + op.routing_key + '"' if op.routing_key else "None" -%}
     def {{ op.field_name }}(self, callback: {{ callback_type }}) -> None:
+        if "{{ op.field_name }}" in self._impls:
+            raise AssertionError("Operation {{ op.field_name }} is implemented more than once")
+        self._impls.add("{{ op.field_name }}")
         self._inner.on(
             params=MessageHandlerParams.model_validate(
                 {%- if op.exchange %}

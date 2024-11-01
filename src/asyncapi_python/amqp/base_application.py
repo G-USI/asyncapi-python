@@ -23,6 +23,8 @@ class BaseApplication(ABC):
     def __init__(self, amqp_uri: str):
         self._uri = amqp_uri
         self._has_started = False
+        self._pool = channel_pool(self._uri)
+        self._consumer = Consumer(self._pool)
 
     def _assert_started(self):
         if not self._has_started:
@@ -33,9 +35,8 @@ class BaseApplication(ABC):
             )
 
     async def start(self):
-        async with (pool := channel_pool(self._uri).acquire()) as ch:
+        async with self._pool.acquire() as ch:
             reply_queue = await ch.declare_queue(exclusive=True)
-            self._producer = Producer(pool, reply_queue)
-            self._consumer = Consumer(pool)
+            self._producer = Producer(self._pool, reply_queue)
             self._has_started = True
-        await self._consumer.run_blocking()
+        await self._consumer.run_blocking(timeout=None)
