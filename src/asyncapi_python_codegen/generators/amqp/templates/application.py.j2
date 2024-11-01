@@ -1,5 +1,5 @@
 from .models import *
-from asyncapi_python.amqp import BaseApplication
+from asyncapi_python.amqp import BaseApplication, Consumer
 from asyncapi_python.amqp.message_handler_params import MessageHandlerParams
 from typing import Callable, Awaitable
 
@@ -7,40 +7,17 @@ from typing import Callable, Awaitable
 class Application(BaseApplication):
     """TODO: Render asyncapi docs here"""
 
-    {% for op in ops -%}
+    def __init__(self, amqp_uri: str):
+        super().__init__(amqp_uri)
+        self.consumer = ConsumerWrapper(self._consumer)
+    
+    {% for op in ops if op.action == "send" -%}
     {%- set in_type = op.input_types | join(" | ") -%}
     {%- set out_type = op.output_types | join(" | ") if op.output_types else "None" -%}
     {%- set callback_type = "Callable[["+ in_type + "], Awaitable[" + out_type + "]" + "]" -%}
     {%- set send_method = "publish" if out_type == "None" else "request" -%}
     {%- set routing_key_literal = '"' + op.routing_key + '"' if op.routing_key else "None" -%}
-
-    {%- if op.action == "receive" -%}
-    def receive_{{ op.field_name }}(self, callback: {{ callback_type }}) -> None:
-        {%- if op.exchange %}
-        self._consumer.on(
-            MessageHandlerParams.model_validate(
-                {
-                    "kind": "exchange", 
-                    "type": "fanout",
-                    "name": "{{op.exchange}}",
-                    "routing_key": {{ routing_key_literal }},
-                }
-            ),
-            input_type={{in_type}},
-            output_type={{out_type}},
-            callback=callback,
-        )
-        {% else %}
-        self._consumer.on(
-            MessageHandlerParams.model_validate({"kind": "queue", "name": "{{op.routing_key}}"}),
-            input_type={{in_type}},
-            output_type={{out_type}},
-            callback=callback,
-        )
-        {%- endif %}
-
-    {%- elif op.action == "send" -%}
-    async def send_{{ op.field_name }}(self, message: {{ in_type }}) -> {{ out_type }}:
+    async def {{ op.field_name }}(self, message: {{ in_type }}) -> {{ out_type }}:
         return await self._producer.{{ send_method }}(
             message=message,
             exchange={{ '"' + op.exchange + '"' if op.exchange else "None" }},
@@ -49,5 +26,33 @@ class Application(BaseApplication):
             output_type={{ out_type }},
             {%- endif %}
         )
-    {% endif %}
+    {% endfor %}
+
+class ConsumerWrapper:
+    def __init__(self, consumer: Consumer):
+        self._inner = consumer
+
+    {% for op in ops if op.action == "receive" %}
+    {%- set in_type = op.input_types | join(" | ") -%}
+    {%- set out_type = op.output_types | join(" | ") if op.output_types else "None" -%}
+    {%- set callback_type = "Callable[["+ in_type + "], Awaitable[" + out_type + "]" + "]" -%}
+    {%- set routing_key_literal = '"' + op.routing_key + '"' if op.routing_key else "None" -%}
+    def {{ op.field_name }}(self, callback: {{ callback_type }}) -> None:
+        self._inner.on(
+            params=MessageHandlerParams.model_validate(
+                {%- if op.exchange %}
+                params={
+                    "kind": "exchange", 
+                    "type": "fanout",
+                    "name": "{{ op.exchange }}",
+                    "routing_key": {{ routing_key_literal }},
+                }
+                {%- else %}
+                {"kind": "queue", "name": "{{op.routing_key}}"}
+                {%- endif %}
+            ),
+            input_type={{in_type}},
+            output_type={{out_type}},
+            callback=callback,
+        )
     {% endfor %}
