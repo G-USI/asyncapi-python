@@ -1,0 +1,57 @@
+asyncapi: "3.0.0"
+info:
+  title: Common part of the Ping-Pong service example
+  version: 1.0.0
+
+channels:
+  ping:
+    address: /ping
+    messages:
+      ping:
+        $ref: "#/components/messages/ping"
+  pong:
+    address: null
+    messages:
+      pong:
+        $ref: "#/components/messages/pong"
+
+components:
+  messages:
+    ping:
+      headers:
+        type: object
+        properties:
+          replyTo:
+            type: string
+            description: Provide path to which reply must be provided
+          requestId:
+            type: string
+            format: uuid
+            description: Provide request id that you will use to identify the reply match
+      payload:
+        type: object
+        properties:
+          event:
+            type: string
+            const: ping
+      correlationId:
+        $ref: "#/components/correlationIds/pingCorrelationId"
+    pong:
+      headers:
+        type: object
+        properties:
+          requestId:
+            type: string
+            format: uuid
+            description: Reply message must contain id of the request message
+      payload:
+        type: object
+        properties:
+          event:
+            type: string
+            const: pong
+      correlationId:
+        $ref: "#/components/correlationIds/pingCorrelationId"
+  correlationIds:
+    pingCorrelationId:
+      location: "$message.header#/requestId"

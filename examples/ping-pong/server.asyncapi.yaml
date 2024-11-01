@@ -1,0 +1,11 @@
+asyncapi: "3.0.0"
+info:
+  title: Server part of the Ping-Pong service example
+  version: 1.0.0
+
+operations:
+  onPingRequest:
+    action: receive
+    channel: { $ref: "./common.asyncapi.yaml#/channels/ping" }
+    reply:
+      channel: { $ref: "./common.asyncapi.yaml#/channels/pong" }
