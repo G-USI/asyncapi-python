@@ -23,7 +23,17 @@ def generate(
     doc = load_document(input_path)
     models = get_models(doc)
     ops = get_operations(doc, models)
-    result.update({output_path / p: s for p, s in generate_application(ops).items()})
+    result.update(
+        {
+            output_path / p: s
+            for p, s in generate_application(
+                ops,
+                doc.info.title,
+                doc.info.description,
+                doc.info.version,
+            ).items()
+        }
+    )
     result[output_path / "models.py"] = generate_models(models)
 
     return result
@@ -47,10 +57,13 @@ class JsonSchema(TypedDict):
 
 def generate_application(
     ops: list[Operation],
+    title: str,
+    description: str | None,
+    version: str,
     template_dir: Path = Path(__file__).parent / "templates",
     filenames: list[str] = ["__init__.py", "application.py"],
 ) -> dict[str, str]:
-    render_args = dict(ops=ops)
+    render_args = dict(ops=ops, title=title, description=description, version=version)
     with ExitStack() as s:
         paths = (template_dir / f"{f}.j2" for f in filenames)
         contents = (s.enter_context(f.open()).read() for f in paths)

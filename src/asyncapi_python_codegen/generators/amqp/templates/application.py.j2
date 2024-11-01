@@ -5,7 +5,12 @@ from typing import Callable, Awaitable
 
 
 class Application(BaseApplication):
-    """TODO: Render asyncapi docs here"""
+    """{{ title }}
+    
+    {{ description }}
+
+    Version: {{ version }}
+    """
 
     def __init__(self, amqp_uri: str):
         super().__init__(amqp_uri)
