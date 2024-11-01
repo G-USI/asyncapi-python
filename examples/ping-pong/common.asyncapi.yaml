@@ -18,40 +18,16 @@ channels:
 components:
   messages:
     ping:
-      headers:
-        type: object
-        properties:
-          replyTo:
-            type: string
-            description: Provide path to which reply must be provided
-          requestId:
-            type: string
-            format: uuid
-            description: Provide request id that you will use to identify the reply match
       payload:
         type: object
         properties:
           event:
             type: string
             const: ping
-      correlationId:
-        $ref: "#/components/correlationIds/pingCorrelationId"
     pong:
-      headers:
-        type: object
-        properties:
-          requestId:
-            type: string
-            format: uuid
-            description: Reply message must contain id of the request message
       payload:
         type: object
         properties:
           event:
             type: string
             const: pong
-      correlationId:
-        $ref: "#/components/correlationIds/pingCorrelationId"
-  correlationIds:
-    pingCorrelationId:
-      location: "$message.header#/requestId"
