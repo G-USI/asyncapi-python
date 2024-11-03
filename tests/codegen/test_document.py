@@ -13,15 +13,13 @@ import yaml
     ],
 )
 def test_document_loads_example(example: str):
-    with (Path("examples") / example).open() as f:
-        Document.model_validate(yaml.safe_load(f))
+    Document.load_yaml(Path("examples") / example)
 
 
 @pytest.mark.parametrize("example", ["amqp-ping-pong.yaml"])
 def test_document_follows_ref(example: str):
     path = Path("examples") / example
-    with path.open() as f:
-        doc = Document.model_validate(yaml.safe_load(f))
+    doc = Document.load_yaml(path)
     doc.operations["pingRequest"].channel.get(partial(context_function, path))
 
 

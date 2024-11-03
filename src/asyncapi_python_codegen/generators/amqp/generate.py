@@ -19,8 +19,7 @@ def generate(
     output_path: Path,
 ) -> dict[Path, str]:
     result: dict[Path, str] = {}
-
-    doc = load_document(input_path)
+    doc = Document.load_yaml(input_path)
     models = get_models(doc)
     ops = get_operations(doc, models)
     result.update(
@@ -187,8 +186,3 @@ def get_models(doc: Document) -> list[JsonSchema]:
             message_schemas
         )
     )
-
-
-def load_document(input_path: Path) -> Document:
-    with input_path.open() as f:
-        return Document.model_validate(yaml.safe_load(f))
