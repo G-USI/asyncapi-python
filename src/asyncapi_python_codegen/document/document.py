@@ -24,7 +24,7 @@ class Document(BaseModel):
     def load_yaml(cls, path: Path) -> Self:
         with path.open() as file:
             raw_doc = yaml.safe_load(file)
-        raw_doc["filepath"] = path
+        raw_doc["filepath"] = path.absolute()
         return cls.model_validate(raw_doc)
 
     def local_context(self, path: str) -> Any:

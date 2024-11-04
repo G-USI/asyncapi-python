@@ -13,7 +13,8 @@ import yaml
     ],
 )
 def test_document_loads_example(example: str):
-    Document.load_yaml(Path("examples") / example)
+    doc = Document.load_yaml(path := Path("examples") / example)
+    assert doc.filepath == path.absolute()
 
 
 @pytest.mark.parametrize("example", ["amqp-ping-pong.yaml"])
