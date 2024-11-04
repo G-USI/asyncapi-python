@@ -17,11 +17,14 @@ def test_document_loads_example(example: str):
     assert doc.filepath == path.absolute()
 
 
-@pytest.mark.parametrize("example", ["amqp-ping-pong.yaml"])
+@pytest.mark.parametrize(
+    "example", ["amqp-ping-pong.yaml", "ping-pong/client.asyncapi.yaml"]
+)
 def test_document_follows_ref(example: str):
     path = Path("examples") / example
     doc = Document.load_yaml(path)
-    doc.operations["pingRequest"].channel.get(partial(context_function, path))
+    channel = doc.operations["pingRequest"].channel.get()
+    assert channel.address == "/ping"
 
 
 def context_function(yaml_file: Path, path: str):

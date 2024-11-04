@@ -1,15 +1,17 @@
 from __future__ import annotations
-from functools import cache
 from pathlib import Path
 
 from pydantic import Field
 from .base import BaseModel
 from typing import Annotated, Any, Literal
-from typing_extensions import Self
 import yaml
 from .bindings import Bindings
 from .components import Components, Message
 from .ref import MaybeRef, Ref
+from .document_context import set_current_doc_path
+
+
+DOCUMENT_CACHE: dict[Path, Document] = {}
 
 
 class Document(BaseModel):
@@ -20,20 +22,19 @@ class Document(BaseModel):
     operations: dict[str, Operation] = {}
     components: Components = Components()
 
-    @classmethod
-    def load_yaml(cls, path: Path) -> Self:
+    @staticmethod
+    def load_yaml(path: Path) -> "Document":
+        path = path.absolute()
+        if path in DOCUMENT_CACHE:
+            print("REUSING CACHE")
+            return DOCUMENT_CACHE[path]
         with path.open() as file:
             raw_doc = yaml.safe_load(file)
         raw_doc["filepath"] = path.absolute()
-        return cls.model_validate(raw_doc)
-
-    def local_context(self, path: str) -> Any:
-        res = self.model_dump(by_alias=True)
-        h, *paths = path.split("/")
-        if h != "#":
-            raise ValueError("local context function got non-local request: {path}")
-        *_, res = (res := res[p] for p in paths)
-        return res
+        with set_current_doc_path(path):
+            doc = Document.model_validate(raw_doc)
+        DOCUMENT_CACHE[path] = doc
+        return doc
 
 
 class Info(BaseModel):
@@ -57,7 +58,7 @@ class Operation(BaseModel):
 
 
 class OperationReply(BaseModel):
-    address: ReplyAddress
+    address: ReplyAddress | None = None
     channel: Ref[Channel]
 
 

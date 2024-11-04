@@ -1,8 +1,13 @@
 from pathlib import Path
 from pydantic._internal._generics import get_args  # TODO: Internal API, this may break
-from pydantic import BeforeValidator, Field, ValidationInfo, model_validator
+from pydantic import Field, model_validator
 from .base import BaseModel, RootModel
-from typing import Any, Callable, Generic, TypeVar, Annotated, cast, TYPE_CHECKING
+from .document_context import (
+    current_doc_path,
+    set_current_doc_path,
+    DOCUMENT_CONTEXT_STACK,
+)
+from typing import Any, Callable, Generic, TypeVar, Annotated
 
 
 T = TypeVar("T", bound=BaseModel)
@@ -12,34 +17,58 @@ ContextFunction = Callable[[str], Any]
 
 
 class Ref(BaseModel, Generic[T]):
-    ref: Annotated[str, Field(alias="$ref")]
-    filepath: Path | None
-    doc_path: tuple[str, ...]
+    ref: Annotated[
+        str,
+        Field(
+            alias="$ref",
+            serialization_alias="$ref",
+            validation_alias="$ref",
+        ),
+    ]
+    filepath: Annotated[Path, Field(exclude=True)]
+    doc_path: Annotated[tuple[str, ...], Field(exclude=True)]
 
     @classmethod
     def type(cls) -> type[T]:
         return get_args(cls)[0]
 
-    def get(self, context: ContextFunction) -> T:
-        return self.type().model_validate(context(self.ref))
+    def get(self) -> T:
+        from .document import Document
+
+        doc = Document.load_yaml(self.filepath).model_dump()
+        for p in self.doc_path:
+            doc = doc[p]
+
+        with set_current_doc_path(self.filepath):
+            return self.type().model_validate(doc)
 
     @model_validator(mode="before")
     @classmethod
     def parse_ref(cls, data: Any) -> Any:
+        fp: str | Path
+
         match data:
-            case {"$ref": ref} if isinstance(ref, str):
+            case {"ref": ref} | {"$ref": ref} if isinstance(ref, str):
                 match ref.split("#"):
+                    case "", dp:
+                        fp = current_doc_path()
+                    case fp, dp if not Path(fp).is_absolute():
+                        fp = current_doc_path().parent / fp
                     case fp, dp:
                         ...
-                    case dp,:
-                        fp = "/"
+
             case x:
                 raise ValueError(f"Requires {{$ref: ... }}, given {x} ")
-        return {**data, "doc_path": dp.split("/")[1:], "filepath": Path(fp).absolute()}
+        return {
+            **data,
+            "$ref": ref,
+            "doc_path": dp.split("/")[1:],
+            "filepath": Path(fp).absolute(),
+        }
 
 
 class MaybeRef(RootModel[Ref[T] | T], Generic[T]):
     root: Ref[T] | T
 
-    def get(self, context: ContextFunction) -> T:
-        return self.root.get(context) if isinstance(self.root, Ref) else self.root
+    def get(self) -> T:
+        return self.root.get() if isinstance(self.root, Ref) else self.root

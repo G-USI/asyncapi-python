@@ -77,7 +77,7 @@ def get_operations(
     result: list[Operation] = []
     for name, op in doc.operations.items():
         action = op.action
-        channel = op.channel.get(doc.local_context)
+        channel = op.channel.get()
 
         # Get channel properties
         exchange: str | None
@@ -102,7 +102,7 @@ def get_operations(
 
         # Get reply channel properties
         if has_reply := op.reply is not None:
-            reply_ch = op.reply.channel.get(doc.local_context)
+            reply_ch = op.reply.channel.get()
             if reply_ch.address:
                 raise NotImplementedError(
                     "Reply channel with static address is not supported"
@@ -145,7 +145,9 @@ def get_channel_message_types(
             raise NotImplementedError(
                 "Inline message schemas are not supported right now, use $ref inside channels"
             )
-        if not (name := next(m["name"] for m in models if m_ref.root.ref == m["path"])):
+
+        name = next((m["name"] for m in models if m_ref.root.ref == m["path"]), None)
+        if not name:
             raise AssertionError(
                 f"Channel declares message ref {m_ref.root.ref} that has "
                 + "not been captured by data model generator"
