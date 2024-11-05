@@ -46,7 +46,6 @@ async def test_message_handler(
         await req_queue.consume(handler)
     await asyncio.sleep(0.5)
     assert surnames == ["Doe"] * 3
-    print(surnames)
 
 
 @pytest.mark.asyncio

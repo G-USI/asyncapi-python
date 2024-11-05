@@ -42,7 +42,6 @@ class Ref(BaseModel, Generic[T]):
         with set_current_doc_path(self.filepath):
             if "$ref" in doc:
                 return self.__class__.model_validate(doc).get()
-            print(doc)
             return self.type().model_validate(doc)
 
     @model_validator(mode="before")
