@@ -1,6 +1,7 @@
+from functools import cache
 from pathlib import Path
 from pydantic._internal._generics import get_args  # TODO: Internal API, this may break
-from pydantic import Field, model_validator
+from pydantic import ConfigDict, Field, model_validator
 from .base import BaseModel, RootModel
 from .document_context import (
     current_doc_path,
@@ -17,6 +18,8 @@ ContextFunction = Callable[[str], Any]
 
 
 class Ref(BaseModel, Generic[T]):
+    model_config = ConfigDict(frozen=True)
+
     ref: Annotated[
         str,
         Field(
@@ -32,6 +35,7 @@ class Ref(BaseModel, Generic[T]):
     def type(cls) -> type[T]:
         return get_args(cls)[0]
 
+    @cache
     def get(self) -> T:
         from .document import Document
 
