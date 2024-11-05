@@ -35,11 +35,14 @@ class Ref(BaseModel, Generic[T]):
     def get(self) -> T:
         from .document import Document
 
-        doc = Document.load_yaml(self.filepath).model_dump()
+        doc = Document.load_yaml(self.filepath).model_dump(by_alias=True)
         for p in self.doc_path:
             doc = doc[p]
 
         with set_current_doc_path(self.filepath):
+            if "$ref" in doc:
+                return self.__class__.model_validate(doc).get()
+            print(doc)
             return self.type().model_validate(doc)
 
     @model_validator(mode="before")

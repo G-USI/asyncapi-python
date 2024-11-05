@@ -1,11 +1,14 @@
 from __future__ import annotations
+
 from .base import BaseModel
-from typing import Any
-from .ref import MaybeRef
+from typing import Any, Literal
+from .ref import MaybeRef, Ref
+from .bindings import Bindings
 
 
 class Components(BaseModel):
-    messages: dict[str, Message] = {}
+    operations: dict[str, MaybeRef[Operation]] = {}
+    messages: dict[str, MaybeRef[Message]] = {}
     correlation_ids: dict[str, CorrelationId] = {}
 
 
@@ -24,3 +27,27 @@ class Message(BaseModel):
 class CorrelationId(BaseModel):
     description: str | None = None
     location: str
+
+
+class Operation(BaseModel):
+    action: Literal["receive", "send"]
+    channel: Ref[Channel]
+    reply: OperationReply | None = None
+
+
+class OperationReply(BaseModel):
+    address: ReplyAddress | None = None
+    channel: Ref[Channel]
+
+
+class ReplyAddress(BaseModel):
+    description: str | None = None
+    location: str
+
+
+class Channel(BaseModel):
+    address: str | None = None
+    title: str | None = None
+    description: str | None = None
+    bindings: Bindings | None = None
+    messages: dict[str, MaybeRef[Message]]
