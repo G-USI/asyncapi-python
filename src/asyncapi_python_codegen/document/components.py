@@ -8,6 +8,7 @@ from .bindings import Bindings
 
 class Components(BaseModel):
     operations: dict[str, MaybeRef[Operation]] = {}
+    channels: dict[str, MaybeRef[Channel]] = {}
     messages: dict[str, MaybeRef[Message]] = {}
     correlation_ids: dict[str, CorrelationId] = {}
 
