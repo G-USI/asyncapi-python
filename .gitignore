@@ -1,5 +1,6 @@
 ### Project-specific ###
 .vscode
+.poetry.lock
 
 # Created by https://www.toptal.com/developers/gitignore/api/windows,linux,macos,vim,emacs,visualstudiocode,jetbrains+all,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=windows,linux,macos,vim,emacs,visualstudiocode,jetbrains+all,python
