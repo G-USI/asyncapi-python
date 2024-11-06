@@ -16,9 +16,9 @@ class Application(BaseApplication):
         super().__init__(amqp_uri)
         self.consumer = ConsumerWrapper(self._consumer, check_impl)
 
-    async def start(self):
+    async def start(self, blocking: bool = True):
         await self.consumer.start()
-        await super().start()
+        await super().start(blocking=blocking)
     
     {% for op in ops if op.action == "send" -%}
     {%- set in_type = op.input_types | join(" | ") -%}
@@ -43,11 +43,11 @@ class ConsumerWrapper:
         self._inner = consumer
         self._check_impl = check_impl
         self._impls: set[str] = set()
-        self._required_impls = {
+        self._required_impls: set[str] = set([
             {%- for op in ops if op.action == "receive" %}
             "{{ op.field_name }}",
             {%- endfor %}
-        }
+        ])
     
     async def start(self):
         if not self._check_impl:

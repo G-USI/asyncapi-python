@@ -34,9 +34,13 @@ class BaseApplication(ABC):
                 + "occurred before {cls_name}::start"
             )
 
-    async def start(self):
+    async def start(self, blocking: bool = True):
         async with self._pool.acquire() as ch:
             reply_queue = await ch.declare_queue(exclusive=True)
             self._producer = Producer(self._pool, reply_queue)
+            await self._producer.run()
             self._has_started = True
-        await self._consumer.run_blocking(timeout=None)
+        if blocking:
+            await self._consumer.run_blocking(timeout=None)
+        else:
+            await self._consumer.run()
