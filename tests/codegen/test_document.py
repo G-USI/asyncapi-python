@@ -8,8 +8,8 @@ import yaml
 @pytest.mark.parametrize(
     "example",
     [
-        "amqp-basic.yaml",
-        "amqp-ping-pong.yaml",
+        "ping-pong/server.asyncapi.yaml",
+        "ping-pong/client.asyncapi.yaml",
     ],
 )
 def test_document_loads_example(example: str):
@@ -18,12 +18,16 @@ def test_document_loads_example(example: str):
 
 
 @pytest.mark.parametrize(
-    "example", ["amqp-ping-pong.yaml", "ping-pong/client.asyncapi.yaml"]
+    "example,op_key",
+    [
+        ["ping-pong/server.asyncapi.yaml", "onPingRequest"],
+        ["ping-pong/client.asyncapi.yaml", "pingRequest"],
+    ],
 )
-def test_document_follows_ref(example: str):
+def test_document_follows_ref(example: str, op_key: str):
     path = Path("examples") / example
     doc = Document.load_yaml(path)
-    channel = doc.operations["pingRequest"].channel.get()
+    channel = doc.operations[op_key].get().channel.get()
     assert channel.address == "/ping"
 
 

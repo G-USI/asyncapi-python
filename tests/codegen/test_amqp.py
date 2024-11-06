@@ -3,7 +3,13 @@ from pathlib import Path
 import pytest
 
 
-@pytest.mark.parametrize("example", ["amqp-ping-pong.yaml"])
+@pytest.mark.parametrize(
+    "example",
+    [
+        "ping-pong/client.asyncapi.yaml",
+        "ping-pong/server.asyncapi.yaml",
+    ],
+)
 def test_generate(tmp_path: Path, example: str):
     input_path = Path("examples") / example
     result = generate(input_path=input_path, output_path=tmp_path)
