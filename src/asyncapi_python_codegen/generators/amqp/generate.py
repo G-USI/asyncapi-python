@@ -20,7 +20,9 @@ def generate(
     channels = (v.channel.get() for v in all_ops.values())
     reply_channels = (v.reply.channel.get() for v in all_ops.values() if v.reply)
     all_channels = chain(channels, reply_channels)
-    all_message_payloads = (m.get() for c in all_channels for m in c.messages.values())
+    all_message_payloads = (
+        m.get().payload for c in all_channels for m in c.messages.values()
+    )
     print(list(all_message_payloads))
 
     return {}
