@@ -26,10 +26,12 @@
 						"file:///workspaces/asyncapi-python/examples/*.yaml"
 					]
 				},
-				"cSpell.words": [
+				"cSpell.ignoreWords": [
 					"asyncapi",
 					"codegen",
-					"devcontainer"
+					"devcontainer",
+					"pydantic",
+					"datamodel"
 				]
 			}
 		}
