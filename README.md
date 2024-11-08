@@ -30,17 +30,15 @@ You can replace `amqp` with any other supported protocols. For more info, see [S
 
 Below, you may see the table of protocols and the supported use cases. The tick signs (✅) contain links to the examples for each implemented protocol-use case.
 
-| Use Case   | AMQP                             |
-| ---------- | -------------------------------- |
-| Pub-Sub    | [✅](./examples/amqp-rpc)        |
-| Work Queue | [✅](./examples/amqp-work-queue) |
-| RPC        | [✅](./examples/amqp-ping-pong)  |
-
-## Quick Start
+| Use Case   | AMQP                                             |
+| ---------- | ------------------------------------------------ |
+| Pub-Sub    | [✅ amqp-pub-sub](./examples/amqp-rpc)           |
+| Work Queue | [✅ amqp-work-queue](./examples/amqp-work-queue) |
+| RPC        | [✅ amqp-rpc](./examples/amqp-ping-pong)         |
 
 ## Documentation
 
-For detailed documentation and examples, see the `examples` directory in the repository.
+A set of examples is available under the [examples](./examples/) directory.
 
 ## Contributing
 
