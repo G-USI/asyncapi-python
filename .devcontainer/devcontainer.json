@@ -17,14 +17,20 @@
 				"ms-python.isort",
 				"redhat.vscode-yaml",
 				"streetsidesoftware.code-spell-checker",
-				"asyncapi.asyncapi-preview"
+				"asyncapi.asyncapi-preview",
+				"DavidAnson.vscode-markdownlint"
 			],
 			"settings": {
 				"yaml.schemas": {
 					"https://asyncapi.com/schema-store/3.0.0-without-$id.json": [
 						"file:///workspaces/asyncapi-python/examples/*.yaml"
 					]
-				}
+				},
+				"cSpell.words": [
+					"asyncapi",
+					"codegen",
+					"devcontainer"
+				]
 			}
 		}
 	}
