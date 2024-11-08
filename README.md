@@ -16,6 +16,19 @@ A command line interface to generate Python code from AsyncAPI specifications. T
 - [ ] AsyncAPI trait support
 - [ ] Customizable message encoder/decoder
 
+## Requirements
+
+- `python>=3.10`
+- `pydantic>=2`
+- `pytz`
+- For `codegen` extra
+  - `jinja2`
+  - `typer`
+  - `datamodel-code-generator`
+  - `pyyaml`
+- For `amqp` extra
+  - `aio-pika`
+
 ## Installation
 
 For code generation (development env), run:
