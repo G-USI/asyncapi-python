@@ -21,8 +21,8 @@ import pytest
 @pytest.mark.parametrize(
     "example",
     [
-        "ping-pong/client.asyncapi.yaml",
-        "ping-pong/server.asyncapi.yaml",
+        "amqp-rpc/spec/client.asyncapi.yaml",
+        "amqp-rpc/spec/server.asyncapi.yaml",
     ],
 )
 def test_generate(tmp_path: Path, example: str):

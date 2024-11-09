@@ -23,8 +23,8 @@ import yaml
 @pytest.mark.parametrize(
     "example",
     [
-        "ping-pong/server.asyncapi.yaml",
-        "ping-pong/client.asyncapi.yaml",
+        "amqp-rpc/spec/client.asyncapi.yaml",
+        "amqp-rpc/spec/server.asyncapi.yaml",
     ],
 )
 def test_document_loads_example(example: str):
@@ -35,8 +35,8 @@ def test_document_loads_example(example: str):
 @pytest.mark.parametrize(
     "example,op_key",
     [
-        ["ping-pong/server.asyncapi.yaml", "onPingRequest"],
-        ["ping-pong/client.asyncapi.yaml", "pingRequest"],
+        ["amqp-rpc/spec/server.asyncapi.yaml", "onPingRequest"],
+        ["amqp-rpc/spec/client.asyncapi.yaml", "pingRequest"],
     ],
 )
 def test_document_follows_ref(example: str, op_key: str):
