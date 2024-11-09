@@ -2,7 +2,7 @@
 
 [Link to this github repository](https://github.com/G-USI/asyncapi-python)
 
-Generate type-safe and async Python applications from AsyncAPI 3 specifications.
+Easily generate type-safe and async Python applications from AsyncAPI 3 specifications.
 
 ## Features
 

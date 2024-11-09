@@ -2,7 +2,7 @@
 name = "asyncapi-python"
 version = "0.1.0"
 license = "Apache-2.0"
-description = ""
+description = "Easily generate type-safe and async Python applications from AsyncAPI 3 specifications."
 authors = ["Yaroslav Petrov <yaroslav.v.petrov@gmail.com>"]
 readme = "README.md"
 packages = [
