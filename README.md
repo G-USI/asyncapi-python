@@ -51,9 +51,9 @@ Below, you may see the table of protocols and the supported use cases. The tick 
 
 | Use Case   | AMQP                                             |
 | ---------- | ------------------------------------------------ |
-| Pub-Sub    | [✅ amqp-pub-sub](./examples/amqp-rpc)           |
+| Pub-Sub    | [✅ amqp-pub-sub](./examples/pub-sub)            |
 | Work Queue | [✅ amqp-work-queue](./examples/amqp-work-queue) |
-| RPC        | [✅ amqp-rpc](./examples/amqp-ping-pong)         |
+| RPC        | [✅ amqp-rpc](./examples/amqp-rpc)               |
 
 ## Documentation
 
