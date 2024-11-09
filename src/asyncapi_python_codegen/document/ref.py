@@ -24,6 +24,7 @@ from .document_context import (
     DOCUMENT_CONTEXT_STACK,
 )
 from typing import Any, Callable, Generic, TypeVar, Annotated
+from typing_extensions import Self
 
 
 T = TypeVar("T", bound=BaseModel)
@@ -54,14 +55,28 @@ class Ref(BaseModel, Generic[T]):
     def get(self) -> T:
         from .document import Document
 
-        doc = Document.load_yaml(self.filepath).model_dump(by_alias=True)
+        sub = self.flatten()
+        doc = Document.load_yaml(sub.filepath).model_dump(by_alias=True)
         for p in self.doc_path:
             doc = doc[p]
+        with set_current_doc_path(sub.filepath):
+            return sub.type().model_validate(doc)
 
-        with set_current_doc_path(self.filepath):
-            if "$ref" in doc:
-                return self.__class__.model_validate(doc).get()
-            return self.type().model_validate(doc)
+    @cache
+    def flatten(self, max_depth: int = 1000) -> Self:
+        from .document import Document
+
+        sub = self
+        for _ in range(max_depth):
+            doc = Document.load_yaml(sub.filepath).model_dump(by_alias=True)
+            for p in sub.doc_path:
+                doc = doc[p]
+            if not "$ref" in doc:
+                return sub
+            sub = self.__class__.model_validate(doc)
+        raise RecursionError(
+            f"Document Ref[{self.type().__class__}] flattening limit reached"
+        )
 
     @model_validator(mode="before")
     @classmethod
