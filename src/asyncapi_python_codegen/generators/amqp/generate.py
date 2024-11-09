@@ -46,7 +46,7 @@ def generate(
             doc.info.description,
             doc.info.version,
         ).items()
-    } | {output_path / "models.py": generate_models(ops)}
+    } | {output_path / "models.py": generate_models(ops, doc.filepath.parent)}
 
 
 def generate_application(
@@ -65,7 +65,7 @@ def generate_application(
         return {f: t.render(**render_args) for t, f in zip(templates, filenames)}
 
 
-def generate_models(schemas: list[Operation]) -> str:
+def generate_models(schemas: list[Operation], cwd: Path) -> str:
     args = """datamodel-codegen
     --output-model-type pydantic_v2.BaseModel
     --input-file-type jsonschema
@@ -74,7 +74,7 @@ def generate_models(schemas: list[Operation]) -> str:
     inp = {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "$defs": {
-            type_name: type_schema
+            type_name: {"$ref": type_schema}
             for s in schemas
             for type_name, type_schema in chain(
                 zip(s["input_types"], s["input_schemas"]),
@@ -82,9 +82,25 @@ def generate_models(schemas: list[Operation]) -> str:
             )
         },
     }
-    return subprocess.run(
-        args=args, capture_output=True, check=True, input=json.dumps(inp).encode()
-    ).stdout.decode()
+
+    str_inp = json.dumps(inp)
+    res = subprocess.run(
+        args=args,
+        capture_output=True,
+        check=False,
+        input=str_inp.encode(),
+        cwd=cwd,
+    )
+
+    if res.returncode:
+        raise AssertionError(
+            "Failed to generate datamodel:\n\n"
+            + f"{res.stderr.decode()} \n\n"
+            + "The subprocess got input:\n\n"
+            + str_inp
+        )
+
+    return res.stdout.decode()
 
 
 def get_operation(op_name: str, op: d.Operation) -> Operation:
@@ -124,28 +140,50 @@ def get_operation(op_name: str, op: d.Operation) -> Operation:
                     "As of now, reply channel must be a queue without name"
                 )
 
+    input_types: list[str] = []
+    input_schemas: list[str] = []
+    output_types: list[str] = []
+    output_schemas: list[str] = []
+
+    for message_key, message in channel.messages.items():
+
+        match message.root:
+            case d.Ref():
+                msg_ref = message.root.flatten()
+                msg_filepath = msg_ref.filepath
+                msg_doc_path = msg_ref.doc_path
+                del msg_ref
+            case d.Message():
+                msg_filepath = op.channel.filepath
+                msg_doc_path = (*op.channel.doc_path, "messages", message_key)
+
+        message_payload = message.get().payload.root
+        match message_payload:
+            case d.Ref():
+                payload_ref = message_payload.flatten()
+                pl_filepath = payload_ref.filepath
+                pl_doc_path = payload_ref.doc_path
+                del payload_ref
+            case d.JsonSchema():
+                pl_filepath = msg_filepath
+                pl_doc_path = (*msg_doc_path, "payload")
+
+        input_types.append(message.get().title or message_key)
+        input_schemas.append(str(pl_filepath) + "#/" + "/".join(pl_doc_path))
+
+    if reply_channel:
+        for message_key, message in reply_channel.messages.items():
+            raise NotImplementedError
+
     return {
         "field_name": snake_case(op_name),
         "action": op.action,
         "exchange": exchange,
         "routing_key": routing_key,
-        "input_types": [msg.get().title for msg in channel.messages.values()],
-        "input_schemas": [
-            msg.get().payload.get().model_dump() for msg in channel.messages.values()
-        ],
-        "output_types": (
-            [msg.get().title for msg in reply_channel.messages.values()]
-            if reply_channel
-            else []
-        ),
-        "output_schemas": (
-            [
-                msg.get().payload.get().model_dump()
-                for msg in reply_channel.messages.values()
-            ]
-            if reply_channel
-            else []
-        ),
+        "input_types": input_types,
+        "input_schemas": input_schemas,
+        "output_types": output_types,
+        "output_schemas": output_schemas,
     }
 
 
@@ -156,5 +194,5 @@ class Operation(TypedDict):
     routing_key: str | None
     input_types: list[str]
     output_types: list[str]
-    input_schemas: list[Any]
-    output_schemas: list[Any]
+    input_schemas: list[str]
+    output_schemas: list[str]

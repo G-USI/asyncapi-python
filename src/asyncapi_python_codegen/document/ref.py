@@ -69,8 +69,14 @@ class Ref(BaseModel, Generic[T]):
         sub = self
         for _ in range(max_depth):
             doc = Document.load_yaml(sub.filepath).model_dump(by_alias=True)
-            for p in sub.doc_path:
-                doc = doc[p]
+            try:
+                for p in sub.doc_path:
+                    doc = doc[p]
+            except KeyError as e:
+                raise KeyError(
+                    f"$ref `{sub.ref}` is invalid \n"
+                    + f"The Error was raised when trying to get key {e.args}"
+                )
             if not "$ref" in doc:
                 return sub
             sub = self.__class__.model_validate(doc)

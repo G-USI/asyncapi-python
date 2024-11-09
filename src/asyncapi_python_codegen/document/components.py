@@ -15,9 +15,7 @@
 
 from __future__ import annotations
 
-from pydantic import model_validator
-
-from .base import BaseModel
+from .base import BaseModel, RootModel
 from typing import Any, Literal
 from .ref import MaybeRef, Ref
 from .bindings import Bindings
@@ -28,13 +26,12 @@ class Components(BaseModel):
     channels: dict[str, MaybeRef[Channel]] = {}
     messages: dict[str, MaybeRef[Message]] = {}
     correlation_ids: dict[str, CorrelationId] = {}
+    schemas: dict[str, MaybeRef[JsonSchema]] = {}
 
 
-class JsonSchema(BaseModel):
+class JsonSchema(RootModel):
     # TODO: Create a better parser for JsonSchema
-    type: str
-    properties: dict[str, Any]
-    required: list[str] = []
+    root: Any
 
 
 class Message(BaseModel):
