@@ -38,20 +38,9 @@ class JsonSchema(BaseModel):
 
 
 class Message(BaseModel):
-    title: str
+    title: str | None = None
     headers: MaybeRef[JsonSchema] | None = None
     payload: MaybeRef[JsonSchema]
-
-    @model_validator(mode="before")
-    @classmethod
-    def has_title(cls, data: dict[str, Any]):
-        if not "title" in data:
-            raise AssertionError(
-                "As of now, all Message objects require "
-                + "`title` field to be present to uniquely identify data types. "
-                + "This limitation will be removed in the future."
-            )
-        return data
 
 
 class CorrelationId(BaseModel):
