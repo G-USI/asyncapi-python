@@ -31,7 +31,9 @@
 					"codegen",
 					"devcontainer",
 					"pydantic",
-					"datamodel"
+					"datamodel",
+					"amqp",
+					"venv"
 				]
 			}
 		}
