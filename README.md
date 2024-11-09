@@ -1,6 +1,8 @@
 # AsyncAPI Python Code Generator
 
-A command line interface to generate Python code from AsyncAPI specifications. This tool helps you automatically create Python implementations of AsyncAPI services, reducing boilerplate code and ensuring consistency with your API specifications.
+[Link to this github repository](https://github.com/G-USI/asyncapi-python)
+
+Generate type-safe and async Python applications from AsyncAPI 3 specifications.
 
 ## Features
 
