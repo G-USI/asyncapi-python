@@ -140,13 +140,43 @@ def get_operation(op_name: str, op: d.Operation) -> Operation:
                     "As of now, reply channel must be a queue without name"
                 )
 
-    input_types: list[str] = []
-    input_schemas: list[str] = []
-    output_types: list[str] = []
-    output_schemas: list[str] = []
+    input_types: list[str]
+    input_schemas: list[str]
+    output_types: list[str]
+    output_schemas: list[str]
 
+    input_types, input_schemas = get_channel_types(
+        channel, op.channel.filepath, op.channel.doc_path
+    )
+    output_types, output_schemas = (
+        get_channel_types(
+            op.reply.channel.get(),
+            op.reply.channel.filepath,
+            op.reply.channel.doc_path,
+        )
+        if op.reply
+        else ([], [])
+    )
+
+    return {
+        "field_name": snake_case(op_name),
+        "action": op.action,
+        "exchange": exchange,
+        "routing_key": routing_key,
+        "input_types": input_types,
+        "input_schemas": input_schemas,
+        "output_types": output_types,
+        "output_schemas": output_schemas,
+    }
+
+
+def get_channel_types(
+    channel: d.Channel,
+    channel_filepath: Path,
+    channel_doc_path: tuple[str, ...],
+) -> tuple[list[str], list[str]]:
+    types, schemas = [], []
     for message_key, message in channel.messages.items():
-
         match message.root:
             case d.Ref():
                 msg_ref = message.root.flatten()
@@ -154,8 +184,8 @@ def get_operation(op_name: str, op: d.Operation) -> Operation:
                 msg_doc_path = msg_ref.doc_path
                 del msg_ref
             case d.Message():
-                msg_filepath = op.channel.filepath
-                msg_doc_path = (*op.channel.doc_path, "messages", message_key)
+                msg_filepath = channel_filepath
+                msg_doc_path = (*channel_doc_path, "messages", message_key)
 
         message_payload = message.get().payload.root
         match message_payload:
@@ -168,23 +198,10 @@ def get_operation(op_name: str, op: d.Operation) -> Operation:
                 pl_filepath = msg_filepath
                 pl_doc_path = (*msg_doc_path, "payload")
 
-        input_types.append(message.get().title or message_key)
-        input_schemas.append(str(pl_filepath) + "#/" + "/".join(pl_doc_path))
+        types.append(message.get().title or message_key)
+        schemas.append(str(pl_filepath) + "#/" + "/".join(pl_doc_path))
 
-    if reply_channel:
-        for message_key, message in reply_channel.messages.items():
-            raise NotImplementedError
-
-    return {
-        "field_name": snake_case(op_name),
-        "action": op.action,
-        "exchange": exchange,
-        "routing_key": routing_key,
-        "input_types": input_types,
-        "input_schemas": input_schemas,
-        "output_types": output_types,
-        "output_schemas": output_schemas,
-    }
+    return types, schemas
 
 
 class Operation(TypedDict):
