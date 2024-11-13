@@ -19,7 +19,7 @@ import json
 from pathlib import Path
 import subprocess
 import jinja2 as j2
-from typing import Any, Literal, TypedDict
+from typing import Literal, Optional, TypedDict
 from asyncapi_python_codegen import document as d
 from itertools import chain
 
@@ -52,7 +52,7 @@ def generate(
 def generate_application(
     ops: list[Operation],
     title: str,
-    description: str | None,
+    description: Optional[str],
     version: str,
     template_dir: Path = Path(__file__).parent / "templates",
     filenames: list[str] = ["__init__.py", "application.py"],
@@ -104,25 +104,25 @@ def generate_models(schemas: list[Operation], cwd: Path) -> str:
 
 
 def get_operation(op_name: str, op: d.Operation) -> Operation:
-    exchange: str | None
-    routing_key: str | None
+    exchange: Optional[str]
+    routing_key: Optional[str]
 
     channel = op.channel.get()
     reply_channel = op.reply.channel.get() if op.reply else None
     addr = lambda x: x or channel.address or op_name
-    match channel.bindings:
-        case None:
-            # Default exchange + named queues
-            exchange = None
-            routing_key = addr(None)
-        case bind if bind.amqp.root.type == "queue":
-            # Default exchange + named queues
-            exchange = None
-            routing_key = addr(bind.amqp.root.queue.name)
-        case bind if bind.amqp.root.type == "routingKey":
-            # Named exchange + exclusive queues
-            exchange = addr(bind.amqp.root.exchange.name)
-            routing_key = None
+
+    if channel.bindings is None:
+        # Default exchange + named queues
+        exchange = None
+        routing_key = addr(None)
+    elif (bind := channel.bindings).amqp.root.type == "queue":
+        # Default exchange + named queues
+        exchange = None
+        routing_key = addr(bind.amqp.root.queue.name)
+    elif bind.amqp.root.type == "routingKey":
+        # Named exchange + exclusive queues
+        exchange = addr(bind.amqp.root.exchange.name)
+        routing_key = None
 
     # Get reply channel properties
     if reply_channel is not None:
@@ -177,26 +177,25 @@ def get_channel_types(
 ) -> tuple[list[str], list[str]]:
     types, schemas = [], []
     for message_key, message in channel.messages.items():
-        match message.root:
-            case d.Ref():
-                msg_ref = message.root.flatten()
-                msg_filepath = msg_ref.filepath
-                msg_doc_path = msg_ref.doc_path
-                del msg_ref
-            case d.Message():
-                msg_filepath = channel_filepath
-                msg_doc_path = (*channel_doc_path, "messages", message_key)
+
+        if isinstance(message.root, d.Ref):
+            msg_ref = message.root.flatten()
+            msg_filepath = msg_ref.filepath
+            msg_doc_path = msg_ref.doc_path
+            del msg_ref
+        else:
+            msg_filepath = channel_filepath
+            msg_doc_path = (*channel_doc_path, "messages", message_key)
 
         message_payload = message.get().payload.root
-        match message_payload:
-            case d.Ref():
-                payload_ref = message_payload.flatten()
-                pl_filepath = payload_ref.filepath
-                pl_doc_path = payload_ref.doc_path
-                del payload_ref
-            case d.JsonSchema():
-                pl_filepath = msg_filepath
-                pl_doc_path = (*msg_doc_path, "payload")
+        if isinstance(message_payload, d.Ref):
+            payload_ref = message_payload.flatten()
+            pl_filepath = payload_ref.filepath
+            pl_doc_path = payload_ref.doc_path
+            del payload_ref
+        else:
+            pl_filepath = msg_filepath
+            pl_doc_path = (*msg_doc_path, "payload")
 
         types.append(message.get().title or message_key)
         schemas.append(str(pl_filepath) + "#/" + "/".join(pl_doc_path))

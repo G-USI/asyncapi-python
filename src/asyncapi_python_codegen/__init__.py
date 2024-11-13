@@ -36,13 +36,12 @@ def generate(
 
     # Generate code
     generation_result: dict[Path, str]
-    match protocol:
-        case "amqp":
-            generation_result = g.amqp.generate(
-                input_path=input_file, output_path=output_dir
-            )
-        case _:
-            raise NotImplementedError(f"Protocol {protocol} is not supported")
+    if protocol == "amqp":
+        generation_result = g.amqp.generate(
+            input_path=input_file, output_path=output_dir
+        )
+    else:
+        raise NotImplementedError(f"Protocol {protocol} is not supported")
 
     # Write files
     for path, code in generation_result.items():

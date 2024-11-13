@@ -13,10 +13,12 @@
 # limitations under the License.
 
 
-from pydantic import BaseModel
-from typing import TypeVar
+from functools import cache
+from pydantic import BaseModel, RootModel, create_model
+from typing import TypeVar, Union
 
 T = TypeVar("T", bound=BaseModel)
+U = TypeVar("U")
 
 
 def encode_message(message: T) -> bytes:
@@ -25,3 +27,9 @@ def encode_message(message: T) -> bytes:
 
 def decode_message(message: bytes, schema: type[T]) -> T:
     return schema.model_validate_json(message)
+
+
+@cache
+def union_model(types: tuple[type[U], ...]) -> type[RootModel[U]]:
+    UnionType = Union.__getitem__(types)
+    return RootModel[UnionType]  # type: ignore

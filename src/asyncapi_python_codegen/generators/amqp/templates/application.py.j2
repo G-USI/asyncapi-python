@@ -14,7 +14,8 @@
 from .models import *
 from asyncapi_python.amqp import BaseApplication, Consumer
 from asyncapi_python.amqp.message_handler_params import MessageHandlerParams
-from typing import Callable, Awaitable
+from typing import Callable, Awaitable, Union
+from pydantic import RootModel
 
 
 class Application(BaseApplication):
@@ -34,8 +35,8 @@ class Application(BaseApplication):
         await super().start(blocking=blocking)
     
     {% for op in ops if op.action == "send" -%}
-    {%- set in_type = op.input_types | join(" | ") -%}
-    {%- set out_type = op.output_types | join(" | ") if op.output_types else "None" -%}
+    {%- set in_type = "Union[" + (op.input_types | join(" | ")) + "]" -%}
+    {%- set out_type = "Union[" + (op.output_types | join(" | ") if op.output_types else "None") + "]" -%}
     {%- set callback_type = "Callable[["+ in_type + "], Awaitable[" + out_type + "]" + "]" -%}
     {%- set send_method = "publish" if out_type == "None" else "request" -%}
     {%- set routing_key_literal = '"' + op.routing_key + '"' if op.routing_key else "None" -%}
@@ -46,7 +47,7 @@ class Application(BaseApplication):
             exchange={{ '"' + op.exchange + '"' if op.exchange else "None" }},
             routing_key={{ routing_key_literal }},
             {%- if send_method == "request" %}
-            output_type={{ out_type }},
+            output_types={{ "[" + op.output_types | join(", ") + "]" }},
             {%- endif %}
         )
     {% endfor %}
@@ -72,8 +73,8 @@ class ConsumerWrapper:
 
     
     {% for op in ops if op.action == "receive" %}
-    {%- set in_type = op.input_types | join(" | ") -%}
-    {%- set out_type = op.output_types | join(" | ") if op.output_types else "None" -%}
+    {%- set in_type = "Union[" + (op.input_types | join(", ")) + "]" -%}
+    {%- set out_type = "Union[" + (op.output_types | join(", ") if op.output_types else "None") + "]" -%}
     {%- set callback_type = "Callable[["+ in_type + "], Awaitable[" + out_type + "]" + "]" -%}
     {%- set routing_key_literal = '"' + op.routing_key + '"' if op.routing_key else "None" -%}
     def {{ op.field_name }}(self, callback: {{ callback_type }}) -> None:
@@ -93,8 +94,8 @@ class ConsumerWrapper:
                 {"kind": "queue", "name": "{{op.routing_key}}"}
                 {%- endif %}
             ),
-            input_type={{in_type}},
-            output_type={{out_type}},
+            input_types={{ "[" + op.input_types | join(", ") + "]" }},
+            output_types={{ "[" + op.output_types | join(", ") + "]" }},
             callback=callback,
         )
     {% endfor %}

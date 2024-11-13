@@ -28,7 +28,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
 # Python and poetry installation
 USER $USER
 ARG HOME="/home/$USER"
-ARG PYTHON_VERSION=3.10
+ARG PYTHON_VERSION=3.9
 # ARG PYTHON_VERSION=3.10
 
 ENV PYENV_ROOT="${HOME}/.pyenv"

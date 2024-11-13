@@ -15,13 +15,13 @@
 
 from abc import ABC, abstractmethod
 from aio_pika.message import AbstractIncomingMessage, Message
-from typing import Awaitable, Callable, Generic, TypeVar
+from typing import Awaitable, Callable, Generic, TypeVar, Union
 from pydantic import BaseModel
 from logging import getLogger
 
 
 T = TypeVar("T", bound=BaseModel)
-U = TypeVar("U", bound=BaseModel | None)
+U = TypeVar("U", bound=Union[BaseModel, None])
 V = TypeVar("V", bound=BaseModel)
 
 

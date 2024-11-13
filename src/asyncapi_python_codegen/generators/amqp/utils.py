@@ -31,12 +31,13 @@ def snake_case(s: str) -> str:
     ).lower()
 
 
-def camel_case(kind: Literal["upper", "lower"], string: str):
+def camel_case(kind: Literal["upper", "lower"], string: str) -> str:
+    if not string:
+        return ""
+
     string = sub(r"(_|-)+", " ", string).title().replace(" ", "")
-    match string, kind:
-        case "", _:
-            return ""
-        case _, "lower":
-            return string[0].lower() + string[1:]
-        case _, "upper":
-            return string[0].upper() + string[1:]
+
+    if kind == "lower":
+        return string[0].lower() + string[1:]
+    elif kind == "upper":
+        return string[0].upper() + string[1:]

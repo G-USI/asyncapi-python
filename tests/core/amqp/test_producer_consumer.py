@@ -51,8 +51,8 @@ async def test_producer_consumer(
                     routing_key=None,
                 )
             ),
-            input_type=UserRegisteredEvent,
-            output_type=None,
+            input_types=(UserRegisteredEvent,),
+            output_types=None,
             callback=partial(on_user_registered, s),
         )
         await cons.run()

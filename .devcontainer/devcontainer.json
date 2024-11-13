@@ -34,7 +34,8 @@
 					"datamodel",
 					"amqp",
 					"venv",
-					"jsonschema"
+					"jsonschema",
+					"fanout"
 				]
 			}
 		}

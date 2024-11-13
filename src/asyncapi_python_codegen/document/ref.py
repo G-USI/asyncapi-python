@@ -23,7 +23,7 @@ from .document_context import (
     set_current_doc_path,
     DOCUMENT_CONTEXT_STACK,
 )
-from typing import Any, Callable, Generic, TypeVar, Annotated
+from typing import Any, Callable, Generic, TypeVar, Annotated, Union
 from typing_extensions import Self
 
 
@@ -87,20 +87,17 @@ class Ref(BaseModel, Generic[T]):
     @model_validator(mode="before")
     @classmethod
     def parse_ref(cls, data: Any) -> Any:
-        fp: str | Path
+        fp: Union[str, Path]
 
-        match data:
-            case {"ref": ref} | {"$ref": ref} if isinstance(ref, str):
-                match ref.split("#"):
-                    case "", dp:
-                        fp = current_doc_path()
-                    case fp, dp if not Path(fp).is_absolute():
-                        fp = current_doc_path().parent / fp
-                    case fp, dp:
-                        ...
+        if (ref := data.get("ref")) or (ref := data.get("$ref")):
+            fp, dp = ref.split("#")
+            if fp == "":
+                fp = current_doc_path()
+            elif not Path(fp).is_absolute():
+                fp = current_doc_path().parent / fp
+        else:
+            raise ValueError(f"Requires {{$ref: ... }}, given {data} ")
 
-            case x:
-                raise ValueError(f"Requires {{$ref: ... }}, given {x} ")
         return {
             **data,
             "$ref": ref,
@@ -109,8 +106,8 @@ class Ref(BaseModel, Generic[T]):
         }
 
 
-class MaybeRef(RootModel[Ref[T] | T], Generic[T]):
-    root: Ref[T] | T
+class MaybeRef(RootModel[Union[Ref[T], T]], Generic[T]):
+    root: Union[Ref[T], T]
 
     def get(self) -> T:
         return self.root.get() if isinstance(self.root, Ref) else self.root

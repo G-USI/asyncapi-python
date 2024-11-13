@@ -16,25 +16,24 @@
 from .connection import channel_pool, AmqpPool
 from .consumer import Consumer
 from .producer import Producer
-from abc import ABC, abstractmethod
-from typing import Literal, TypedDict
+from typing import Literal, Optional, TypedDict
 
 
 class Queue(TypedDict):
-    name: str | None
+    name: Optional[str]
     durable: bool
     exclusive: bool
     auto_delete: bool
 
 
 class Exchange(TypedDict):
-    name: str | None
+    name: Optional[str]
     type: Literal["topic", "direct", "fanout", "default", "headers"]
     durable: bool
     auto_delete: bool
 
 
-class BaseApplication(ABC):
+class BaseApplication:
     def __init__(self, amqp_uri: str):
         self._uri = amqp_uri
         self._has_started = False

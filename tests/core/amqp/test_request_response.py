@@ -13,6 +13,7 @@
 # limitations under the License.
 
 
+from typing import Optional
 from asyncapi_python.amqp.message_handler_params import (
     MessageHandlerParams,
     QueueHandlerParams,
@@ -42,8 +43,8 @@ async def test_request_response(
             params=MessageHandlerParams(
                 root=QueueHandlerParams(name=name, exclusive=True)
             ),
-            input_type=Request,
-            output_type=Response,
+            input_types=(Request,),
+            output_types=(Response,),
             callback=callback,
         )
         for name, callback in [
@@ -80,14 +81,14 @@ async def handle_sub_request(req: Request) -> Response:
 
 
 async def post_requests(
-    producer: Producer, reqs: list[Request], exchange: str | None, routing_key: str
+    producer: Producer, reqs: list[Request], exchange: Optional[str], routing_key: str
 ) -> list[Response]:
     reqs_futures = [
         producer.request(
             message=req,
             exchange=exchange,
             routing_key=routing_key,
-            output_type=Response,
+            output_types=(Response,),
         )
         for req in reqs
     ]

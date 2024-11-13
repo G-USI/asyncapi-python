@@ -21,14 +21,15 @@ from aio_pika.abc import (
     AbstractIncomingMessage,
 )
 from logging import getLogger
-from pydantic import BaseModel
-from typing import TypeVar
+from pydantic import BaseModel, RootModel, create_model
+from typing import Optional, Sequence, TypeVar, Union, Type
+from collections.abc import Sequence as Seq
 from asyncio import Future
 from uuid import uuid4
-from .utils import encode_message, decode_message
+from .utils import encode_message, decode_message, union_model
 
-T = TypeVar("T", bound=BaseModel)
-U = TypeVar("U", bound=BaseModel)
+T = TypeVar("T")
+U = TypeVar("U")
 
 
 class Producer:
@@ -44,7 +45,7 @@ class Producer:
         self._pool = channel_pool
         self._replies: dict[str, Future[AbstractIncomingMessage]] = {}
         self._reply_queue = reply_queue
-        self._reply_consumer_tag: str | None = None
+        self._reply_consumer_tag: Optional[str] = None
 
     async def _on_reply(self, msg: AbstractIncomingMessage):
         await msg.ack()
@@ -59,12 +60,10 @@ class Producer:
     async def publish(
         self,
         message: T,
-        exchange: str | None,
-        routing_key: str | None,
+        exchange: Optional[str],
+        routing_key: Optional[str],
     ):
-        outbound_message = Message(
-            body=encode_message(message),
-        )
+        outbound_message = Message(body=encode_message(RootModel[T](message)))
         async with self._pool.acquire() as channel:
             await (
                 await channel.get_exchange(exchange)
@@ -75,9 +74,9 @@ class Producer:
     async def request(
         self,
         message: T,
-        exchange: str | None,
-        routing_key: str | None,
-        output_type: type[U],
+        exchange: Optional[str],
+        routing_key: Optional[str],
+        output_types: Sequence[type[U]],
     ) -> U:
         if not self._reply_consumer_tag:
             raise AssertionError(
@@ -85,7 +84,7 @@ class Producer:
             )
         corr_id = str(uuid4())
         outbound_message = Message(
-            body=encode_message(message),
+            body=encode_message(RootModel[T](message)),
             correlation_id=corr_id,
             reply_to=self._reply_queue.name,
         )
@@ -98,6 +97,9 @@ class Producer:
             ).publish(outbound_message, routing_key or "")
             self._logger.info(f"Sent request {message}")
             self._replies[corr_id] = reply_future
-        res = decode_message((await reply_future).body, output_type)
+        res = decode_message(
+            (await reply_future).body,
+            union_model(tuple(output_types)),
+        ).root
         self._logger.info(f"Got response {res}")
         return res

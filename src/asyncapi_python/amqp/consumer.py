@@ -15,19 +15,19 @@
 
 from .message_handler import AbstractMessageHandler, MessageHandler, RpcMessageHandler
 from .message_handler_params import MessageHandlerParams
-from .utils import encode_message, decode_message
+from .utils import encode_message, decode_message, union_model
 
 import asyncio
 from aio_pika import Message
 from aio_pika.pool import Pool
 from aio_pika.abc import AbstractRobustChannel
 from asyncio import Future
-from typing import Callable, TypeVar
-from pydantic import BaseModel
+from typing import Callable, Optional, Sequence, TypeVar, Union
+from pydantic import BaseModel, RootModel
 from logging import getLogger
 
-T = TypeVar("T", bound=BaseModel)
-U = TypeVar("U", bound=BaseModel)
+T = TypeVar("T")
+U = TypeVar("U")
 
 
 class Consumer:
@@ -36,7 +36,7 @@ class Consumer:
         self._logger = getLogger(__name__)
         self._pool = channel_pool
 
-    async def run_blocking(self, timeout: int | float | None):
+    async def run_blocking(self, timeout: Union[int, float, None]):
         await self.run()
         if timeout is not None:
             await asyncio.sleep(timeout)
@@ -56,18 +56,20 @@ class Consumer:
         self,
         *,
         params: MessageHandlerParams,
-        input_type: type[T],
-        output_type: type[U] | None,
+        input_types: Sequence[type[T]],
+        output_types: Union[None, Sequence[type[U]]],
         callback: Callable,
     ):
         handler: AbstractMessageHandler
         if params in self._handlers:
             raise AssertionError(f"Only one handler for `{params}` is allowed")
-        if output_type is None:
+        if output_types is None or len(output_types) == 0:
             handler = MessageHandler(
                 name=params.root.name,
                 callback=callback,
-                decode_message=lambda x: decode_message(x, input_type),
+                decode_message=lambda x: decode_message(
+                    x, union_model(input_types)
+                ).root,
             )
         else:
             handler = RpcMessageHandler(
@@ -75,6 +77,8 @@ class Consumer:
                 callback=callback,
                 reply_callback=self._reply_callback,
                 encode_message=encode_message,
-                decode_message=lambda x: decode_message(x, input_type),
+                decode_message=lambda x: decode_message(
+                    x, union_model(input_types)
+                ).root,
             )
         self._handlers[params] = handler

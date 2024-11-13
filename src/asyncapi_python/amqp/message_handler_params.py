@@ -14,7 +14,7 @@
 
 
 from pydantic import RootModel, BaseModel, ConfigDict, computed_field
-from typing import Literal
+from typing import Literal, Optional, Union
 from aio_pika.abc import AbstractRobustChannel
 from .message_handler import AbstractMessageHandler
 
@@ -24,7 +24,7 @@ class ExchangeHandlerParams(BaseModel):
     kind: Literal["exchange"] = "exchange"
     type: Literal["direct", "fanout", "topic", "headers"]
     name: str
-    routing_key: str | None
+    routing_key: Optional[str]
     auto_delete: bool = False
 
 
@@ -39,24 +39,28 @@ class QueueHandlerParams(BaseModel):
 
 class MessageHandlerParams(RootModel):
     model_config = ConfigDict(frozen=True)
-    root: QueueHandlerParams | ExchangeHandlerParams
+    root: Union[QueueHandlerParams, ExchangeHandlerParams]
 
     async def setup_consume(
         self,
         handler: AbstractMessageHandler,
         channel: AbstractRobustChannel,
     ):
-        match self.root:
-            case ExchangeHandlerParams(
-                name=name, routing_key=rk, type=et, auto_delete=ad
-            ):
-                exchange = await channel.declare_exchange(name, type=et, auto_delete=ad)
-                queue = await channel.declare_queue(exclusive=True)
-                await queue.bind(exchange, rk)
-            case QueueHandlerParams(name=name, exclusive=ex, auto_delete=ad, durable=d):
-                queue = await channel.declare_queue(
-                    name, exclusive=ex, auto_delete=ad, durable=d
-                )
-            case _:
-                raise NotImplementedError
+        if isinstance(self.root, ExchangeHandlerParams):
+            exchange = await channel.declare_exchange(
+                name=self.root.name,
+                type=self.root.type,
+                auto_delete=self.root.auto_delete,
+            )
+            queue = await channel.declare_queue(exclusive=True)
+            await queue.bind(exchange, self.root.routing_key)
+        elif isinstance(self.root, QueueHandlerParams):
+            queue = await channel.declare_queue(
+                self.root.name,
+                exclusive=self.root.exclusive,
+                auto_delete=self.root.auto_delete,
+                durable=self.root.durable,
+            )
+        else:
+            raise NotImplementedError
         await queue.consume(handler)

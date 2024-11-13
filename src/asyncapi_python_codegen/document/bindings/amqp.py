@@ -13,13 +13,13 @@
 # limitations under the License.
 
 
-from typing import Literal
+from typing import Literal, Optional, Union
 
 from pydantic import BaseModel, Field, RootModel
 
 
 class Exchange(BaseModel):
-    name: str | None = None
+    name: Optional[str] = None
     type: Literal["topic", "direct", "fanout", "default", "headers"] = "default"
     durable: bool = False
     auto_delete: bool = Field(alias="autoDelete", default=False)
@@ -31,7 +31,7 @@ class ExchangeBinding(BaseModel):
 
 
 class Queue(BaseModel):
-    name: str | None = None
+    name: Optional[str] = None
     durable: bool = False
     exclusive: bool = False
     auto_delete: bool = Field(alias="autoDelete", default=False)
@@ -43,4 +43,4 @@ class QueueBinding(BaseModel):
 
 
 class AmqpBinding(RootModel):
-    root: ExchangeBinding | QueueBinding = QueueBinding()
+    root: Union[ExchangeBinding, QueueBinding] = QueueBinding()

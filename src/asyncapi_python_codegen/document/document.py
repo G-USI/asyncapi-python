@@ -18,7 +18,7 @@ from pathlib import Path
 
 from pydantic import Field
 from .base import BaseModel
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, Optional
 import yaml
 from .components import Channel, Components, Message, Operation
 from .ref import MaybeRef, Ref
@@ -53,4 +53,4 @@ class Document(BaseModel):
 class Info(BaseModel):
     title: str
     version: str
-    description: str | None = None
+    description: Optional[str] = None

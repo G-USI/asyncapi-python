@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 from .base import BaseModel, RootModel
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 from .ref import MaybeRef, Ref
 from .bindings import Bindings
 
@@ -35,35 +35,35 @@ class JsonSchema(RootModel):
 
 
 class Message(BaseModel):
-    title: str | None = None
-    headers: MaybeRef[JsonSchema] | None = None
+    title: Optional[str] = None
+    headers: Optional[MaybeRef[JsonSchema]] = None
     payload: MaybeRef[JsonSchema]
 
 
 class CorrelationId(BaseModel):
-    description: str | None = None
+    description: Optional[str] = None
     location: str
 
 
 class Operation(BaseModel):
     action: Literal["receive", "send"]
     channel: Ref[Channel]
-    reply: OperationReply | None = None
+    reply: Optional[OperationReply] = None
 
 
 class OperationReply(BaseModel):
-    address: ReplyAddress | None = None
+    address: Optional[ReplyAddress] = None
     channel: Ref[Channel]
 
 
 class ReplyAddress(BaseModel):
-    description: str | None = None
+    description: Optional[str] = None
     location: str
 
 
 class Channel(BaseModel):
-    address: str | None = None
-    title: str | None = None
-    description: str | None = None
-    bindings: Bindings | None = None
+    address: Optional[str] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    bindings: Optional[Bindings] = None
     messages: dict[str, MaybeRef[Message]]
