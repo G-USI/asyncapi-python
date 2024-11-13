@@ -32,8 +32,8 @@ typer = { extras = ["all"], version = "^0.12.5", optional = true }
 datamodel-code-generator = { extras = [
     "http",
 ], version = "^0.26.1", optional = true }
-aio-pika = { version = "^9.4.3", optional = true }
-pyyaml = { version = "^6.0.2", optional = true }
+aio-pika = { version = "*", optional = true }
+pyyaml = { version = "*", optional = true }
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.10.0"
