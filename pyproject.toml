@@ -20,6 +20,7 @@ codegen = [
     "asyncapi_python_codegen",
     "pyyaml",
     "datamodel-code-generator",
+    "black",
 ]
 amqp = ["aio-pika"]
 
@@ -34,6 +35,7 @@ datamodel-code-generator = { extras = [
 ], version = "^0.26.1", optional = true }
 aio-pika = { version = "*", optional = true }
 pyyaml = { version = "*", optional = true }
+black = { version = "*", optional = true }
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.10.0"
@@ -43,6 +45,7 @@ types-pyyaml = "^6.0.12.20240917"
 pytest = "^8.3.3"
 types-pytz = "^2024.2.0.20241003"
 pytest-asyncio = "^0.24.0"
+pex = "^2.24.1"
 
 [build-system]
 requires = ["poetry-core"]
