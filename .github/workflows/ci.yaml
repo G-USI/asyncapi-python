@@ -18,7 +18,7 @@ jobs:
     services:
       rabbitmq:
         image: rabbitmq:3.13.6
-        ports: ["5672:5672"]
+        ports: ["5672"]
           
     steps:
       - uses: actions/checkout@v4
@@ -44,4 +44,6 @@ jobs:
         run: poetry install --all-extras
 
       - name: Run tests
+        env:
+          AMQP_URI: amqp://localhost:${{ job.services.rabbitmq.ports[5672] }}
         run: poetry run pytest

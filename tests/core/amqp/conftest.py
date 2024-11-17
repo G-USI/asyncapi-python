@@ -21,6 +21,7 @@ from typing import AsyncGenerator
 from aio_pika import connect_robust
 from aio_pika.pool import Pool
 from aio_pika.abc import AbstractRobustConnection
+from os import environ
 import pytest
 import pytest_asyncio
 
@@ -44,6 +45,8 @@ async def consumer2(amqp_pool: AmqpPool) -> Consumer:
 
 @pytest.fixture(scope="session")
 def amqp_uri() -> str:
+    if (env_uri := environ.get("AMQP_URI")) is not None:
+        return env_uri
     return "amqp://guest:guest@rabbitmq/"
 
 
