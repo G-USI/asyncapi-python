@@ -56,7 +56,7 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: ${{ github.ref }}
-          draft: false
+          draft: true
           prerelease: false
       
       - name: Build sdist, wheel, and pex
