@@ -75,7 +75,7 @@ jobs:
           asset_path: ./dist/asyncapi_python-${{ env.PROJECT_VERSION }}-py3-none-any.whl
           asset_name: asyncapi_python-${{ env.PROJECT_VERSION }}-py3-none-any.whl
           asset_content_type: application/x-wheel+zip
-
+ 
       - name: Upload sdist to Release
         uses: actions/upload-release-asset@v1
         env:
@@ -95,6 +95,11 @@ jobs:
           asset_path: ./dist/asyncapi-python-codegen
           asset_name: asyncapi-python-codegen-${{ env.PROJECT_VERSION }}.pex
           asset_content_type: application/octet-stream
+
+      - name: Cleanup dist folder before PyPI publish
+        run: |
+          rm dist/asyncapi-python-codegen*
+          rm dist/requirements.txt
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
