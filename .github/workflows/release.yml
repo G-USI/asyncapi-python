@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    tags: "v*-*-*"
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+  
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version Check and population of PROJECT_VERSION var
+        run: |
+          PROJECT_VERSION=$(poetry version --short)
+          TAG=$(git describe HEAD --tags --abbrev=0)
+          echo "PROJECT_VERSION=$PROJECT_VERSION" >> $GITHUB_ENV
+          echo "Project version: $PROJECT_VERSION"
+          echo "Git tag: $TAG"
+          if [[ "$TAG" != "v$PROJECT_VERSION" ]]; then
+            echo "Version mismatch: Tag '$TAG' does not match project version 'v$PROJECT_VERSION'"
+            exit 1
+          fi
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          draft: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+      
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      
+      - name: Install dependencies
+        run: poetry install --only dev
+      
+      - name: Build sdist, wheel, and pex
+        run: >
+          mkdir -p dist
+          && poetry export -E codegen --without dev --format requirements.txt --output dist/requirements.txt --without-hashes
+          && poetry build
+          && poetry run pex . --scie eager -o dist/asyncapi-python-codegen.pex -e asyncapi_python_codegen:app -r dist/requirements.txt
+      
+      - name: Upload wheel to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dist/asyncapi_python-${{ env.PROJECT_VERSION }}-py3-none-any.whl
+          asset_name: asyncapi_python-${{ env.PROJECT_VERSION }}-py3-none-any.whl
+          asset_content_type: application/x-wheel+zip
+
+      - name: Upload sdist to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dist/asyncapi_python-${{ env.PROJECT_VERSION }}.tar.gz
+          asset_name: asyncapi_python-${{ env.PROJECT_VERSION }}.tar.gz
+          asset_content_type: application/gzip
+
+      - name: Upload sdist to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dist/asyncapi-python-codegen
+          asset_name: asyncapi-python-codegen-${{ env.PROJECT_VERSION }}.pex
+          asset_content_type: application/octet-stream
