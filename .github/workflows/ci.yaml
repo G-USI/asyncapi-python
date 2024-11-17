@@ -22,7 +22,6 @@ jobs:
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
-          installation-arguments: "--all-extras"
           virtualenvs-create: true
           virtualenvs-in-project: true
 
@@ -33,7 +32,7 @@ jobs:
           key: venv-${{ hashFiles('poetry.lock') }}
 
       - name: Install dependencies
-        run: poetry install
+        run: poetry install --all-extras
 
       - name: Run tests
         run: poetry run pytest
