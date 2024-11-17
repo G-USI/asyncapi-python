@@ -8,9 +8,16 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    
     strategy:
         matrix:
           python_version: ["3.9", "3.10", "3.11", "3.12"]
+    
+    services:
+      rabbitmq:
+        image: rabbitmq:3.13.6
+        ports: ["5672:5672"]
+          
     steps:
       - uses: actions/checkout@v4
 
