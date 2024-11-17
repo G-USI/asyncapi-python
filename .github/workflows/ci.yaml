@@ -9,6 +9,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    container: ubuntu
+
     strategy:
         matrix:
           python_version: ["3.9", "3.10", "3.11", "3.12"]
