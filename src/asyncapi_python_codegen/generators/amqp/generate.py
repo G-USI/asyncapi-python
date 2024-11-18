@@ -17,11 +17,12 @@ from __future__ import annotations
 from contextlib import ExitStack
 import json
 from pathlib import Path
-import subprocess
+import tempfile
 import jinja2 as j2
 from typing import Literal, Optional, TypedDict
 from asyncapi_python_codegen import document as d
 from itertools import chain
+from datamodel_code_generator.__main__ import main as datamodel_codegen
 
 from .utils import snake_case
 
@@ -66,11 +67,6 @@ def generate_application(
 
 
 def generate_models(schemas: list[Operation], cwd: Path) -> str:
-    args = """datamodel-codegen
-    --output-model-type pydantic_v2.BaseModel
-    --input-file-type jsonschema
-    """.split()
-
     inp = {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "$defs": {
@@ -83,24 +79,26 @@ def generate_models(schemas: list[Operation], cwd: Path) -> str:
         },
     }
 
-    str_inp = json.dumps(inp)
-    res = subprocess.run(
-        args=args,
-        capture_output=True,
-        check=False,
-        input=str_inp.encode(),
-        cwd=cwd,
-    )
+    with tempfile.TemporaryDirectory() as dir:
+        schema_path = Path(dir) / "schema.json"
+        models_path = Path(dir) / "models.py"
 
-    if res.returncode:
-        raise AssertionError(
-            "Failed to generate datamodel:\n\n"
-            + f"{res.stderr.decode()} \n\n"
-            + "The subprocess got input:\n\n"
-            + str_inp
-        )
+        args = f"""
+        --input { str(schema_path.absolute()) }
+        --output { str(models_path.absolute()) }
+        --output-model-type pydantic_v2.BaseModel
+        --input-file-type jsonschema
+        """.split()
 
-    return res.stdout.decode()
+        with schema_path.open("w") as schema:
+            json.dump(inp, schema)
+
+        datamodel_codegen(args=args)
+
+        with models_path.open() as f:
+            models_code = f.read()
+
+    return models_code
 
 
 def get_operation(op_name: str, op: d.Operation) -> Operation:
