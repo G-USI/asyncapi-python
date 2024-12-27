@@ -24,6 +24,8 @@ from asyncapi_python_codegen import document as d
 from itertools import chain
 from datamodel_code_generator.__main__ import main as datamodel_codegen
 
+from asyncapi_python_codegen.document.utils import populate_jsonschema
+
 from .utils import snake_case
 
 
@@ -69,14 +71,16 @@ def generate_application(
 def generate_models(schemas: list[Operation], cwd: Path) -> str:
     inp = {
         "$schema": "http://json-schema.org/draft-07/schema#",
-        "$defs": {
-            type_name: {"$ref": type_schema}
-            for s in schemas
-            for type_name, type_schema in chain(
-                zip(s["input_types"], s["input_schemas"]),
-                zip(s["output_types"], s["output_schemas"]),
-            )
-        },
+        "$defs": populate_jsonschema(
+            {
+                type_name: {"$ref": type_schema}
+                for s in schemas
+                for type_name, type_schema in chain(
+                    zip(s["input_types"], s["input_schemas"]),
+                    zip(s["output_types"], s["output_schemas"]),
+                )
+            }
+        ),
     }
 
     with tempfile.TemporaryDirectory() as dir:
@@ -88,6 +92,14 @@ def generate_models(schemas: list[Operation], cwd: Path) -> str:
         --output { str(models_path.absolute()) }
         --output-model-type pydantic_v2.BaseModel
         --input-file-type jsonschema
+        --reuse-model
+        --allow-extra-fields
+        --collapse-root-models
+        --target-python-version 3.9
+        --use-title-as-name
+        --capitalize-enum-members
+        --snake-case-field
+        --allow-population-by-field-name
         """.split()
 
         with schema_path.open("w") as schema:
