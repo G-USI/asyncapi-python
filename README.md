@@ -1,4 +1,11 @@
 # AsyncAPI Python Code Generator
+> [!IMPORTANT]
+> Although commits to dev branch might seem infrequent, the project is under active development **as of December 2024**.
+>
+> We currently produce only those changes that are required to satisfy our personal use cases.
+> 
+> The number of commits will grow as we see increase in popularity of it, so do not hesitate
+> to star this repo, open issues, and pull requests.
 
 [Link to this github repository](https://github.com/G-USI/asyncapi-python)
 

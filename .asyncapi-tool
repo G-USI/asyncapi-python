@@ -1,0 +1,12 @@
+---
+title: asyncapi-python
+description: Easily generate type-safe and async Python applications from AsyncAPI 3 specifications.
+links:
+  repoUrl: https://github.com/G-USI/asyncapi-python/
+  websiteUrl: https://pypi.org/project/asyncapi-python/
+filters:
+  language: python
+  technology:
+  - amqp
+  categories:
+  - code-generator
