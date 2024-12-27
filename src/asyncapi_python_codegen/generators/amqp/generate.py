@@ -24,7 +24,7 @@ from asyncapi_python_codegen import document as d
 from itertools import chain
 from datamodel_code_generator.__main__ import main as datamodel_codegen
 
-from asyncapi_python_codegen.document.utils import populate_jsonschema
+from asyncapi_python_codegen.document.utils import populate_jsonschema_defs
 
 from .utils import snake_case
 
@@ -71,7 +71,7 @@ def generate_application(
 def generate_models(schemas: list[Operation], cwd: Path) -> str:
     inp = {
         "$schema": "http://json-schema.org/draft-07/schema#",
-        "$defs": populate_jsonschema(
+        "$defs": populate_jsonschema_defs(
             {
                 type_name: {"$ref": type_schema}
                 for s in schemas

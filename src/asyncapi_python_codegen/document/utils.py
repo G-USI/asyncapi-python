@@ -28,7 +28,23 @@ ReferenceCounter = defaultdict[Reference, set[Reference]]
 """A reference counter"""
 
 
-def count_references(schema: Any, this: Reference, counter: ReferenceCounter):
+def populate_jsonschema_defs(schema: Any) -> Any:
+    """Given a $defs element of the JsonSchema
+    1. Constructs back references map for all links
+    2. Populates types by copying its body into parent $def (if there is only one reference)
+    3. Adds a new $defs object (if there is more than one reference), and rewrites $refs
+    4. Returns a huge jsonschema $defs object containing all structs that have been referenced by the structs
+       from the original schema
+    """
+    counter: ReferenceCounter = defaultdict(lambda: set())
+    shared_schemas: dict[str, Any] = {}
+    _count_references(schema, None, counter)
+    res = _populate_jsonschema_recur(schema, counter, shared_schemas)
+    return {**res, **shared_schemas}
+
+
+def _count_references(schema: Any, this: Reference, counter: ReferenceCounter):
+    """Recursively constructs back references within the JsonSchema"""
     if not isinstance(schema, dict):
         return
 
@@ -43,26 +59,19 @@ def count_references(schema: Any, this: Reference, counter: ReferenceCounter):
         child = (ref.filepath, ref.doc_path)
         counter[child].add(this)
         with set_current_doc_path(ref.filepath):
-            return count_references(doc, child, counter)
+            return _count_references(doc, child, counter)
 
     for v in schema.values():
-        count_references(v, this, counter)
+        _count_references(v, this, counter)
 
 
-def populate_jsonschema(schema: Any) -> Any:
-    counter: ReferenceCounter = defaultdict(lambda: set())
-    shared_schemas: dict[str, Any] = {}
-    count_references(schema, None, counter)
-    res = populate_jsonschema_recur(schema, counter, shared_schemas)
-    return {**res, **shared_schemas}
-
-
-def populate_jsonschema_recur(
+def _populate_jsonschema_recur(
     schema: Any,
     counter: ReferenceCounter,
     shared_schemas: dict[str, Any],
     ignore_shared: bool = False,
 ) -> Any:
+    """Recursively populates JsonSchema $defs object"""
     if not isinstance(schema, dict):
         return schema
 
@@ -74,7 +83,7 @@ def populate_jsonschema_recur(
             back_refs = counter[(ref.filepath, ref.doc_path)]
             if len(back_refs) > 1 and not ignore_shared:
                 ref_struct_name = ref.doc_path[-1]
-                shared_schemas[ref_struct_name] = populate_jsonschema_recur(
+                shared_schemas[ref_struct_name] = _populate_jsonschema_recur(
                     schema, counter, shared_schemas, True
                 )
                 return {"$ref": f"#/$defs/{ref_struct_name}"}
@@ -84,9 +93,9 @@ def populate_jsonschema_recur(
         for p in ref.doc_path:
             doc = doc[p]
         with set_current_doc_path(ref.filepath):
-            return populate_jsonschema_recur(doc, counter, shared_schemas)
+            return _populate_jsonschema_recur(doc, counter, shared_schemas)
 
     return {
-        k: populate_jsonschema_recur(v, counter, shared_schemas)
+        k: _populate_jsonschema_recur(v, counter, shared_schemas)
         for k, v in schema.items()
     }
