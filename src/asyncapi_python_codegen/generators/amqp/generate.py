@@ -49,7 +49,10 @@ def generate(
             doc.info.description,
             doc.info.version,
         ).items()
-    } | {output_path / "models.py": generate_models(ops, doc.filepath.parent)}
+    } | {
+        output_path / "models.py": generate_models(ops, doc.filepath.parent),
+        output_path / "py.typed": "",
+    }
 
 
 def generate_application(
