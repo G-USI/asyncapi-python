@@ -68,7 +68,7 @@ class Consumer:
                 name=params.root.name,
                 callback=callback,
                 decode_message=lambda x: decode_message(
-                    x, union_model(input_types)
+                    x, union_model(tuple(input_types))
                 ).root,
             )
         else:
@@ -78,7 +78,7 @@ class Consumer:
                 reply_callback=self._reply_callback,
                 encode_message=encode_message,
                 decode_message=lambda x: decode_message(
-                    x, union_model(input_types)
+                    x, union_model(tuple(input_types))
                 ).root,
             )
         self._handlers[params] = handler
