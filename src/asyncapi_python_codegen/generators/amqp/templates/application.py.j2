@@ -36,7 +36,7 @@ class Application(BaseApplication):
     
     {% for op in ops if op.action == "send" -%}
     {%- set in_type = "Union[" + (op.input_types | join(", ")) + "]" -%}
-    {%- set out_type = "Union[" + (op.output_types | join(", ") if op.output_types else "None") + "]" -%}
+    {%- set out_type = ("Union[" + op.output_types | join(", ") + "]") if op.output_types else "None" -%}
     {%- set callback_type = "Callable[["+ in_type + "], Awaitable[" + out_type + "]" + "]" -%}
     {%- set send_method = "publish" if out_type == "None" else "request" -%}
     {%- set routing_key_literal = '"' + op.routing_key + '"' if op.routing_key else "None" -%}
