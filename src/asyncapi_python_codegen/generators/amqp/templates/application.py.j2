@@ -84,7 +84,7 @@ class ConsumerWrapper:
         self._inner.on(
             params=MessageHandlerParams.model_validate(
                 {%- if op.exchange %}
-                params={
+                {
                     "kind": "exchange", 
                     "type": "fanout",
                     "name": "{{ op.exchange }}",
