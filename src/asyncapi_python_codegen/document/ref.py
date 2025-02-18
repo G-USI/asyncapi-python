@@ -23,7 +23,7 @@ from .document_context import (
     set_current_doc_path,
     DOCUMENT_CONTEXT_STACK,
 )
-from typing import Any, Callable, Generic, TypeVar, Annotated, Union
+from typing import Any, Callable, Generic, TypeVar, Annotated, Union, cast
 from typing_extensions import Self
 
 
@@ -88,6 +88,7 @@ class Ref(BaseModel, Generic[T]):
     @classmethod
     def parse_ref(cls, data: Any) -> Any:
         fp: Union[str, Path]
+        ref: str
 
         if (ref := data.get("ref")) or (ref := data.get("$ref")):
             fp, dp = ref.split("#")
@@ -101,7 +102,9 @@ class Ref(BaseModel, Generic[T]):
         return {
             **data,
             "$ref": ref,
-            "doc_path": dp.split("/")[1:],
+            "doc_path": tuple(
+                p.replace("~0", "~").replace("~1", "/") for p in dp.split("/")[1:]
+            ),
             "filepath": Path(fp).absolute(),
         }
 
