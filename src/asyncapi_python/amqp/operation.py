@@ -35,3 +35,9 @@ class Operation(Generic[I, O]):
 
     exchange_type: ExchangeType
     """An exchange type."""
+
+    @property
+    def path(self) -> tuple[str, ...]:
+        """A hierarchical path of the operation, like a/b/c or a.b.c
+        with empty parts of the path dropped"""
+        return tuple(y for x in self.name.split("/") for y in x.split(".") if y)
