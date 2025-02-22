@@ -43,6 +43,7 @@ class AbstractReceiver(AbstractEndpoint[I, O]):
             async with self._params.pool.acquire() as ch:
                 q = await self._declare(ch)
                 await q.consume(self._consumer)
+            return
         path = ".".join(self._op.path)
         args = get_args(getattr(self.__class__, "__orig_bases__")[0])
         i = args[0].__name__

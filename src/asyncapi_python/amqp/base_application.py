@@ -19,7 +19,7 @@ from uuid import uuid4
 from .endpoint import EndpointParams
 from .connection import channel_pool
 from .utils import encode_message, decode_message
-from typing import Generic, TypeVar
+from typing import Generic, Optional, TypeVar
 
 
 class Router:
@@ -55,8 +55,7 @@ class BaseApplication(Generic[P, C]):
             str,
             Future[AbstractIncomingMessage],
         ] = defaultdict(lambda: Future())
-        self.__stop_future: Future[None] = Future()
-        self.__is_blocking: bool = False
+        self.__stop_future: Optional[Future[None]] = None
 
         self.producer: P = producer_factory(self.__params)
         self.consumer: C = consumer_factory(self.__params)
@@ -68,14 +67,20 @@ class BaseApplication(Generic[P, C]):
             reply_queue = await ch.declare_queue(self.__params.reply_to, exclusive=True)
             await reply_queue.consume(self.__handle_reply)
 
-        if blocking:
-            self.__is_blocking = True
-            await self.__stop_future
+        if not blocking:
+            return
+
+        if self.__stop_future:
+            raise AssertionError(
+                "Calling start multiple times with blocking=True is not supported"
+            )
+        self.__stop_future = Future()
+        await self.__stop_future
 
     def stop(self) -> None:
-        if not self.__is_blocking:
+        if not self.__stop_future:
             return
-        stop_future, self.__stop_future = self.__stop_future, Future()
+        stop_future, self.__stop_future = self.__stop_future, None
         stop_future.set_result(None)
 
     def __handle_reply(self, message: AbstractIncomingMessage):
