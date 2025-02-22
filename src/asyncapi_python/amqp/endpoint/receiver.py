@@ -63,6 +63,7 @@ class AbstractReceiver(AbstractEndpoint[I, O]):
     async def _consumer(self, message: AbstractIncomingMessage):
         try:
             await self._handle_message(message)
+            await message.ack()
         except Reject as e:
             # TODO: Handle rejection logic here
             # (i.e. raise RejectedError on the host that sent this message)
