@@ -14,20 +14,11 @@
 
 
 from abc import abstractmethod
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    TypeVar,
-    Union,
-)
+from typing import Any, TypeVar, Union
 from uuid import uuid4
 
 from pydantic import BaseModel
-from .base import AbstractEndpoint, Encoder, Decoder
-from ..connection import AmqpPool
-from ..operation import Operation
-from aio_pika.abc import AbstractIncomingMessage
+from .base import AbstractEndpoint
 from aio_pika import Message
 
 
@@ -37,10 +28,6 @@ O = TypeVar("O", bound=Union[BaseModel, None])
 
 
 class AbstractSender(AbstractEndpoint[I, O]):
-    def __init__(self, op: Operation[I, O], pool: AmqpPool, encoder: Encoder):
-        super().__init__(op, pool)
-        self._encoder = encoder
-
     async def start(self): ...
 
     @abstractmethod
@@ -58,41 +45,27 @@ class Sender(AbstractSender[I, None]):
     async def __call__(self, message: I) -> None:
         ex_n = self._op.exchange_name or ""
         q_n = self._op.routing_key or ""
-        body = self._encoder(message)
-        async with self._pool.acquire() as ch:
+        body = self._params.encode(message)
+        async with self._params.pool.acquire() as ch:
             ex = await ch.get_exchange(ex_n)
             await ex.publish(Message(body), q_n)
 
 
 class RpcSender(AbstractSender[I, U]):
-    def __init__(
-        self,
-        op: Operation[I, U],
-        pool: AmqpPool,
-        encoder: Encoder,
-        decoder: Decoder[U],
-        await_corr_id: Callable[[str], Awaitable[AbstractIncomingMessage]],
-        reply_to: str,
-    ):
-        super().__init__(op, pool, encoder)
-        self._decoder = decoder
-        self._await_corr_id = await_corr_id
-        self._reply_to = reply_to
-
     async def __call__(self, message: I) -> U:
         corr_id = str(uuid4())
         ex_n = self._op.exchange_name or ""
         q_n = self._op.routing_key or ""
-        body = self._encoder(message)
-        async with self._pool.acquire() as ch:
+        body = self._params.encode(message)
+        async with self._params.pool.acquire() as ch:
             ex = await ch.get_exchange(ex_n)
             await ex.publish(
                 Message(
                     body,
-                    reply_to=self._reply_to,
+                    reply_to=self._params.reply_to,
                     correlation_id=corr_id,
                 ),
                 q_n,
             )
-        res = await self._await_corr_id(corr_id)
-        return self._decoder(res.body, self._op.reply_type)
+        res = await self._params.await_corr_id(corr_id)
+        return self._params.decode(res.body, self._op.reply_type)

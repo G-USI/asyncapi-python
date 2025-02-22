@@ -1,4 +1,4 @@
-# Copyright 2024 Yaroslav Petrov <yaroslav.v.petrov@gmail.com>
+# Copyright 2024-2025 Yaroslav Petrov <yaroslav.v.petrov@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,3 +16,12 @@
 from .document import Document
 from .ref import Ref
 from .components import JsonSchema, Message, Operation, Channel
+
+__all__ = [
+    "Document",
+    "Ref",
+    "JsonSchema",
+    "Message",
+    "Operation",
+    "Channel",
+]

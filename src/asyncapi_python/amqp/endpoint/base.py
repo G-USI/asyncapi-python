@@ -14,6 +14,7 @@
 
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import (
     Awaitable,
     Callable,
@@ -30,6 +31,7 @@ from ..operation import Operation
 from aio_pika.abc import (
     AbstractRobustChannel,
     AbstractRobustQueue,
+    AbstractIncomingMessage,
 )
 
 I = TypeVar("I", bound=BaseModel)
@@ -55,14 +57,19 @@ class Decoder(Protocol[I]):
     def __call__(self, body: bytes, schema: Type[I]) -> I: ...
 
 
-Callback = Callable[[I], Awaitable[O]]
-"""A callback that turns input type into output type"""
+@dataclass
+class EndpointParams:
+    pool: AmqpPool
+    encode: Callable[[I], bytes]
+    decode: Callable[[bytes, Type[I]], I]
+    await_corr_id: Callable[[str], Awaitable[AbstractIncomingMessage]]
+    reply_to: str
 
 
 class AbstractEndpoint(ABC, Generic[I, O]):
-    def __init__(self, op: Operation, pool: AmqpPool):
+    def __init__(self, op: Operation, params: EndpointParams):
         self._op = op
-        self._pool = pool
+        self._params = params
 
     @abstractmethod
     async def start(self):

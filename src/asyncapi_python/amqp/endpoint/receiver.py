@@ -15,6 +15,8 @@
 
 from abc import abstractmethod
 from typing import (
+    Awaitable,
+    Callable,
     Optional,
     TypeVar,
     Union,
@@ -22,8 +24,7 @@ from typing import (
 )
 
 from pydantic import BaseModel
-from .base import AbstractEndpoint, Encoder, Decoder, Callback, Reject
-from ..connection import AmqpPool
+from .base import AbstractEndpoint, EndpointParams, Reject
 from ..operation import Operation
 from aio_pika.abc import AbstractIncomingMessage
 from aio_pika import Message
@@ -34,15 +35,18 @@ U = TypeVar("U", bound=BaseModel)
 O = TypeVar("O", bound=Union[BaseModel, None])
 
 
+Callback = Callable[[I], Awaitable[O]]
+"""A callback that turns input type into output type"""
+
+
 class AbstractReceiver(AbstractEndpoint[I, O]):
-    def __init__(self, op: Operation, pool: AmqpPool, decoder: Decoder[I]):
-        super().__init__(op, pool)
-        self._decoder: Decoder[I] = decoder
+    def __init__(self, op: Operation, params: EndpointParams):
+        super().__init__(op, params)
         self._fn: Optional[Callback[I, O]] = None
 
     async def start(self) -> None:
         if self._fn:
-            async with self._pool.acquire() as ch:
+            async with self._params.pool.acquire() as ch:
                 q = await self._declare(ch)
                 await q.consume(self._consumer)
         raise NotImplementedError(
@@ -75,21 +79,11 @@ class Receiver(AbstractReceiver[I, None]):
         if message.correlation_id or message.reply_to:
             raise Reject("Expected publish, but message has reply_to/correlation_id")
         fn = cast(Callback[I, None], self._fn)
-        payload = self._decoder(message.body, self._op.message_type)
+        payload: I = self._params.decode(message.body, self._op.message_type)
         await fn(payload)
 
 
 class RpcReceiver(AbstractReceiver[I, U]):
-    def __init__(
-        self,
-        op: Operation,
-        pool: AmqpPool,
-        encoder: Encoder,
-        decoder: Decoder[I],
-    ):
-        super().__init__(op, pool, decoder)
-        self._encoder = encoder
-
     async def _handle_message(self, message: AbstractIncomingMessage):
         if not (message.correlation_id and message.reply_to):
             raise Reject(
@@ -97,11 +91,11 @@ class RpcReceiver(AbstractReceiver[I, U]):
             )
 
         fn = cast(Callback[I, U], self._fn)
-        payload = self._decoder(message.body, self._op.message_type)
+        payload: I = self._params.decode(message.body, self._op.message_type)
         res = await fn(payload)
-        encoded_res = self._encoder(res)
+        encoded_res = self._params.encode(res)
 
-        async with self._pool.acquire() as ch:
+        async with self._params.pool.acquire() as ch:
             await ch.default_exchange.publish(
                 Message(body=encoded_res, correlation_id=message.correlation_id),
                 message.reply_to,

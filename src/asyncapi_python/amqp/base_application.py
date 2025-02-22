@@ -1,4 +1,4 @@
-# Copyright 2024 Yaroslav Petrov <yaroslav.v.petrov@gmail.com>
+# Copyright 2024-2025 Yaroslav Petrov <yaroslav.v.petrov@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,49 +12,63 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-from .connection import channel_pool, AmqpPool
-from .consumer import Consumer
-from .producer import Producer
-from typing import Literal, Optional, TypedDict
-
-
-class Queue(TypedDict):
-    name: Optional[str]
-    durable: bool
-    exclusive: bool
-    auto_delete: bool
+from asyncio import Future
+from collections import defaultdict
+from aio_pika.abc import AbstractIncomingMessage
+from uuid import uuid4
+from .endpoint import EndpointParams
+from .connection import channel_pool
+from .utils import encode_message, decode_message
+from typing import Generic, TypeVar
 
 
-class Exchange(TypedDict):
-    name: Optional[str]
-    type: Literal["topic", "direct", "fanout", "default", "headers"]
-    durable: bool
-    auto_delete: bool
+class Router:
+    def __init__(self, params: EndpointParams):
+        self._params = params
+
+    async def start(self) -> None:
+        for f in self.__dict__.values():
+            if not isinstance(f, Router):
+                continue
+            await f.start()
 
 
-class BaseApplication:
-    def __init__(self, amqp_uri: str):
-        self._uri = amqp_uri
-        self._has_started = False
-        self._pool = channel_pool(self._uri)
-        self._consumer = Consumer(self._pool)
+P = TypeVar("P", bound=Router)
+C = TypeVar("C", bound=Router)
 
-    def _assert_started(self):
-        if not self._has_started:
-            cls_name = self.__class__.__name__
-            raise AssertionError(
-                f"Invoke of {cls_name}::request or {cls_name}::publish "
-                + "occurred before {cls_name}::start"
-            )
 
-    async def start(self, blocking: bool = True):
-        async with self._pool.acquire() as ch:
-            reply_queue = await ch.declare_queue(exclusive=True)
-            self._producer = Producer(self._pool, reply_queue)
-            await self._producer.run()
-            self._has_started = True
-        if blocking:
-            await self._consumer.run_blocking(timeout=None)
-        else:
-            await self._consumer.run()
+class BaseApplication(Generic[P, C]):
+    def __init__(
+        self,
+        amqp_uri: str,
+        producer_factory: type[P],
+        consumer_factory: type[C],
+    ):
+        self.__params = EndpointParams(
+            pool=channel_pool(amqp_uri),
+            encode=encode_message,
+            decode=decode_message,
+            reply_to=f"reply-queue-{uuid4()}",
+            await_corr_id=self.__await_corr_id,
+        )
+        self.__reply_futures: dict[
+            str,
+            Future[AbstractIncomingMessage],
+        ] = defaultdict(lambda: Future())
+
+        self.producer: P = producer_factory(self.__params)
+        self.consumer: C = consumer_factory(self.__params)
+
+    async def start(self):
+        await self.consumer.start()
+        await self.producer.start()
+        async with self.__params.pool.acquire() as ch:
+            reply_queue = await ch.declare_queue(self.__params.reply_to, exclusive=True)
+            await reply_queue.consume(self.__handle_reply)
+
+    def __handle_reply(self, message: AbstractIncomingMessage):
+        if future := self.__reply_futures.pop(message.correlation_id or "", None):
+            future.set_result(message)
+
+    def __await_corr_id(self, corr_id: str) -> Future:
+        return self.__reply_futures[corr_id]
