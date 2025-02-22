@@ -165,15 +165,9 @@ def get_operation(op_name: str, op: d.Operation) -> Operation:
     output_types: list[str]
     output_schemas: list[str]
 
-    input_types, input_schemas = get_channel_types(
-        ch, op.channel.filepath, op.channel.doc_path
-    )
+    input_types, input_schemas = get_channel_types(ch, op.channel)
     output_types, output_schemas = (
-        get_channel_types(
-            op.reply.channel.get(),
-            op.reply.channel.filepath,
-            op.reply.channel.doc_path,
-        )
+        get_channel_types(op.reply.channel.get(), op.reply.channel)
         if op.reply
         else ([], [])
     )
@@ -227,8 +221,7 @@ class _Route:
 
 def get_channel_types(
     channel: d.Channel,
-    channel_filepath: Path,
-    channel_doc_path: tuple[str, ...],
+    channel_ref: d.Ref[d.Channel],
 ) -> tuple[list[str], list[str]]:
     types, schemas = [], []
     for message_key, message in channel.messages.items():
@@ -236,17 +229,17 @@ def get_channel_types(
         if isinstance(message.root, d.Ref):
             msg_ref = message.root.flatten()
             msg_filepath = msg_ref.filepath
-            msg_doc_path = msg_ref.doc_path
+            msg_doc_path = msg_ref.raw_doc_path
             del msg_ref
         else:
-            msg_filepath = channel_filepath
-            msg_doc_path = (*channel_doc_path, "messages", message_key)
+            msg_filepath = channel_ref.filepath
+            msg_doc_path = (*channel_ref.raw_doc_path, "messages", message_key)
 
         message_payload = message.get().payload.root
         if isinstance(message_payload, d.Ref):
             payload_ref = message_payload.flatten()
             pl_filepath = payload_ref.filepath
-            pl_doc_path = payload_ref.doc_path
+            pl_doc_path = payload_ref.raw_doc_path
             del payload_ref
         else:
             pl_filepath = msg_filepath
