@@ -1,0 +1,19 @@
+asyncapi: "3.0.0"
+info:
+  title: Common part of the Ping service example
+  version: 1.0.0
+
+channels:
+  /ping/pubsub:
+    bindings:
+      amqp:
+        exchange:
+          type: fanout
+    messages:
+      Ping:
+        payload:
+          type: object
+          properties:
+            event:
+              type: string
+              const: ping
