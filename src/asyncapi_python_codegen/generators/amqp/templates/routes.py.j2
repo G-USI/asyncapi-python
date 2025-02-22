@@ -43,11 +43,11 @@ class _Router_{{ router.id }}({{ extends_class }}api.Router):
         {% else %}
         out = None.__class__
         {% endif %}
-        op = api.Operation(
+        op: Any = api.Operation(
             name="{{ router.op.name }}",
             message_type=inp,
             reply_type=out,
-            routing_key={{ "\"" + router.op.routing_key + "\"" if op.routing_key else "None" }},
+            routing_key={{ "\"" + router.op.routing_key + "\"" if router.op.routing_key else "None" }},
             exchange_name={{ "\"" + router.op.exchange + "\"" if router.op.exchange else "None" }},
             exchange_type={{ "\"" + router.op.exchange_type + "\"" if router.op.exchange_type else "None" }},
         )
