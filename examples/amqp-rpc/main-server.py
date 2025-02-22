@@ -2,7 +2,7 @@ import asyncio
 from os import environ
 from sys import exit
 from server import Application
-from server.models import Ping, Pong
+from server.messages import Ping, Pong
 
 
 AMQP_URI = environ.get("AMQP_URI", "amqp://guest:guest@localhost")

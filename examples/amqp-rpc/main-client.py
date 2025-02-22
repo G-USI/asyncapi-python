@@ -1,7 +1,7 @@
 import asyncio
 from os import environ
 from client import Application
-from client.models import Ping, Pong
+from client.messages import Ping, Pong
 
 
 AMQP_URI = environ.get("AMQP_URI", "amqp://guest:guest@localhost")
@@ -15,7 +15,7 @@ async def main() -> None:
     for _ in range(NUM_REQUESTS):
         req = Ping()
         print(f"Sending request: {req}")
-        res: Pong = await app.ping_request(req)
+        res: Pong = await app.producer.ping_request(req)
         print(f"Got response: {res}")
 
 
