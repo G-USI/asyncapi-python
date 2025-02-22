@@ -22,6 +22,7 @@ from typing import (
 )
 from pydantic import BaseModel
 from dataclasses import dataclass
+from asyncapi_python_codegen.generators.amqp.utils import snake_case
 
 ExchangeType = Literal["topic", "direct", "fanout", "default", "headers"]
 
@@ -55,4 +56,6 @@ class Operation(Generic[I, O]):
     def path(self) -> tuple[str, ...]:
         """A hierarchical path of the operation, like a/b/c or a.b.c
         with empty parts of the path dropped"""
-        return tuple(y for x in self.name.split("/") for y in x.split(".") if y)
+        return tuple(
+            snake_case(y) for x in self.name.split("/") for y in x.split(".") if y
+        )

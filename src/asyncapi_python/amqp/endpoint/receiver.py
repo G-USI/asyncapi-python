@@ -14,14 +14,7 @@
 
 
 from abc import abstractmethod
-from typing import (
-    Awaitable,
-    Callable,
-    Optional,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import Awaitable, Callable, Optional, TypeVar, Union, cast, get_args
 
 from pydantic import BaseModel
 from .base import AbstractEndpoint, EndpointParams, Reject
@@ -45,13 +38,23 @@ class AbstractReceiver(AbstractEndpoint[I, O]):
         self._fn: Optional[Callback[I, O]] = None
 
     async def start(self) -> None:
+        print("start", self._op)
         if self._fn:
             async with self._params.pool.acquire() as ch:
                 q = await self._declare(ch)
                 await q.consume(self._consumer)
+        path = ".".join(self._op.path)
+        i, o = get_args(getattr(self.__class__, "__orig_bases__")[0])
         raise NotImplementedError(
             "The following operation must be implemented "
-            f"before the system can start: {self._op.name}"
+            f"before the system can start: {self._op.name}. "
+            "This can be done by:\n\n\n"
+            "```python\n"
+            f"@app.consumer.{path}\n"
+            f"async def callback(msg: {i.__name__}) -> {o.__name__}:\n"
+            "    # TODO: Implement callback for this handler\n"
+            "    raise NotImplementedError\n"
+            "```\n"
         )
 
     async def _consumer(self, message: AbstractIncomingMessage):
