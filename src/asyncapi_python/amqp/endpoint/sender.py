@@ -28,7 +28,9 @@ O = TypeVar("O", bound=Union[BaseModel, None])
 
 
 class AbstractSender(AbstractEndpoint[I, O]):
-    async def start(self): ...
+    async def start(self):
+        async with self._params.pool.acquire() as ch:
+            await self._declare(ch)
 
     @abstractmethod
     async def __call__(self, message: I) -> O:
@@ -47,18 +49,18 @@ class Sender(AbstractSender[I, None]):
         q_n = self._op.routing_key or ""
         body = self._params.encode(message)
         async with self._params.pool.acquire() as ch:
-            ex = await ch.get_exchange(ex_n)
+            ex = await ch.get_exchange(ex_n) if ex_n else ch.default_exchange
             await ex.publish(Message(body), q_n)
 
 
 class RpcSender(AbstractSender[I, U]):
     async def __call__(self, message: I) -> U:
         corr_id = str(uuid4())
-        ex_n = self._op.exchange_name or ""
+        ex_n = self._op.exchange_name
         q_n = self._op.routing_key or ""
         body = self._params.encode(message)
         async with self._params.pool.acquire() as ch:
-            ex = await ch.get_exchange(ex_n)
+            ex = await ch.get_exchange(ex_n) if ex_n else ch.default_exchange
             await ex.publish(
                 Message(
                     body,
@@ -66,6 +68,7 @@ class RpcSender(AbstractSender[I, U]):
                     correlation_id=corr_id,
                 ),
                 q_n,
+                timeout=1,
             )
         res = await self._params.await_corr_id(corr_id)
         return self._params.decode(res.body, self._op.reply_type)
