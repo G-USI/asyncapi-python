@@ -30,7 +30,9 @@ O = TypeVar("O", bound=Union[BaseModel, None])
 class AbstractSender(AbstractEndpoint[I, O]):
     async def start(self):
         async with self._params.pool.acquire() as ch:
-            await self._declare(ch)
+            q = await self._declare(ch)
+            if q.exclusive:
+                await q.delete()
 
     @abstractmethod
     async def __call__(self, message: I) -> O:
