@@ -55,16 +55,28 @@ class BaseApplication(Generic[P, C]):
             str,
             Future[AbstractIncomingMessage],
         ] = defaultdict(lambda: Future())
+        self.__stop_future: Future[None] = Future()
+        self.__is_blocking: bool = False
 
         self.producer: P = producer_factory(self.__params)
         self.consumer: C = consumer_factory(self.__params)
 
-    async def start(self):
+    async def start(self, blocking: bool = True):
         await self.consumer.start()
         await self.producer.start()
         async with self.__params.pool.acquire() as ch:
             reply_queue = await ch.declare_queue(self.__params.reply_to, exclusive=True)
             await reply_queue.consume(self.__handle_reply)
+
+        if blocking:
+            self.__is_blocking = True
+            await self.__stop_future
+
+    def stop(self) -> None:
+        if not self.__is_blocking:
+            return
+        stop_future, self.__stop_future = self.__stop_future, Future()
+        stop_future.set_result(None)
 
     def __handle_reply(self, message: AbstractIncomingMessage):
         if future := self.__reply_futures.pop(message.correlation_id or "", None):
