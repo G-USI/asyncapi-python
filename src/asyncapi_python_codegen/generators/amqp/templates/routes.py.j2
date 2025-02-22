@@ -38,7 +38,11 @@ class _Router_{{ router.id }}({{ extends_class }}api.Router):
     def __init__(self, params: api.EndpointParams):
         {% if router.op %}
         inp = api.utils.union_model(({{ ", ".join(router.op.input_types) }},))
+        {% if router.op.output_types %}
         out = api.utils.union_model(({{ ", ".join(router.op.output_types) }},))
+        {% else %}
+        out = None
+        {% endif %}
         op = api.Operation(
             name="{{ router.op.name }}",
             message_type=inp,

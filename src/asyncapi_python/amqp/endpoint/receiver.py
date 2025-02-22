@@ -44,14 +44,16 @@ class AbstractReceiver(AbstractEndpoint[I, O]):
                 q = await self._declare(ch)
                 await q.consume(self._consumer)
         path = ".".join(self._op.path)
-        i, o = get_args(getattr(self.__class__, "__orig_bases__")[0])
+        args = get_args(getattr(self.__class__, "__orig_bases__")[0])
+        i = args[0].__name__
+        o = args[1].__name__ if len(args) > 1 else None
         raise NotImplementedError(
             "The following operation must be implemented "
             f"before the system can start: {self._op.name}. "
             "This can be done by:\n\n\n"
             "```python\n"
             f"@app.consumer.{path}\n"
-            f"async def callback(msg: {i.__name__}) -> {o.__name__}:\n"
+            f"async def callback(msg: {i}) -> {o}:\n"
             "    # TODO: Implement callback for this handler\n"
             "    raise NotImplementedError\n"
             "```\n"
@@ -72,6 +74,7 @@ class AbstractReceiver(AbstractEndpoint[I, O]):
     def __call__(self, callback: Callback[I, O]) -> None:
         if not self._fn:
             self._fn = callback
+            return
         raise ValueError(
             f"Operation handler {self._op.name} has already been implemented"
         )
