@@ -131,7 +131,7 @@ def get_operation(op_name: str, op: d.Operation) -> Operation:
     ch = op.channel.get()
     reply_ch = op.reply.channel.get() if op.reply else None
     op_path = (snake_case(y) for x in op_name.split("/") for y in x.split(".") if y)
-    addr = lambda x: x or op_name or ch.address
+    addr = lambda x: x or ch.address or op.channel.escaped_doc_path[-1] or op_name
 
     if ch.bindings is None:
         # Default exchange + named queues
