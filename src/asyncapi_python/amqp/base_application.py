@@ -32,6 +32,12 @@ class Router:
                 continue
             await f.start()
 
+    async def stop(self) -> None:
+        for f in self.__dict__.values():
+            if not isinstance(f, Router):
+                continue
+            await f.stop()
+
 
 P = TypeVar("P", bound=Router)
 C = TypeVar("C", bound=Router)
@@ -50,6 +56,7 @@ class BaseApplication(Generic[P, C]):
             decode=decode_message,
             reply_to=f"reply-queue-{uuid4()}",
             await_corr_id=self.__await_corr_id,
+            stop_application=self.stop,
         )
         self.__reply_futures: dict[
             str,
@@ -77,7 +84,9 @@ class BaseApplication(Generic[P, C]):
         self.__stop_future = Future()
         await self.__stop_future
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
+        await self.producer.stop()
+        await self.consumer.stop()
         if not self.__stop_future:
             return
         stop_future, self.__stop_future = self.__stop_future, None

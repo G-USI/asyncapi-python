@@ -64,6 +64,7 @@ class EndpointParams:
     decode: Callable[[bytes, Type[I]], I]
     await_corr_id: Callable[[str], Awaitable[AbstractIncomingMessage]]
     reply_to: str
+    stop_application: Callable[[], Awaitable[None]]
 
 
 class AbstractEndpoint(ABC, Generic[I, O]):
@@ -73,6 +74,10 @@ class AbstractEndpoint(ABC, Generic[I, O]):
 
     @abstractmethod
     async def start(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    async def stop(self):
         raise NotImplementedError
 
     async def _declare(self, ch: AbstractRobustChannel) -> AbstractRobustQueue:
