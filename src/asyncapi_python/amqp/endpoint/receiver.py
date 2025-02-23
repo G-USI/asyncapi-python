@@ -19,7 +19,7 @@ from typing import Awaitable, Callable, Optional, TypeVar, Union, cast, get_args
 from pydantic import BaseModel
 from .base import AbstractEndpoint, EndpointParams, Reject
 from ..operation import Operation
-from aio_pika.abc import AbstractIncomingMessage
+from aio_pika.abc import AbstractIncomingMessage, AbstractRobustQueue
 from aio_pika import Message
 
 
@@ -36,13 +36,15 @@ class AbstractReceiver(AbstractEndpoint[I, O]):
     def __init__(self, op: Operation, params: EndpointParams):
         super().__init__(op, params)
         self._fn: Optional[Callback[I, O]] = None
+        self._consumer_tag: Optional[str] = None
+        self._queue: Optional[AbstractRobustQueue] = None
 
     async def start(self) -> None:
         print("start", self._op)
         if self._fn:
             async with self._params.pool.acquire() as ch:
-                q = await self._declare(ch)
-                await q.consume(self._consumer)
+                q = self._queue = await self._declare(ch)
+                self._consumer_tag = await q.consume(self._consumer)
             return
         path = ".".join(self._op.path)
         args = get_args(getattr(self.__class__, "__orig_bases__")[0])
@@ -59,6 +61,11 @@ class AbstractReceiver(AbstractEndpoint[I, O]):
             "    raise NotImplementedError\n"
             "```\n"
         )
+
+    async def stop(self):
+        if not (self._consumer_tag and self._queue):
+            return
+        await self._queue.cancel(self._consumer_tag)
 
     async def _consumer(self, message: AbstractIncomingMessage):
         try:

@@ -34,6 +34,8 @@ class AbstractSender(AbstractEndpoint[I, O]):
             if q.exclusive:
                 await q.delete()
 
+    async def stop(self): ...
+
     @abstractmethod
     async def __call__(self, message: I) -> O:
         raise NotImplementedError
