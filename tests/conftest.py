@@ -1,4 +1,4 @@
-# Copyright 2024-2025 Yaroslav Petrov <yaroslav.v.petrov@gmail.com>
+# Copyright 2025 Yaroslav Petrov <yaroslav.v.petrov@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,12 +13,23 @@
 # limitations under the License.
 
 
-from asyncapi_python.amqp import AmqpPool, channel_pool
-import pytest_asyncio
-from typing import AsyncGenerator
+import asyncio
+from os import environ
+import pytest
 
 
-@pytest_asyncio.fixture(scope="function")
-async def amqp_pool(amqp_uri: str) -> AsyncGenerator[AmqpPool, None]:
-    pool = channel_pool(amqp_uri)
-    yield pool
+@pytest.fixture(scope="session")
+def amqp_uri() -> str:
+    if env_uri := environ.get("AMQP_URI"):
+        return env_uri
+    return "amqp://guest:guest@rabbitmq/"
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
