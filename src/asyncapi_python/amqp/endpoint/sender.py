@@ -15,7 +15,6 @@
 
 from abc import abstractmethod
 from typing import Any, TypeVar, Union
-from uuid import uuid4
 
 from pydantic import BaseModel
 from .base import AbstractEndpoint
