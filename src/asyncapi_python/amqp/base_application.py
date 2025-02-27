@@ -55,7 +55,7 @@ class BaseApplication(Generic[P, C]):
             encode=encode_message,
             decode=decode_message,
             reply_to=f"reply-queue-{uuid4()}",
-            await_corr_id=self.__await_corr_id,
+            register_correlation_id=self.__register_correlation_id,
             stop_application=self.stop,
         )
         self.__reply_futures: dict[
@@ -96,5 +96,6 @@ class BaseApplication(Generic[P, C]):
         if future := self.__reply_futures.pop(message.correlation_id or "", None):
             future.set_result(message)
 
-    def __await_corr_id(self, corr_id: str) -> Future:
-        return self.__reply_futures[corr_id]
+    def __register_correlation_id(self) -> tuple[str, Future[AbstractIncomingMessage]]:
+        corr_id = str(uuid4())
+        return corr_id, self.__reply_futures[corr_id]

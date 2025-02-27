@@ -62,7 +62,9 @@ class EndpointParams:
     pool: AmqpPool
     encode: Callable[[I], bytes]
     decode: Callable[[bytes, Type[I]], I]
-    await_corr_id: Callable[[str], Awaitable[AbstractIncomingMessage]]
+    register_correlation_id: Callable[
+        [], tuple[str, Awaitable[AbstractIncomingMessage]]
+    ]
     reply_to: str
     stop_application: Callable[[], Awaitable[None]]
 
