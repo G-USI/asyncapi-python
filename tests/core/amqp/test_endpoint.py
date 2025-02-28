@@ -85,7 +85,7 @@ def params(
         register_correlation_id=lambda: ((uuid := str(uuid4()), correlation_ids[uuid])),
         encode=encode_message,
         decode=decode_message,
-        reply_queue_name="reply",
+        app_id="app-1",
         stop_application=lambda: exit(-1),
     )
 
@@ -135,7 +135,7 @@ async def test_rpc(
     await consumer.start()
 
     async with amqp_pool.acquire() as ch:
-        q = await ch.declare_queue("reply", auto_delete=True)
+        q = await ch.declare_queue(params.reply_queue_name, auto_delete=True)
         await q.consume(on_reply)
 
     assert await producer(AddRequest(a=1, b=2)) == AddResponse(root=3)
