@@ -1,9 +1,10 @@
 # AsyncAPI Python Code Generator
+>
 > [!IMPORTANT]
 > Although commits to dev branch might seem infrequent, the project is under active development **as of February 2025**.
 >
 > We currently produce only those changes that are required to satisfy our personal use cases.
-> 
+>
 > The number of commits will grow as we see increase in popularity of it, so do not hesitate
 > to star this repo, open issues, and pull requests.
 
@@ -27,7 +28,7 @@ Easily generate type-safe and async Python applications from AsyncAPI 3 specific
 
 ## Requirements
 
-- `python>=3.10`
+- `python>=3.9`
 - `pydantic>=2`
 - `pytz`
 - For `codegen` extra
