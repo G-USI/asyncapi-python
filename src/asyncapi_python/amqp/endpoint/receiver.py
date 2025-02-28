@@ -72,9 +72,16 @@ class AbstractReceiver(AbstractEndpoint[I, O]):
             await self._handle_message(message)
             await message.ack()
         except Reject as e:
-            # TODO: Handle rejection logic here
-            # (i.e. raise RejectedError on the host that sent this message)
-            raise e
+            await self._reject(message, e)
+
+    async def _reject(self, message: AbstractIncomingMessage, err: Reject):
+        await message.reject()
+        if not (app_id := message.app_id):
+            return
+        err_msg = self._create_message(message.body, message.correlation_id)
+        routing_key = self._params.get_error_queue(app_id)
+        async with self._params.pool.acquire() as ch:
+            await ch.default_exchange.publish(err_msg, routing_key)
 
     @abstractmethod
     async def _handle_message(self, message: AbstractIncomingMessage):
@@ -112,7 +119,7 @@ class RpcReceiver(AbstractReceiver[I, U]):
 
         async with self._params.pool.acquire() as ch:
             await ch.default_exchange.publish(
-                self._params.create_message(
+                self._create_message(
                     encoded_res, correlation_id=message.correlation_id
                 ),
                 message.reply_to,

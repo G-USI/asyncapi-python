@@ -82,18 +82,6 @@ class EndpointParams:
     def get_error_queue(cls, app_id: str) -> str:
         return f"error-queue-{app_id}"
 
-    def create_message(
-        self,
-        body: bytes,
-        correlation_id: Optional[str] = None,
-    ) -> Message:
-        return Message(
-            body,
-            app_id=self.app_id,
-            correlation_id=correlation_id,
-            reply_to=self.reply_queue_name if correlation_id else None,
-        )
-
 
 class AbstractEndpoint(ABC, Generic[I, O]):
     def __init__(self, op: Operation, params: EndpointParams):
@@ -122,3 +110,15 @@ class AbstractEndpoint(ABC, Generic[I, O]):
             ex = await ch.declare_exchange(name=ex_name, type=ex_type)
             await q.bind(ex)
         return q
+
+    def _create_message(
+        self,
+        body: bytes,
+        correlation_id: Optional[str] = None,
+    ) -> Message:
+        return Message(
+            body,
+            app_id=self._params.app_id,
+            correlation_id=correlation_id,
+            reply_to=self._params.reply_queue_name if correlation_id else None,
+        )
