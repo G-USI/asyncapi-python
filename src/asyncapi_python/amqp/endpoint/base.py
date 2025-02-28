@@ -28,6 +28,7 @@ from typing import (
 
 from aio_pika import Message
 from pydantic import BaseModel
+from ..error import Reject, RejectedError
 from ..connection import AmqpPool
 from ..operation import Operation
 from aio_pika.abc import (
@@ -39,12 +40,6 @@ from aio_pika.abc import (
 I = TypeVar("I", bound=BaseModel)
 U = TypeVar("U", bound=BaseModel)
 O = TypeVar("O", bound=Union[BaseModel, None])
-
-
-class Reject(BaseException): ...
-
-
-class RejectedError(BaseException): ...
 
 
 class Encoder(Protocol):
