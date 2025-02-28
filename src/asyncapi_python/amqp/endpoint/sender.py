@@ -53,7 +53,7 @@ class Sender(AbstractSender[I, None]):
         body = self._params.encode(message)
         async with self._params.pool.acquire() as ch:
             ex = await ch.get_exchange(ex_n) if ex_n else ch.default_exchange
-            await ex.publish(Message(body), q_n)
+            await ex.publish(self._params.create_message(body), q_n)
 
 
 class RpcSender(AbstractSender[I, U]):
@@ -64,14 +64,6 @@ class RpcSender(AbstractSender[I, U]):
         corr_id, future = self._params.register_correlation_id()
         async with self._params.pool.acquire() as ch:
             ex = await ch.get_exchange(ex_n) if ex_n else ch.default_exchange
-            await ex.publish(
-                Message(
-                    body,
-                    reply_to=self._params.reply_to,
-                    correlation_id=corr_id,
-                ),
-                q_n,
-                timeout=1,
-            )
+            await ex.publish(self._params.create_message(body, corr_id), q_n)
             res = await future
         return self._params.decode(res.body, self._op.reply_type)

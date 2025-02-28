@@ -19,12 +19,14 @@ from typing import (
     Awaitable,
     Callable,
     Generic,
+    Optional,
     Protocol,
     Type,
     TypeVar,
     Union,
 )
 
+from aio_pika import Message
 from pydantic import BaseModel
 from ..connection import AmqpPool
 from ..operation import Operation
@@ -65,8 +67,28 @@ class EndpointParams:
     register_correlation_id: Callable[
         [], tuple[str, Awaitable[AbstractIncomingMessage]]
     ]
-    reply_to: str
+    app_id: str
     stop_application: Callable[[], Awaitable[None]]
+
+    @property
+    def reply_queue_name(self) -> str:
+        return f"reply-queue-{self.app_id}"
+
+    @classmethod
+    def get_error_queue(cls, app_id: str) -> str:
+        return f"error-queue-{app_id}"
+
+    def create_message(
+        self,
+        body: bytes,
+        correlation_id: Optional[str] = None,
+    ) -> Message:
+        return Message(
+            body,
+            app_id=self.app_id,
+            correlation_id=correlation_id,
+            reply_to=self.reply_queue_name if correlation_id else None,
+        )
 
 
 class AbstractEndpoint(ABC, Generic[I, O]):

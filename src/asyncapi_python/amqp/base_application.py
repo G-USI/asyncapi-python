@@ -54,9 +54,9 @@ class BaseApplication(Generic[P, C]):
             pool=channel_pool(amqp_uri),
             encode=encode_message,
             decode=decode_message,
-            reply_to=f"reply-queue-{uuid4()}",
             register_correlation_id=self.__register_correlation_id,
             stop_application=self.stop,
+            app_id=str(uuid4()),
         )
         self.__reply_futures: dict[
             str,
@@ -71,7 +71,9 @@ class BaseApplication(Generic[P, C]):
         await self.consumer.start()
         await self.producer.start()
         async with self.__params.pool.acquire() as ch:
-            reply_queue = await ch.declare_queue(self.__params.reply_to, exclusive=True)
+            reply_queue = await ch.declare_queue(
+                self.__params.reply_queue_name, exclusive=True
+            )
             await reply_queue.consume(self.__handle_reply)
 
         if not blocking:

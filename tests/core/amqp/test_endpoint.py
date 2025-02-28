@@ -85,7 +85,7 @@ def params(
         register_correlation_id=lambda: ((uuid := str(uuid4()), correlation_ids[uuid])),
         encode=encode_message,
         decode=decode_message,
-        reply_to="reply",
+        reply_queue_name="reply",
         stop_application=lambda: exit(-1),
     )
 

@@ -17,10 +17,10 @@ from abc import abstractmethod
 from typing import Awaitable, Callable, Optional, TypeVar, Union, cast, get_args
 
 from pydantic import BaseModel
+
 from .base import AbstractEndpoint, EndpointParams, Reject
 from ..operation import Operation
 from aio_pika.abc import AbstractIncomingMessage, AbstractRobustQueue
-from aio_pika import Message
 
 
 I = TypeVar("I", bound=BaseModel)
@@ -112,6 +112,8 @@ class RpcReceiver(AbstractReceiver[I, U]):
 
         async with self._params.pool.acquire() as ch:
             await ch.default_exchange.publish(
-                Message(body=encoded_res, correlation_id=message.correlation_id),
+                self._params.create_message(
+                    encoded_res, correlation_id=message.correlation_id
+                ),
                 message.reply_to,
             )
