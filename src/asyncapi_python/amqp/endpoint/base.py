@@ -74,6 +74,10 @@ class EndpointParams:
     def reply_queue_name(self) -> str:
         return f"reply-queue-{self.app_id}"
 
+    @property
+    def error_queue_name(self) -> str:
+        return self.get_error_queue(self.app_id)
+
     @classmethod
     def get_error_queue(cls, app_id: str) -> str:
         return f"error-queue-{app_id}"
