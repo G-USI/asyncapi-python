@@ -14,11 +14,13 @@
 
 
 from abc import abstractmethod
+import json
 from typing import Awaitable, Callable, Optional, TypeVar, Union, cast, get_args
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
-from .base import AbstractEndpoint, EndpointParams, Reject
+from .base import AbstractEndpoint, EndpointParams
+from ..error import Reject, RejectBadRequest
 from ..operation import Operation
 from aio_pika.abc import AbstractIncomingMessage, AbstractRobustQueue
 
@@ -69,22 +71,40 @@ class AbstractReceiver(AbstractEndpoint[I, O]):
 
     async def _consumer(self, message: AbstractIncomingMessage):
         try:
-            await self._handle_message(message)
+            payload = self._decode_payload(message)
+            await self._handle_message(message, payload)
             await message.ack()
         except Reject as e:
-            await self._reject(message, e)
+            await self._reject(e, message)
 
-    async def _reject(self, message: AbstractIncomingMessage, err: Reject):
+    def _decode_payload(self, message: AbstractIncomingMessage) -> I:
+        try:
+            payload: I = self._params.decode(message.body, self._op.message_type)
+        except ValidationError as e:
+            raise RejectBadRequest(e)
+        return payload
+
+    async def _reject(self, err: Reject, message: AbstractIncomingMessage):
         await message.reject()
         if not (app_id := message.app_id):
             return
-        err_msg = self._create_message(message.body, message.correlation_id)
+
+        err_payload = json.dumps(
+            {
+                "error": err.asdict(),
+                "original_message": {
+                    "headers": message.headers,
+                    "body": json.loads(message.body),
+                },
+            }
+        ).encode()
+        err_msg = self._create_message(err_payload, message.correlation_id)
         routing_key = self._params.get_error_queue(app_id)
         async with self._params.pool.acquire() as ch:
             await ch.default_exchange.publish(err_msg, routing_key)
 
     @abstractmethod
-    async def _handle_message(self, message: AbstractIncomingMessage):
+    async def _handle_message(self, message: AbstractIncomingMessage, payload: I):
         raise NotImplementedError
 
     def __call__(self, callback: Callback[I, O]) -> None:
@@ -97,7 +117,7 @@ class AbstractReceiver(AbstractEndpoint[I, O]):
 
 
 class Receiver(AbstractReceiver[I, None]):
-    async def _handle_message(self, message: AbstractIncomingMessage):
+    async def _handle_message(self, message: AbstractIncomingMessage, payload: I):
         if message.correlation_id or message.reply_to:
             raise Reject("Expected publish, but message has reply_to/correlation_id")
         fn = cast(Callback[I, None], self._fn)
@@ -106,14 +126,13 @@ class Receiver(AbstractReceiver[I, None]):
 
 
 class RpcReceiver(AbstractReceiver[I, U]):
-    async def _handle_message(self, message: AbstractIncomingMessage):
+    async def _handle_message(self, message: AbstractIncomingMessage, payload: I):
         if not (message.correlation_id and message.reply_to):
             raise Reject(
                 "Expected RPC call, but message has no reply_to/correlation_id"
             )
 
         fn = cast(Callback[I, U], self._fn)
-        payload: I = self._params.decode(message.body, self._op.message_type)
         res = await fn(payload)
         encoded_res = self._params.encode(res)
 
