@@ -18,10 +18,10 @@ from pathlib import Path
 
 from pydantic import Field
 from .base import BaseModel
-from typing import Annotated, Any, Literal, Optional
+from typing import Annotated, Literal, Optional
 import yaml
-from .components import Channel, Components, Message, Operation
-from .ref import MaybeRef, Ref
+from .components import Channel, Components, Operation
+from .ref import MaybeRef
 from .document_context import set_current_doc_path
 
 
@@ -32,7 +32,7 @@ class Document(BaseModel):
     filepath: Annotated[Path, Field(exclude=True)]
     asyncapi: Literal["3.0.0"]
     info: Info
-    channels: dict[str, Channel] = {}
+    channels: dict[str, MaybeRef[Channel]] = {}
     operations: dict[str, MaybeRef[Operation]] = {}
     components: Components = Components()
 
