@@ -18,6 +18,7 @@ from .base_application import BaseApplication, Router
 from .endpoint import Receiver, RpcReceiver, Sender, RpcSender, EndpointParams
 from .operation import Operation
 from .utils import union_model
+from .error import Reject, RejectedError
 
 __all__ = [
     "channel_pool",
@@ -31,4 +32,6 @@ __all__ = [
     "Operation",
     "EndpointParams",
     "union_model",
+    "Reject",
+    "RejectedError",
 ]
