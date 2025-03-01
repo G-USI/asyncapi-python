@@ -121,7 +121,6 @@ class Receiver(AbstractReceiver[I, None]):
         if message.correlation_id or message.reply_to:
             raise Reject("Expected publish, but message has reply_to/correlation_id")
         fn = cast(Callback[I, None], self._fn)
-        payload: I = self._params.decode(message.body, self._op.message_type)
         await fn(payload)
 
 
