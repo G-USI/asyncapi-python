@@ -21,7 +21,7 @@ T = TypeVar("T", bound=BaseModel)
 U = TypeVar("U")
 
 
-class UnionModel(RootModel): ...
+class UnionModel(RootModel[U]): ...
 
 
 def encode_message(message: T) -> bytes:
@@ -33,6 +33,6 @@ def decode_message(message: bytes, schema: type[T]) -> T:
 
 
 @cache
-def union_model(types: tuple[type[U], ...]) -> type[RootModel[U]]:
+def union_model(types: tuple[type[U], ...]) -> type[UnionModel[U]]:
     UnionType = Union.__getitem__(types)
     return UnionModel[UnionType]  # type: ignore
