@@ -33,6 +33,6 @@ def decode_message(message: bytes, schema: type[T]) -> T:
 
 
 @cache
-def union_model(types: tuple[type[U], ...]) -> type[UnionModel[U]]:
+def union_model(types: tuple[type[U], ...]) -> type[RootModel[U]]:
     UnionType = Union.__getitem__(types)
     return UnionModel[UnionType]  # type: ignore
