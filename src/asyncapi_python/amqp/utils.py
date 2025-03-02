@@ -15,13 +15,14 @@
 
 from functools import cache
 from pydantic import BaseModel, RootModel
-from typing import TypeVar, Union
+from typing import TypeVar, Union, cast
 
 T = TypeVar("T", bound=BaseModel)
 U = TypeVar("U")
 
 
-class UnionModel(RootModel[U]): ...
+class UnionModel(RootModel[U]):
+    """A trick to allow unions as constructor types"""
 
 
 def encode_message(message: T) -> bytes:
@@ -29,7 +30,10 @@ def encode_message(message: T) -> bytes:
 
 
 def decode_message(message: bytes, schema: type[T]) -> T:
-    return schema.model_validate_json(message)
+    payload = schema.model_validate_json(message)
+    if isinstance(payload, UnionModel):
+        payload = cast(T, payload.root)
+    return payload
 
 
 @cache

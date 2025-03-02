@@ -22,7 +22,6 @@ from pydantic import BaseModel, ValidationError
 from .base import AbstractEndpoint, EndpointParams
 from ..error import Rejection, BadRequestRejection
 from ..operation import Operation
-from ..utils import UnionModel
 from aio_pika.abc import AbstractIncomingMessage, AbstractRobustQueue
 
 
@@ -81,9 +80,6 @@ class AbstractReceiver(AbstractEndpoint[I, O]):
     def _decode_payload(self, message: AbstractIncomingMessage) -> I:
         try:
             payload: I = self._params.decode(message.body, self._op.message_type)
-            # This trick is used to support union types in receivers
-            if isinstance(payload, UnionModel):
-                payload = cast(I, payload.root)
         except ValidationError as e:
             raise BadRequestRejection(e)
         return payload
