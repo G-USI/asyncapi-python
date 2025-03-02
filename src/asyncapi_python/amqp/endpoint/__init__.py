@@ -13,13 +13,13 @@
 # limitations under the License.
 
 
-from .base import Reject, RejectedError, EndpointParams, AbstractEndpoint
+from .base import Rejection, RejectedError, EndpointParams, AbstractEndpoint
 from .receiver import Receiver, RpcReceiver
 from .sender import Sender, RpcSender
 
 
 __all__ = [
-    "Reject",
+    "Rejection",
     "RejectedError",
     "Receiver",
     "RpcReceiver",

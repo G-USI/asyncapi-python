@@ -5,7 +5,7 @@ from typing import Any
 from pydantic import ValidationError
 
 
-class Reject(BaseException):
+class Rejection(BaseException):
     def asdict(self) -> dict[str, Any]:
         return {
             "__exception__": True,
@@ -15,7 +15,7 @@ class Reject(BaseException):
         }
 
 
-class RejectBadRequest(Reject):
+class BadRequestRejection(Rejection):
     def __init__(self, err: ValidationError):
         super().__init__(err)
 

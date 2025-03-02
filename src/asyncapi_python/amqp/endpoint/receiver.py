@@ -20,7 +20,7 @@ from typing import Awaitable, Callable, Optional, TypeVar, Union, cast, get_args
 from pydantic import BaseModel, ValidationError
 
 from .base import AbstractEndpoint, EndpointParams
-from ..error import Reject, RejectBadRequest
+from ..error import Rejection, BadRequestRejection
 from ..operation import Operation
 from aio_pika.abc import AbstractIncomingMessage, AbstractRobustQueue
 
@@ -74,17 +74,17 @@ class AbstractReceiver(AbstractEndpoint[I, O]):
             payload = self._decode_payload(message)
             await self._handle_message(message, payload)
             await message.ack()
-        except Reject as e:
+        except Rejection as e:
             await self._reject(e, message)
 
     def _decode_payload(self, message: AbstractIncomingMessage) -> I:
         try:
             payload: I = self._params.decode(message.body, self._op.message_type)
         except ValidationError as e:
-            raise RejectBadRequest(e)
+            raise BadRequestRejection(e)
         return payload
 
-    async def _reject(self, err: Reject, message: AbstractIncomingMessage):
+    async def _reject(self, err: Rejection, message: AbstractIncomingMessage):
         await message.reject()
         if not (app_id := message.app_id):
             return
@@ -119,7 +119,7 @@ class AbstractReceiver(AbstractEndpoint[I, O]):
 class Receiver(AbstractReceiver[I, None]):
     async def _handle_message(self, message: AbstractIncomingMessage, payload: I):
         if message.correlation_id or message.reply_to:
-            raise Reject("Expected publish, but message has reply_to/correlation_id")
+            raise Rejection("Expected publish, but message has reply_to/correlation_id")
         fn = cast(Callback[I, None], self._fn)
         await fn(payload)
 
@@ -127,7 +127,7 @@ class Receiver(AbstractReceiver[I, None]):
 class RpcReceiver(AbstractReceiver[I, U]):
     async def _handle_message(self, message: AbstractIncomingMessage, payload: I):
         if not (message.correlation_id and message.reply_to):
-            raise Reject(
+            raise Rejection(
                 "Expected RPC call, but message has no reply_to/correlation_id"
             )
 

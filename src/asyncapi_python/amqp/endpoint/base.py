@@ -28,7 +28,7 @@ from typing import (
 
 from aio_pika import Message
 from pydantic import BaseModel
-from ..error import Reject, RejectedError
+from ..error import Rejection, RejectedError
 from ..connection import AmqpPool
 from ..operation import Operation
 from aio_pika.abc import (
