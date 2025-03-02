@@ -21,7 +21,7 @@ from typing import (
     Union,
 )
 from pydantic import BaseModel
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from asyncapi_python_codegen.generators.amqp.utils import snake_case
 
 ExchangeType = Literal["topic", "direct", "fanout", "default", "headers"]
@@ -51,6 +51,9 @@ class Operation(Generic[I, O]):
 
     exchange_type: ExchangeType
     """An exchange type."""
+
+    debug_auto_delete: bool = field(default=False)
+    """A debug param that will force automatic deletion of the resources for this operation. Used for tests."""
 
     @property
     def path(self) -> tuple[str, ...]:

@@ -96,14 +96,32 @@ class AbstractEndpoint(ABC, Generic[I, O]):
         ex_type = self._op.exchange_type
         q_name = self._op.routing_key
 
-        q = await ch.declare_queue(
-            name=q_name,
-            durable=bool(q_name),
-            exclusive=not bool(q_name),
-        )
-        if ex_name:
-            ex = await ch.declare_exchange(name=ex_name, type=ex_type)
-            await q.bind(ex)
+        # Debug/Test mode
+        # TODO: Inject this code instead of having if-else
+        if self._op.debug_auto_delete:
+            q = await ch.declare_queue(
+                name=q_name,
+                durable=False,
+                exclusive=not bool(q_name),
+                auto_delete=True,
+            )
+            if ex_name:
+                ex = await ch.declare_exchange(
+                    name=ex_name,
+                    type=ex_type,
+                    auto_delete=True,
+                )
+                await q.bind(ex)
+        # Production mode
+        else:
+            q = await ch.declare_queue(
+                name=q_name,
+                durable=bool(q_name),
+                exclusive=not bool(q_name),
+            )
+            if ex_name:
+                ex = await ch.declare_exchange(name=ex_name, type=ex_type)
+                await q.bind(ex)
         return q
 
     def _create_message(
