@@ -1,4 +1,4 @@
-# Copyright 2024-2025 Yaroslav Petrov <yaroslav.v.petrov@gmail.com>
+# Copyright 2025 Yaroslav Petrov <yaroslav.v.petrov@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,15 +13,23 @@
 # limitations under the License.
 
 
-from .document import Document
-from .ref import Ref
-from .components import JsonSchema, Message, Operation, Channel
+import asyncio
+from os import environ
+import pytest
 
-__all__ = [
-    "Document",
-    "Ref",
-    "JsonSchema",
-    "Message",
-    "Operation",
-    "Channel",
-]
+
+@pytest.fixture(scope="session")
+def amqp_uri() -> str:
+    if env_uri := environ.get("AMQP_URI"):
+        return env_uri
+    return "amqp://guest:guest@rabbitmq/"
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()

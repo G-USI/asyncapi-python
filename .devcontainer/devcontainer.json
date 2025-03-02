@@ -6,6 +6,9 @@
 	"forwardPorts": [
 		"rabbitmq:15672"
 	],
+	"containerEnv": {
+		"AMQP_URI": "amqp://guest:guest@rabbitmq/"
+	},
 	"customizations": {
 		"vscode": {
 			"extensions": [

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "asyncapi-python"
-version = "0.1.6"
+version = "0.2.0"
 license = "Apache-2.0"
 description = "Easily generate type-safe and async Python applications from AsyncAPI 3 specifications."
 authors = ["Yaroslav Petrov <yaroslav.v.petrov@gmail.com>"]
@@ -25,7 +25,7 @@ codegen = [
 amqp = ["aio-pika"]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
+python = ">=3.9,<3.14"
 pydantic = ">=2"
 pytz = "*"
 jinja2 = { version = "^3.1.4", optional = true }

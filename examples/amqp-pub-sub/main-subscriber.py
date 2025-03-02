@@ -1,8 +1,8 @@
 import asyncio
 from os import environ
 from sys import exit
-from server import Application
-from server.messages import Ping, Pong
+from subscriber import Application
+from subscriber.messages import Ping
 
 
 AMQP_URI = environ.get("AMQP_URI", "amqp://guest:guest@localhost")
@@ -12,14 +12,11 @@ request_count = 0
 app = Application(AMQP_URI)
 
 
-@app.consumer.on_ping_request
-async def handle_ping_request(msg: Ping) -> Pong:
+@app.consumer.application.ping
+async def handle_ping_request(msg: Ping) -> None:
     global request_count
     print(f"Handling request: {msg}")
-    res = Pong()
-    print(f"Returning response: {res}")
     request_count += 1
-    return res
 
 
 async def termination_handler():

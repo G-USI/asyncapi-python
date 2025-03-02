@@ -45,7 +45,8 @@ class Ref(BaseModel, Generic[T]):
         ),
     ]
     filepath: Annotated[Path, Field(exclude=True)]
-    doc_path: Annotated[tuple[str, ...], Field(exclude=True)]
+    raw_doc_path: Annotated[tuple[str, ...], Field(exclude=True)]
+    escaped_doc_path: Annotated[tuple[str, ...], Field(exclude=True)]
 
     @classmethod
     def type(cls) -> type[T]:
@@ -57,7 +58,7 @@ class Ref(BaseModel, Generic[T]):
 
         sub = self.flatten()
         doc = Document.load_yaml(sub.filepath).model_dump(by_alias=True)
-        for p in self.doc_path:
+        for p in self.escaped_doc_path:
             doc = doc[p]
         with set_current_doc_path(sub.filepath):
             return sub.type().model_validate(doc)
@@ -70,7 +71,7 @@ class Ref(BaseModel, Generic[T]):
         for _ in range(max_depth):
             doc = Document.load_yaml(sub.filepath).model_dump(by_alias=True)
             try:
-                for p in sub.doc_path:
+                for p in sub.escaped_doc_path:
                     doc = doc[p]
             except KeyError as e:
                 raise KeyError(
@@ -102,8 +103,9 @@ class Ref(BaseModel, Generic[T]):
         return {
             **data,
             "$ref": ref,
-            "doc_path": tuple(
-                p.replace("~0", "~").replace("~1", "/") for p in dp.split("/")[1:]
+            "raw_doc_path": (doc_path := tuple(dp.split("/")[1:])),
+            "escaped_doc_path": tuple(
+                p.replace("~0", "~").replace("~1", "/") for p in doc_path
             ),
             "filepath": Path(fp).absolute(),
         }

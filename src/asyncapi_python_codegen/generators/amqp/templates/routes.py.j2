@@ -1,0 +1,66 @@
+{# Copyright 2024-2025 Yaroslav Petrov <yaroslav.v.petrov@gmail.com>
+   
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License. #}
+from __future__ import annotations
+import asyncapi_python.amqp as api
+from typing import Union, Any
+from .messages import *
+
+{% for router in routers -%}
+{%- set inputs = (
+    "Union[" + ", ".join(router.op.input_types or ["None"]) + "]"
+    if router.op else ""
+  )-%}
+{%- set outputs = (
+    ", Union[" + ", ".join(router.op.output_types) + "]"
+    if router.op and router.op.output_types else ""
+  )-%}
+{%- set extends_class_base = (
+    "Receiver[" + inputs + outputs + "], " if router.op and router.op.action == "receive" else
+    "Sender[" + inputs + outputs + "], " if router.op and router.op.action == "send" else
+    ""
+  )-%}
+{%- set extends_class_prefix = "Rpc" if router.op and router.op.output_types else "" -%}
+{%- set ns = "api." if router.op else "" -%}
+{%- set extends_class = ns + extends_class_prefix + extends_class_base -%}
+class _Router_{{ router.id }}({{ extends_class }}api.Router): 
+    {% if router.op or router.children %}
+    def __init__(self, params: api.EndpointParams):
+        {% if router.op %}
+        inp = api.utils.union_model(({{ ", ".join(router.op.input_types) }},))
+        {% if router.op.output_types %}
+        out = api.utils.union_model(({{ ", ".join(router.op.output_types) }},))
+        {% else %}
+        out = None.__class__
+        {% endif %}
+        op: Any = api.Operation(
+            name="{{ router.op.name }}",
+            message_type=inp,
+            reply_type=out,
+            routing_key={{ "\"" + router.op.routing_key + "\"" if router.op.routing_key else "None" }},
+            exchange_name={{ "\"" + router.op.exchange + "\"" if router.op.exchange else "None" }},
+            exchange_type={{ "\"" + router.op.exchange_type + "\"" if router.op.exchange_type else "None" }},
+        )
+        super().__init__(op, params)
+        {% endif %}
+        {% for c_id, c in router.children %}
+        self.{{ c }}: _Router_{{ c_id }} = _Router_{{ c_id }}(params)
+        {% endfor %}
+    {% endif %}
+{% endfor %}
+
+{% if not routers %}
+class _Router_0(api.Router): ...
+{% endif %}
+
+__all__ = ["_Router_0"]

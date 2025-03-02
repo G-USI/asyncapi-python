@@ -1,0 +1,9 @@
+asyncapi: "3.0.0"
+info:
+  title: Client part of the Ping service example
+  version: 1.0.0
+
+operations:
+  /application/ping:
+    action: send
+    channel: { $ref: "./common.asyncapi.yaml#/channels/~1ping~1pubsub" }

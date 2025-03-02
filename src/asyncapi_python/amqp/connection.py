@@ -1,4 +1,4 @@
-# Copyright 2024 Yaroslav Petrov <yaroslav.v.petrov@gmail.com>
+# Copyright 2024-2025 Yaroslav Petrov <yaroslav.v.petrov@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,13 +30,13 @@ def connection_pool(amqp_uri: str) -> Pool[AbstractRobustConnection]:
     return Pool(get_connection, max_size=2)
 
 
+AmqpPool = Pool[AbstractRobustChannel]
+
+
 @cache
-def channel_pool(amqp_uri: str) -> Pool[AbstractRobustChannel]:
+def channel_pool(amqp_uri: str) -> AmqpPool:
     async def get_channel():
         async with connection_pool(amqp_uri).acquire() as connection:
             return await connection.channel()
 
     return Pool(get_channel, max_size=10)
-
-
-AmqpPool = Pool[AbstractRobustChannel]

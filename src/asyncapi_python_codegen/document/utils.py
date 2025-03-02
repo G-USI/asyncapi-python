@@ -54,9 +54,9 @@ def _count_references(schema: Any, this: Reference, counter: ReferenceCounter):
             ref = ref.flatten()
         with ref.filepath.open() as f:
             doc = yaml.safe_load(f)
-        for p in ref.doc_path:
+        for p in ref.escaped_doc_path:
             doc = doc[p]
-        child = (ref.filepath, ref.doc_path)
+        child = (ref.filepath, ref.escaped_doc_path)
         counter[child].add(this)
         with set_current_doc_path(ref.filepath):
             return _count_references(doc, child, counter)
@@ -80,9 +80,9 @@ def _populate_jsonschema_recur(
         with set_current_doc_path(ref.filepath):
             ref = ref.flatten()
 
-            back_refs = counter[(ref.filepath, ref.doc_path)]
+            back_refs = counter[(ref.filepath, ref.raw_doc_path)]
             if len(back_refs) > 1 and not ignore_shared:
-                ref_struct_name = ref.doc_path[-1]
+                ref_struct_name = ref.raw_doc_path[-1]
                 shared_schemas[ref_struct_name] = _populate_jsonschema_recur(
                     schema, counter, shared_schemas, True
                 )
@@ -90,7 +90,7 @@ def _populate_jsonschema_recur(
 
         with ref.filepath.open() as f:
             doc = yaml.safe_load(f)
-        for p in ref.doc_path:
+        for p in ref.escaped_doc_path:
             doc = doc[p]
         with set_current_doc_path(ref.filepath):
             return _populate_jsonschema_recur(doc, counter, shared_schemas)
