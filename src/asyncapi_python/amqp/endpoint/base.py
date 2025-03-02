@@ -102,8 +102,7 @@ class AbstractEndpoint(ABC, Generic[I, O]):
             q = await ch.declare_queue(
                 name=q_name,
                 durable=False,
-                exclusive=not bool(q_name),
-                auto_delete=True,
+                exclusive=True,
             )
             if ex_name:
                 ex = await ch.declare_exchange(
