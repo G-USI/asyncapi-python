@@ -54,3 +54,6 @@ build-backend = "poetry.core.masonry.api"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+
+[tool.poetry.requires-plugins]
+poetry-plugin-export = ">=1.8"
