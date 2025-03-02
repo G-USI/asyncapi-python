@@ -22,7 +22,7 @@ from typing import (
 )
 from pydantic import BaseModel
 from dataclasses import dataclass, field
-from asyncapi_python_codegen.generators.amqp.utils import snake_case
+from asyncapi_python.utils import snake_case
 
 ExchangeType = Literal["topic", "direct", "fanout", "default", "headers"]
 

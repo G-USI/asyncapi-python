@@ -25,7 +25,7 @@ import jinja2 as j2
 
 import asyncapi_python_codegen.document as d
 from asyncapi_python_codegen.document.utils import populate_jsonschema_defs
-from asyncapi_python_codegen.generators.amqp.utils import snake_case
+from asyncapi_python.utils import snake_case
 
 from datamodel_code_generator.__main__ import main as datamodel_codegen
 
