@@ -25,6 +25,7 @@ Easily generate type-safe and async Python applications from AsyncAPI 3 specific
 - [x] Supports publish-subscribe pattern
 - [ ] AsyncAPI trait support
 - [ ] Customizable message encoder/decoder
+- [x] Works as a plugin for [pantsbuild](https://pantsbuild.org) (see [instructions](#usage-as-a-pants-plugin) below)
 
 ## Requirements
 
@@ -54,6 +55,102 @@ pip install asyncapi-python[amqp]
 ```
 
 You can replace `amqp` with any other supported protocols. For more info, see [Supported Protocols](#supported-protocols--use-cases) section.
+
+### Usage as a Pants plugin
+
+> The following method was tested with pants version 2.23.1.
+> Pleas note that Pants plugin API is still in development and things might break.
+
+This library can act as a plugin for [Pants](https://pantsbuild.org). More specifically, it creates a new target type: `asyncapi_python_service` -- which can be used like:
+
+```python
+# BUILD
+asyncapi_python_service(
+  name="asyncapi_app",
+  service="app.asyncapi.yaml",
+  sources=[
+    "app.asyncapi.yaml", 
+    "lib.asyncapi.yaml", 
+    "commons.*.asyncapi.yaml"
+  ]
+)
+```
+
+This will be generating python module named `asyncapi_app` on `codegen-export` and `export` goals.
+This target can later be used as a dependency of `python_sources`.
+
+```python
+# BUILD
+python_sources(
+  dependencies=[
+    ":asyncapi_app",
+    ":reqs",
+  ],
+)
+
+python_requirements(
+  name="reqs",
+)
+```
+
+Note that this plugin does not do dependency injection, so asyncapi-python must be a dependency
+
+```text
+# requirements.txt
+asyncapi-python[amqp]
+```
+
+### Deploying this plugin into pants monorepo
+
+In order to deploy this plugin into your pants monorepo, create the following structure inside your plugins folder:
+
+```bash
+pants-plugins/
+└── asyncapi_python_plugin
+    ├── BUILD
+    ├── __init__.py
+    ├── register.py
+    └── requirements.txt
+```
+
+`requirements.txt` must contain:
+
+```text
+asyncapi-python
+```
+
+`register.py` should have:
+
+```python
+from asyncapi_python_pants.register import *
+```
+
+`BUILD` must include:
+
+```python
+python_sources(
+    dependencies=[":reqs"],
+)
+
+python_requirements(
+    name="reqs",
+)
+```
+
+`__init__.py` can be empty, but it has to exist.
+
+Finally, add `pants-plugins` to your `PYTHONPATH`, and add the created folder as a backend package:
+
+```toml
+# pants.toml
+backend_packages = [
+    "asyncapi_python_plugin",
+    ...
+]
+pythonpath = ["%(buildroot)s/pants-plugins"]
+```
+
+When everything is done, test if the plugin works by running `pants export-codegen ::`
 
 ## Supported Protocols / Use Cases
 
