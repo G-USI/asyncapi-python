@@ -1,13 +1,10 @@
+from importlib.metadata import version
 from pants.engine.internals.native_engine import (
     Digest,
     MergeDigests,
     RemovePrefix,
     AddPrefix,
     Snapshot,
-)
-from pants.core.util_rules.external_tool import (
-    ExternalToolRequest,
-    DownloadedExternalTool,
 )
 from pants.core.util_rules.stripped_source_files import StrippedSourceFiles
 from pants.core.util_rules.source_files import SourceFilesRequest
@@ -17,7 +14,7 @@ from pants.engine.target import (
     TransitiveTargetsRequest,
 )
 from pants.engine.rules import rule, Get, MultiGet
-from pants.engine.process import Process, ProcessResult
+from pants.engine.process import ProcessResult
 from pants.source.source_root import SourceRoot, SourceRootRequest
 from pants.backend.python.target_types import ConsoleScript
 from pants.backend.python.util_rules.interpreter_constraints import (
@@ -29,7 +26,6 @@ from pants.backend.python.util_rules.pex import (
     PexRequest,
     PexRequirements,
 )
-from pants.engine.process import FallibleProcessResult
 from .tools import *
 from .targets import *
 
@@ -37,15 +33,15 @@ from .targets import *
 @rule
 async def generate_python_from_asyncapi(
     request: GeneratePythonFromAsyncapiRequest,
-    asyncapi: AsyncapiPython,
-    platform: Platform,
 ) -> GeneratedSources:
     pex = await Get(
         Pex,
         PexRequest(
             output_filename="asyncapi-python-codegen.pex",
             internal_only=True,
-            requirements=PexRequirements(["asyncapi-python[codegen]"]),
+            requirements=PexRequirements(
+                [f"asyncapi-python[codegen]=={version('asyncapi-python')}"]
+            ),
             interpreter_constraints=InterpreterConstraints([">=3.9"]),
             main=ConsoleScript("asyncapi-python-codegen"),
         ),
