@@ -6,6 +6,7 @@ description = "Easily generate type-safe and async Python applications from Asyn
 authors = ["Yaroslav Petrov <yaroslav.v.petrov@gmail.com>"]
 readme = "README.md"
 packages = [
+    { include = "asyncapi_python_pants", from = "src" },
     { include = "asyncapi_python_codegen", from = "src" },
     { include = "asyncapi_python", from = "src" },
 ]
