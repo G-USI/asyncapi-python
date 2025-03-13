@@ -1,11 +1,12 @@
 [tool.poetry]
 name = "asyncapi-python"
-version = "0.2.2"
+version = "0.2.3"
 license = "Apache-2.0"
 description = "Easily generate type-safe and async Python applications from AsyncAPI 3 specifications."
 authors = ["Yaroslav Petrov <yaroslav.v.petrov@gmail.com>"]
 readme = "README.md"
 packages = [
+    { include = "asyncapi_python_pants", from = "src" },
     { include = "asyncapi_python_codegen", from = "src" },
     { include = "asyncapi_python", from = "src" },
 ]
