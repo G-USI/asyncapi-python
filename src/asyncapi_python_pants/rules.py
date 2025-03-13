@@ -26,7 +26,6 @@ from pants.backend.python.util_rules.pex import (
     PexRequest,
     PexRequirements,
 )
-from .tools import *
 from .targets import *
 
 
@@ -50,23 +49,12 @@ async def generate_python_from_asyncapi(
         TransitiveTargets,
         TransitiveTargetsRequest([request.protocol_target.address]),
     )
-    all_stripped_sources_get = Get(
+    all_sources_stripped = await Get(
         StrippedSourceFiles,
         SourceFilesRequest(
             (tgt.get(AsyncapiSourcesField) for tgt in transitive_targets.closure),
             for_sources_types=(AsyncapiSourcesField,),
         ),
-    )
-    target_stripped_sources_get = Get(
-        StrippedSourceFiles,
-        SourceFilesRequest([request.protocol_target[AsyncapiSourcesField]]),
-    )
-    (
-        all_sources_stripped,
-        target_sources_stripped,
-    ) = await MultiGet(
-        all_stripped_sources_get,
-        target_stripped_sources_get,
     )
     input_digest = await Get(
         Digest,

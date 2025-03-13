@@ -12,7 +12,6 @@ def rules():
         *collect_rules(),
         *pex.rules(),
         UnionRule(GenerateSourcesRequest, GeneratePythonFromAsyncapiRequest),
-        UnionRule(ExportableTool, AsyncapiPython),
     ]
 
 
