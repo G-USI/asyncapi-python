@@ -22,10 +22,10 @@ from collections import defaultdict
 
 
 Reference = Union[None, tuple[Path, tuple[str, ...]]]
-"""A reference type"""
+"""A reference type, maps a document path to a set of references that point to it"""
 
 ReferenceCounter = defaultdict[Reference, set[Reference]]
-"""A reference counter"""
+"""A reference counter, maps each reference to a set of references that point to it"""
 
 
 def populate_jsonschema_defs(schema: Any) -> Any:
@@ -45,10 +45,17 @@ def populate_jsonschema_defs(schema: Any) -> Any:
 
 def _count_references(schema: Any, this: Reference, counter: ReferenceCounter):
     """Recursively constructs back references within the JsonSchema"""
+
+    # List case   
+    if isinstance(schema, list):
+        for v in schema:
+            _count_references(v, this, counter)
+
+    # Dict case
     if not isinstance(schema, dict):
         return
 
-    if "$ref" in schema:
+    if "$ref" in schema: # If dict is $ref object
         ref: Ref[Any] = Ref.model_validate(schema)
         with set_current_doc_path(ref.filepath):
             ref = ref.flatten()
@@ -61,7 +68,7 @@ def _count_references(schema: Any, this: Reference, counter: ReferenceCounter):
         with set_current_doc_path(ref.filepath):
             return _count_references(doc, child, counter)
 
-    for v in schema.values():
+    for v in schema.values(): # Recur
         _count_references(v, this, counter)
 
 
@@ -72,6 +79,12 @@ def _populate_jsonschema_recur(
     ignore_shared: bool = False,
 ) -> Any:
     """Recursively populates JsonSchema $defs object"""
+
+    # List case
+    if isinstance(schema, list):
+        return [_populate_jsonschema_recur(v, counter, shared_schemas, ignore_shared) for v in schema]
+
+    # Dict case
     if not isinstance(schema, dict):
         return schema
 
