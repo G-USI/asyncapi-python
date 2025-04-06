@@ -57,6 +57,7 @@ def generate(
         for rs in (send_routes_dict, recv_routes_dict)
     )
 
+    messages_code, typed_dicts_code = generate_message_types(ops, doc.filepath.parent)
     return (
         {
             output_path / f: generate_routers(r, template_dir / "routes.py.j2")
@@ -68,8 +69,8 @@ def generate(
             for f in ("application", "__init__")
         }
         | {
-            output_path
-            / "messages.py": generate_message_types(ops, doc.filepath.parent),
+            output_path / "messages.py": messages_code,
+            output_path / "typed_dicts.py": typed_dicts_code,
             output_path / "py.typed": "",
         }
     )
@@ -251,7 +252,7 @@ def get_channel_types(
     return types, schemas
 
 
-def generate_message_types(schemas: list[Operation], cwd: Path) -> str:
+def generate_message_types(schemas: list[Operation], cwd: Path) -> tuple[str, str]:
     inp = {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "$defs": populate_jsonschema_defs(
@@ -269,11 +270,12 @@ def generate_message_types(schemas: list[Operation], cwd: Path) -> str:
     with tempfile.TemporaryDirectory() as dir:
         schema_path = Path(dir) / "schema.json"
         models_path = Path(dir) / "models.py"
+        typed_dicts_path = Path(dir) / "typed_dicts.py"
 
-        args = f"""
+        args = lambda model_type, output_path: f"""
         --input { str(schema_path.absolute()) }
-        --output { str(models_path.absolute()) }
-        --output-model-type pydantic_v2.BaseModel
+        --output { str(output_path.absolute()) }
+        --output-model-type {model_type}
         --input-file-type jsonschema
         --reuse-model
         --allow-extra-fields
@@ -288,9 +290,13 @@ def generate_message_types(schemas: list[Operation], cwd: Path) -> str:
         with schema_path.open("w") as schema:
             json.dump(inp, schema)
 
-        datamodel_codegen(args=args)
+        datamodel_codegen(args=args("pydantic_v2.BaseModel", models_path))
+        datamodel_codegen(args=args("typing.TypedDict", typed_dicts_path))
 
         with models_path.open() as f:
             models_code = f.read()
 
-    return models_code
+        with typed_dicts_path.open() as f:
+            typed_dicts_code = f.read()
+
+    return models_code, typed_dicts_code
