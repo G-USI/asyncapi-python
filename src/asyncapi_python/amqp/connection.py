@@ -14,7 +14,6 @@
 
 
 from functools import cache
-from typing import TypeAlias
 from aio_pika.robust_connection import (
     AbstractRobustConnection,
     AbstractRobustChannel,
