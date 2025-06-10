@@ -13,9 +13,9 @@
    limitations under the License. #}
 from .consumer import _Router_0 as Consumer
 from .producer import _Router_0 as Producer
-from asyncapi_python.amqp.base_application import BaseApplication
+from asyncapi_python.amqp import BaseApplication, AmqpParams
 
 
 class Application(BaseApplication[Producer, Consumer]):
-    def __init__(self, amqp_uri: str):
-        super().__init__(amqp_uri, Producer, Consumer)
+    def __init__(self, amqp_uri: str, amqp_params: AmqpParams = {}):
+        super().__init__(amqp_uri, Producer, Consumer, amqp_params)

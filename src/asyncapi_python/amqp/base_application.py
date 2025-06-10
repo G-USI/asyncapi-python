@@ -23,6 +23,7 @@ from .error import RejectedError
 from .endpoint import EndpointParams
 from .connection import channel_pool
 from .utils import encode_message, decode_message
+from .params import AmqpParams
 from typing import Generic, Optional, TypeVar
 
 
@@ -61,6 +62,7 @@ class BaseApplication(Generic[P, C]):
         amqp_uri: str,
         producer_factory: type[P],
         consumer_factory: type[C],
+        amqp_params: AmqpParams,
     ):
         self.__params = EndpointParams(
             pool=channel_pool(amqp_uri),
@@ -69,6 +71,7 @@ class BaseApplication(Generic[P, C]):
             register_correlation_id=self.__register_correlation_id,
             stop_application=self.stop,
             app_id=str(uuid4()),
+            amqp_params=amqp_params,
         )
         self.__reply_futures: dict[
             str,

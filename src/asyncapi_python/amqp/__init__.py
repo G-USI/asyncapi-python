@@ -19,9 +19,11 @@ from .endpoint import Receiver, RpcReceiver, Sender, RpcSender, EndpointParams
 from .operation import Operation
 from .utils import union_model
 from .error import Rejection, RejectedError
+from .params import AmqpParams
 
 __all__ = [
     "channel_pool",
+    "AmqpParams",
     "AmqpPool",
     "BaseApplication",
     "Router",

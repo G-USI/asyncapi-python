@@ -45,6 +45,8 @@ class AbstractReceiver(AbstractEndpoint[I, O]):
         print("start", self._op)
         if self._fn:
             async with self._params.pool.acquire() as ch:
+                if self._params.amqp_params.prefetch_count:
+                    await ch.set_qos(prefetch_count=self._params.amqp_params.prefetch_count)
                 q = self._queue = await self._declare(ch)
                 self._consumer_tag = await q.consume(self._consumer)
             return

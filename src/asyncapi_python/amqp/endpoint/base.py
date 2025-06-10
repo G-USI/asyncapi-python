@@ -31,6 +31,7 @@ from pydantic import BaseModel
 from ..error import Rejection, RejectedError
 from ..connection import AmqpPool
 from ..operation import Operation
+from ..params import AmqpParams
 from aio_pika.abc import (
     AbstractRobustChannel,
     AbstractRobustQueue,
@@ -64,6 +65,7 @@ class EndpointParams:
     ]
     app_id: str
     stop_application: Callable[[], Awaitable[None]]
+    amqp_params: AmqpParams
 
     @property
     def reply_queue_name(self) -> str:
