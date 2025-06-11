@@ -25,6 +25,7 @@
 				"github.vscode-github-actions"
 			],
 			"settings": {
+				"python.defaultInterpreterPath": "/workspaces/${localWorkspaceFolderBasename}/.venv/bin/python",
 				"yaml.schemas": {
 					"https://asyncapi.com/schema-store/3.0.0-without-$id.json": [
 						"file:///workspaces/asyncapi-python/examples/*.yaml"

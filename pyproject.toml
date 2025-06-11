@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "asyncapi-python"
-version = "0.2.4"
+version = "0.2.5"
 license = "Apache-2.0"
 description = "Easily generate type-safe and async Python applications from AsyncAPI 3 specifications."
 authors = ["Yaroslav Petrov <yaroslav.v.petrov@gmail.com>"]
@@ -52,9 +52,10 @@ pex = "*"
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "function"
-
 [tool.poetry.requires-plugins]
 poetry-plugin-export = ">=1.8"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
