@@ -76,7 +76,7 @@ asyncapi_python_service(
 )
 ```
 
-This will be generating python module named `asyncapi_app` on `codegen-export` and `export` goals.
+This will be generating python module named `asyncapi_app` on `codegen-export`, and `export` goals.
 This target can later be used as a dependency of `python_sources`.
 
 ```python
@@ -100,51 +100,16 @@ Note that this plugin does not do dependency injection, so asyncapi-python must 
 asyncapi-python[amqp]
 ```
 
-### Deploying this plugin into pants monorepo
-
-In order to deploy this plugin into your pants monorepo, create the following structure inside your plugins folder:
-
-```bash
-pants-plugins/
-└── asyncapi_python_plugin
-    ├── BUILD
-    ├── __init__.py
-    ├── register.py
-    └── requirements.txt
-```
-
-`requirements.txt` must contain:
-
-```text
-asyncapi-python
-```
-
-`register.py` should have:
-
-```python
-from asyncapi_python_pants.register import *
-```
-
-`BUILD` must include:
-
-```python
-python_sources(
-    dependencies=[":reqs"],
-)
-
-python_requirements(
-    name="reqs",
-)
-```
-
-`__init__.py` can be empty, but it has to exist.
-
-Finally, add `pants-plugins` to your `PYTHONPATH`, and add the created folder as a backend package:
+### Deploying this plugin into your pants monorepo
 
 ```toml
 # pants.toml
+plugins = [
+  "asyncapi_python[codegen]==0.2.5",  # Plugin version MUST match the version of your python clients
+  ...
+]
 backend_packages = [
-    "asyncapi_python_plugin",
+    "asyncapi_python_pants",
     ...
 ]
 pythonpath = ["%(buildroot)s/pants-plugins"]

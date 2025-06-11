@@ -117,6 +117,7 @@ def params(
         decode=decode_message,
         app_id=app_id,
         stop_application=lambda: exit(-1),
+        amqp_params={},
     )
 
 
