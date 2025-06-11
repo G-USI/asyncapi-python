@@ -136,6 +136,7 @@ def params_2(amqp_pool, correlation_ids):
     return params("app-2", amqp_pool, correlation_ids)
 
 
+@pytest.mark.asyncio
 async def test_queue(params_1: EndpointParams, operation: Operation):
     producer: Sender[Log] = Sender(operation, params_1)
     consumer: Receiver[Log] = Receiver(operation, params_1)

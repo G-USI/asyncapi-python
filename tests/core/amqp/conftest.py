@@ -20,5 +20,6 @@ from typing import AsyncGenerator
 
 @pytest_asyncio.fixture(scope="function")
 async def amqp_pool(amqp_uri: str) -> AsyncGenerator[AmqpPool, None]:
+    channel_pool.cache_clear()
     pool = channel_pool(amqp_uri)
     yield pool
