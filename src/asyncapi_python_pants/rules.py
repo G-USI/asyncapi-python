@@ -41,7 +41,7 @@ async def generate_python_from_asyncapi(
             internal_only=True,
             requirements=PexRequirements([]),
             interpreter_constraints=InterpreterConstraints([">=3.9"]),
-            main=EntryPoint("asyncapi_python_codegen"),
+            main=EntryPoint("asyncapi_python_codegen:app"),
         ),
     )
     transitive_targets = await Get(
