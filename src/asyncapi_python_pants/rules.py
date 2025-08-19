@@ -1,4 +1,3 @@
-from importlib.metadata import version
 from pants.engine.internals.native_engine import (
     Digest,
     MergeDigests,
@@ -16,14 +15,12 @@ from pants.engine.target import (
 from pants.engine.rules import rule, Get, MultiGet
 from pants.engine.process import ProcessResult
 from pants.source.source_root import SourceRoot, SourceRootRequest
-from pants.backend.python.target_types import ConsoleScript
 from pants.backend.python.util_rules.interpreter_constraints import (
     InterpreterConstraints,
 )
-from pants.backend.python.util_rules.pex import EntryPoint
 from pants.backend.python.util_rules.pex import (
     Pex,
-    PexProcess,
+    Process,
     PexRequest,
     PexRequirements,
 )
@@ -41,7 +38,7 @@ async def generate_python_from_asyncapi(
             internal_only=True,
             requirements=PexRequirements([]),
             interpreter_constraints=InterpreterConstraints([">=3.9"]),
-            main=EntryPoint("asyncapi_python_codegen:app"),
+            # No main parameter - creates a REPL-style PEX
         ),
     )
     transitive_targets = await Get(
@@ -66,11 +63,16 @@ async def generate_python_from_asyncapi(
     )
     output_dir = "_generated_files"
     module_name = request.protocol_target.address.target_name
+
+    # Use Process instead of PexProcess to execute with -m flag
     result = await Get(
         ProcessResult,
-        PexProcess(
-            pex,
+        Process(
             argv=[
+                pex.pex.path,
+                "-m",
+                "asyncapi_python_codegen",  # Execute as module
+                "generate",  # Your CLI command
                 request.protocol_target[AsyncapiServiceField].value or "",
                 f"{output_dir}/{module_name}",
             ],
