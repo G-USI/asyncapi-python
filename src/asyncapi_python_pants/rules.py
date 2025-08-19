@@ -20,6 +20,7 @@ from pants.backend.python.target_types import ConsoleScript
 from pants.backend.python.util_rules.interpreter_constraints import (
     InterpreterConstraints,
 )
+from pants.backend.python.util_rules.pex import EntryPoint
 from pants.backend.python.util_rules.pex import (
     Pex,
     PexProcess,
@@ -38,11 +39,9 @@ async def generate_python_from_asyncapi(
         PexRequest(
             output_filename="asyncapi-python-codegen.pex",
             internal_only=True,
-            requirements=PexRequirements(
-                [f"asyncapi-python[codegen]=={version('asyncapi-python')}"]
-            ),
+            requirements=PexRequirements([]),
             interpreter_constraints=InterpreterConstraints([">=3.9"]),
-            main=ConsoleScript("asyncapi-python-codegen"),
+            main=EntryPoint("asyncapi_python_codegen"),
         ),
     )
     transitive_targets = await Get(
