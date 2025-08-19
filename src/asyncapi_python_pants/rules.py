@@ -13,7 +13,7 @@ from pants.engine.target import (
     TransitiveTargetsRequest,
 )
 from pants.engine.rules import rule, Get, MultiGet
-from pants.engine.process import ProcessResult, Process
+from pants.engine.process import ProcessResult
 from pants.source.source_root import SourceRoot, SourceRootRequest
 from pants.backend.python.util_rules.interpreter_constraints import (
     InterpreterConstraints,
@@ -22,6 +22,7 @@ from pants.backend.python.util_rules.pex import (
     Pex,
     PexRequest,
     PexRequirements,
+    PexProcess,
 )
 from .targets import *
 
@@ -63,13 +64,12 @@ async def generate_python_from_asyncapi(
     output_dir = "_generated_files"
     module_name = request.protocol_target.address.target_name
 
-    # Use python to execute the PEX file with -m flag
+    # Use PexProcess to properly execute the PEX
     result = await Get(
         ProcessResult,
-        Process(
+        PexProcess(
+            pex,
             argv=[
-                "python3",  # Use python interpreter
-                "asyncapi-python-codegen.pex",  # PEX file (no ./ prefix)
                 "-m",
                 "asyncapi_python_codegen",  # Execute as module
                 "generate",  # Your CLI command
