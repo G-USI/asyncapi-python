@@ -13,7 +13,7 @@ from pants.engine.target import (
     TransitiveTargetsRequest,
 )
 from pants.engine.rules import rule, Get, MultiGet
-from pants.engine.process import ProcessResult
+from pants.engine.process import ProcessResult, Process
 from pants.source.source_root import SourceRoot, SourceRootRequest
 from pants.backend.python.util_rules.interpreter_constraints import (
     InterpreterConstraints,
@@ -22,7 +22,6 @@ from pants.backend.python.util_rules.pex import (
     Pex,
     PexRequest,
     PexRequirements,
-    PexProcess,
 )
 from .targets import *
 
@@ -36,9 +35,15 @@ async def generate_python_from_asyncapi(
         PexRequest(
             output_filename="asyncapi-python-codegen.pex",
             internal_only=True,
-            requirements=PexRequirements([]),
+            requirements=PexRequirements(
+                [
+                    # Include your plugin as a requirement so it's available in the PEX
+                    "asyncapi_python_codegen",  # or whatever your package is called
+                ]
+            ),
             interpreter_constraints=InterpreterConstraints([">=3.9"]),
-            # No main parameter - creates a REPL-style PEX
+            # Make it executable by specifying the main module
+            main="-m asyncapi_python_codegen",  # This makes it executable
         ),
     )
     transitive_targets = await Get(
@@ -64,14 +69,12 @@ async def generate_python_from_asyncapi(
     output_dir = "_generated_files"
     module_name = request.protocol_target.address.target_name
 
-    # Use PexProcess to properly execute the PEX
+    # Now use Process with the executable PEX
     result = await Get(
         ProcessResult,
-        PexProcess(
-            pex,
+        Process(
             argv=[
-                "-m",
-                "asyncapi_python_codegen",  # Execute as module
+                "./asyncapi-python-codegen.pex",  # Executable PEX
                 "generate",  # Your CLI command
                 request.protocol_target[AsyncapiServiceField].value or "",
                 f"{output_dir}/{module_name}",
