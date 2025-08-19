@@ -63,12 +63,13 @@ async def generate_python_from_asyncapi(
     output_dir = "_generated_files"
     module_name = request.protocol_target.address.target_name
 
-    # Use Process instead of PexProcess to execute with -m flag
+    # Use python to execute the PEX file with -m flag
     result = await Get(
         ProcessResult,
         Process(
             argv=[
-                "./asyncapi-python-codegen.pex",  # Use relative path to PEX file
+                "python3",  # Use python interpreter
+                "asyncapi-python-codegen.pex",  # PEX file (no ./ prefix)
                 "-m",
                 "asyncapi_python_codegen",  # Execute as module
                 "generate",  # Your CLI command
