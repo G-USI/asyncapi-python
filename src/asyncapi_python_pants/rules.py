@@ -30,20 +30,19 @@ from .targets import *
 async def generate_python_from_asyncapi(
     request: GeneratePythonFromAsyncapiRequest,
 ) -> GeneratedSources:
+    pex_filename = "asyncapi-python-codegen.pex"
     pex = await Get(
         Pex,
         PexRequest(
-            output_filename="asyncapi-python-codegen.pex",
+            output_filename=pex_filename,
             internal_only=True,
             requirements=PexRequirements(
                 [
-                    # Include your plugin as a requirement so it's available in the PEX
-                    "asyncapi_python_codegen",  # or whatever your package is called
+                    "asyncapi_python_codegen",
                 ]
             ),
             interpreter_constraints=InterpreterConstraints([">=3.9"]),
-            # Make it executable by specifying the main module
-            main="-m asyncapi_python_codegen",  # This makes it executable
+            # Don't specify main - we'll handle execution manually
         ),
     )
     transitive_targets = await Get(
@@ -69,13 +68,16 @@ async def generate_python_from_asyncapi(
     output_dir = "_generated_files"
     module_name = request.protocol_target.address.target_name
 
-    # Now use Process with the executable PEX
+    # Execute the PEX with python and -m flag
     result = await Get(
         ProcessResult,
         Process(
             argv=[
-                "./asyncapi-python-codegen.pex",  # Executable PEX
-                "generate",  # Your CLI command
+                "python",  # Use python interpreter
+                pex_filename,  # PEX file
+                "-m",
+                "asyncapi_python_codegen",  # Module execution
+                "generate",  # CLI command
                 request.protocol_target[AsyncapiServiceField].value or "",
                 f"{output_dir}/{module_name}",
             ],
