@@ -23,6 +23,8 @@ from pants.backend.python.util_rules.pex import (
     PexRequest,
     PexRequirements,
 )
+from pants.util.strutil import softwrap
+import os
 from .targets import *
 
 
@@ -30,19 +32,14 @@ from .targets import *
 async def generate_python_from_asyncapi(
     request: GeneratePythonFromAsyncapiRequest,
 ) -> GeneratedSources:
-    pex_filename = "asyncapi-python-codegen.pex"
     pex = await Get(
         Pex,
         PexRequest(
-            output_filename=pex_filename,
+            output_filename="asyncapi-python-codegen.pex",
             internal_only=True,
-            requirements=PexRequirements(
-                [
-                    "asyncapi_python_codegen",
-                ]
-            ),
+            requirements=PexRequirements([]),
             interpreter_constraints=InterpreterConstraints([">=3.9"]),
-            # Don't specify main - we'll handle execution manually
+            # No main parameter - creates a REPL-style PEX
         ),
     )
     transitive_targets = await Get(
@@ -68,16 +65,16 @@ async def generate_python_from_asyncapi(
     output_dir = "_generated_files"
     module_name = request.protocol_target.address.target_name
 
-    # Execute the PEX with python and -m flag
+    # Use python to execute the PEX instead of executing it directly
     result = await Get(
         ProcessResult,
         Process(
             argv=[
                 "python",  # Use python interpreter
-                pex_filename,  # PEX file
+                "asyncapi-python-codegen.pex",  # PEX file (no ./ needed)
                 "-m",
-                "asyncapi_python_codegen",  # Module execution
-                "generate",  # CLI command
+                "asyncapi_python_codegen",  # Execute as module
+                "generate",  # Your CLI command
                 request.protocol_target[AsyncapiServiceField].value or "",
                 f"{output_dir}/{module_name}",
             ],
