@@ -13,14 +13,13 @@ from pants.engine.target import (
     TransitiveTargetsRequest,
 )
 from pants.engine.rules import rule, Get, MultiGet
-from pants.engine.process import ProcessResult
+from pants.engine.process import ProcessResult, Process
 from pants.source.source_root import SourceRoot, SourceRootRequest
 from pants.backend.python.util_rules.interpreter_constraints import (
     InterpreterConstraints,
 )
 from pants.backend.python.util_rules.pex import (
     Pex,
-    Process,
     PexRequest,
     PexRequirements,
 )
@@ -69,7 +68,7 @@ async def generate_python_from_asyncapi(
         ProcessResult,
         Process(
             argv=[
-                pex.pex.path,
+                "./asyncapi-python-codegen.pex",  # Use relative path to PEX file
                 "-m",
                 "asyncapi_python_codegen",  # Execute as module
                 "generate",  # Your CLI command
