@@ -29,16 +29,15 @@ jobs:
         with:
           python-version: ${{ matrix.python_version }}
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Install UV
+        uses: astral-sh/setup-uv@v3
         with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
+          enable-cache: true
 
       - name: Install dependencies
-        run: poetry install --all-extras
+        run: uv sync --all-extras
 
       - name: Run tests
         env:
           AMQP_URI: amqp://localhost:${{ job.services.rabbitmq.ports[5672] }}
-        run: poetry run pytest
+        run: uv run pytest

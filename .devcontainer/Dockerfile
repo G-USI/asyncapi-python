@@ -25,7 +25,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
         libffi-dev \
         liblzma-dev
 
-# Python and poetry installation
+# Python and uv installation
 USER $USER
 ARG HOME="/home/$USER"
 ARG PYTHON_VERSION=3.9
@@ -41,5 +41,4 @@ RUN echo "done 0" \
     && echo "done 2" \
     && pyenv global ${PYTHON_VERSION} \
     && echo "done 3" \
-    && curl -sSL https://install.python-poetry.org | python3 - \
-    && poetry config virtualenvs.in-project true
+    && curl -LsSf https://astral.sh/uv/install.sh | sh
