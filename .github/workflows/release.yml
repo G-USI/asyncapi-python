@@ -27,18 +27,17 @@ jobs:
         with:
           python-version: "3.9"
       
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Install UV
+        uses: astral-sh/setup-uv@v3
         with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
+          enable-cache: true
       
       - name: Install dependencies
-        run: poetry install --only dev
+        run: uv sync
 
       - name: Version Check and population of PROJECT_VERSION var
         run: |
-          PROJECT_VERSION=$(poetry version --short)
+          PROJECT_VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
           TAG=$(git describe HEAD --tags --abbrev=0)
           echo "PROJECT_VERSION=$PROJECT_VERSION" >> $GITHUB_ENV
           echo "Project version: $PROJECT_VERSION"
@@ -62,9 +61,9 @@ jobs:
       - name: Build sdist, wheel, and pex
         run: >
           mkdir -p dist
-          && poetry export -E codegen --without dev --format requirements.txt --output dist/requirements.txt --without-hashes
-          && poetry build
-          && poetry run pex . --scie eager -o dist/asyncapi-python-codegen.pex -e asyncapi_python_codegen:app -r dist/requirements.txt
+          && uv export --extra codegen --no-dev --format requirements-txt --output-file dist/requirements.txt --no-hashes
+          && uv build
+          && uv run pex . --scie eager -o dist/asyncapi-python-codegen.pex -e asyncapi_python_codegen:app -r dist/requirements.txt
       
       - name: Upload wheel to Release
         uses: actions/upload-release-asset@v1
