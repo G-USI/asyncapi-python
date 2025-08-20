@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from .connection import channel_pool, AmqpPool
 from .base_application import BaseApplication, Router
 from .endpoint import Receiver, RpcReceiver, Sender, RpcSender, EndpointParams
