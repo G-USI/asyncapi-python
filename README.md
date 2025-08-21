@@ -29,7 +29,7 @@ Easily generate type-safe and async Python applications from AsyncAPI 3 specific
 
 ## Requirements
 
-- `python>=3.9`
+- `python>=3.10`
 - `pydantic>=2`
 - `pytz`
 - For `codegen` extra
