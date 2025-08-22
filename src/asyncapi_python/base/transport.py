@@ -1,6 +1,12 @@
-from typing import AsyncGenerator, Generic, TypeVar
+from typing import AsyncGenerator, Generic, Protocol, TypeVar
 from abc import abstractmethod, ABC
 from .document import Channel
+
+
+class IncomingMessage(Protocol):
+    async def ack() -> None: ...
+    async def nack() -> None: ...
+    async def reject() -> None: ...
 
 
 T_Send = TypeVar("T_Send")
@@ -15,7 +21,7 @@ class AbstractProducer(ABC, Generic[T_Send, T_SendResult]):
 
 class AbstractConsumer(ABC, Generic[T_Recv]):
     @abstractmethod
-    def start_recv(self) -> AsyncGenerator[T_Recv, None]: ...
+    def recv(self) -> AsyncGenerator[T_Recv, None]: ...
 
 
 class AbstractTransportFactory(ABC, Generic[T_Send, T_SendResult, T_Recv]):
