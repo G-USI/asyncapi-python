@@ -40,7 +40,11 @@
 					"amqp",
 					"venv",
 					"jsonschema",
-					"fanout"
+					"fanout",
+					"anypointmq",
+					"googlepubsub",
+					"ibmmq",
+					"mqtt"
 				]
 			}
 		}
