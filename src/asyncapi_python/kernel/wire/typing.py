@@ -33,11 +33,17 @@ class Panic(Protocol):
         """Signals unrecoverable error. Receiving side must call its background tasks and terminate them"""
 
 
-class Producer(Protocol, Panic, Generic[T_Send]):
+class Producer(Protocol, Generic[T_Send]):
     async def send_batch(self, messages: list[T_Send]) -> None:
         """Sends batch of messages to channel"""
 
+    async def panic(self) -> None:
+        """Signals unrecoverable error. Receiving side must call its background tasks and terminate them"""
 
-class Consumer(Protocol, Panic, Generic[T_Recv]):
+
+class Consumer(Protocol, Generic[T_Recv]):
     def recv(self) -> AsyncGenerator[T_Recv, None]:
         """Starts streaming incoming messages"""
+
+    async def panic(self) -> None:
+        """Signals unrecoverable error. Receiving side must call its background tasks and terminate them"""
