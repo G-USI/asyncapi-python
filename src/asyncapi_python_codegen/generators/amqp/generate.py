@@ -278,7 +278,7 @@ def generate_message_types(schemas: list[Operation], cwd: Path) -> str:
         --reuse-model
         --allow-extra-fields
         --collapse-root-models
-        --target-python-version 3.9
+        --target-python-version 3.10
         --use-title-as-name
         --capitalize-enum-members
         --snake-case-field
