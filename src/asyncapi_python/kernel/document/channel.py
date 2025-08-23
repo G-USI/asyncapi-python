@@ -6,13 +6,13 @@ from .common import *
 __all__ = ["AddressParameter", "ChannelBindings", "Channel"]
 
 
-@dataclass
+@dataclass(frozen=True)
 class AddressParameter:
     description: str | None
     location: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class ChannelBindings:
     http: Any = None
     amqp1: Any = None
@@ -33,7 +33,7 @@ class ChannelBindings:
     pulsar: Any = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class Channel:
     address: str | None
     title: str | None

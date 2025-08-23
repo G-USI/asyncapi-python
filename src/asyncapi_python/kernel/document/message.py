@@ -1,17 +1,27 @@
-from dataclasses import dataclass
-from typing import Any
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import Any, TYPE_CHECKING
 from .common import *
 
-__all__ = ["CorrelationId", "MessageBindings", "MessageExample", "MessageTrait", "Message"]
+if TYPE_CHECKING:
+    from ..codec.abc import AbstractCodec
+
+__all__ = [
+    "CorrelationId",
+    "MessageBindings",
+    "MessageExample",
+    "MessageTrait",
+    "Message",
+]
 
 
-@dataclass
+@dataclass(frozen=True)
 class CorrelationId:
     description: str | None
     location: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class MessageBindings:
     http: Any = None
     amqp1: Any = None
@@ -32,7 +42,7 @@ class MessageBindings:
     pulsar: Any = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class MessageExample:
     name: str | None
     summary: str | None
@@ -40,7 +50,7 @@ class MessageExample:
     payload: Any
 
 
-@dataclass
+@dataclass(frozen=True)
 class MessageTrait:
     content_type: str | None
     headers: Any
@@ -56,7 +66,7 @@ class MessageTrait:
     bindings: MessageBindings | None
 
 
-@dataclass
+@dataclass(frozen=True)
 class Message:
     content_type: str | None
     headers: Any
@@ -71,3 +81,4 @@ class Message:
     externalDocs: ExternalDocs | None
     bindings: MessageBindings | None
     traits: list[MessageTrait]
+    codec: "AbstractCodec" | None = field(default=None, init=False, repr=False)

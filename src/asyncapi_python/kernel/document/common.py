@@ -1,20 +1,20 @@
 from dataclasses import dataclass
 
 
-@dataclass
+@dataclass(frozen=True)
 class ExternalDocs:
     description: str
     url: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class Tag:
     name: str
     description: str
     external_docs: ExternalDocs
 
 
-@dataclass
+@dataclass(frozen=True)
 class Server: ...  # TODO: Implement Server spec
 
 

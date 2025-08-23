@@ -14,7 +14,7 @@ __all__ = [
 ]
 
 
-@dataclass
+@dataclass(frozen=True)
 class SecurityScheme:
     type: Literal[
         "userPassword",
@@ -29,20 +29,20 @@ class SecurityScheme:
     ]
 
 
-@dataclass
+@dataclass(frozen=True)
 class OperationReplyAddress:
     location: str
     description: str | None
 
 
-@dataclass
+@dataclass(frozen=True)
 class OperationReply:
     channel: Channel
     messages: list[Message]
     address: str | None
 
 
-@dataclass
+@dataclass(frozen=True)
 class OperationBindings:
     # TODO: Reproduce full schema here
     http: Any = None
@@ -64,7 +64,7 @@ class OperationBindings:
     pulsar: Any = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class OperationTrait:
     title: str | None
     summary: str | None
@@ -76,7 +76,7 @@ class OperationTrait:
     bindings: OperationBindings
 
 
-@dataclass
+@dataclass(frozen=True)
 class Operation:
     action: Literal["send", "receive"]
     title: str | None
