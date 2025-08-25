@@ -7,12 +7,12 @@ from ..document import Channel, OperationBindings
 
 class EndpointParams(TypedDict):
     channel: Channel
-    addr_params: dict[str, str]
+    parameters: dict[str, str]
     op_bindings: OperationBindings | None
     is_reply: bool
 
 
-class AbstractTransportFactory(ABC, Generic[T_Send, T_Recv]):
+class AbstractWireFactory(ABC, Generic[T_Send, T_Recv]):
     @abstractmethod
     async def create_consumer(
         self, **kwargs: Unpack[EndpointParams]
