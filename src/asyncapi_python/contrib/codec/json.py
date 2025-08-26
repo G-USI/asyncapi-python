@@ -1,122 +1,95 @@
-"""JSON codec implementation for encoding/decoding BaseModel messages"""
+import json
+from typing import Type, cast, ClassVar
 
-from dataclasses import dataclass
-from typing import Type, Any
 from pydantic import BaseModel, ValidationError
-from asyncapi_python.kernel.document import Message as AsyncAPIMessage
-from asyncapi_python.kernel.codec import AbstractCodec
-from asyncapi_python.kernel.codec.protocols import EncodedMessage as EncodedMessageProtocol
+
+from asyncapi_python.kernel.codec import Codec, CodecFactory
+from asyncapi_python.kernel.document.message import Message
 
 
-@dataclass
-class JsonEncodedMessage:
-    """Concrete implementation of EncodedMessage for JSON codec"""
-
-    payload: bytes
-    headers: dict[str, Any]
-    content_type: str | None = "application/json"
-
-
-class JsonCodec(AbstractCodec[BaseModel, BaseModel]):
-    """
-    JSON codec for encoding/decoding Pydantic BaseModel instances.
-
-    This codec:
-    - Encodes Pydantic models to JSON bytes
-    - Decodes JSON bytes back to Pydantic models
-    - Validates against model schemas
-    - Preserves custom headers as JSON-serializable values
-    """
-
-    def encode(
-        self, payload: BaseModel, headers: BaseModel, asyncapi_message: AsyncAPIMessage
-    ) -> EncodedMessageProtocol:
-        """
-        Encode Pydantic models to JSON wire format
-
-        Args:
-            payload: Pydantic model instance for message body
-            headers: Pydantic model instance for message headers
-            asyncapi_message: AsyncAPI spec (used for content-type hints)
-
-        Returns:
-            JsonEncodedMessage with JSON-serialized payload and headers
-        """
-        # Validate models first
-        validated_payload, validated_headers = self.validate(
-            payload, headers, asyncapi_message
-        )
-
-        # Encode payload to JSON bytes
-        payload_bytes = validated_payload.model_dump_json().encode("utf-8")
-
-        # Convert headers to dict (JSON-serializable)
-        headers_dict = validated_headers.model_dump(mode="json")
-
-        # Determine content type from AsyncAPI spec or use default
-        content_type = asyncapi_message.content_type or "application/json"
-
-        return JsonEncodedMessage(
-            payload=payload_bytes, headers=headers_dict, content_type=content_type
-        )
-
-    def decode(
-        self,
-        encoded: EncodedMessageProtocol,
-        payload_type: Type[BaseModel],
-        headers_type: Type[BaseModel],
-    ) -> tuple[BaseModel, BaseModel]:
-        """
-        Decode JSON wire format to Pydantic models
-
-        Args:
-            encoded: Wire format message with JSON payload
-            payload_type: Target Pydantic model class for payload
-            headers_type: Target Pydantic model class for headers
-
-        Returns:
-            Tuple of (decoded_payload, decoded_headers) as Pydantic instances
-
-        Raises:
-            ValidationError: If JSON doesn't match model schemas
-            ValueError: If payload is not valid JSON
-        """
-        # Decode payload from JSON bytes
+class JsonCodec(Codec[BaseModel, bytes]):
+    """JSON codec that converts between Pydantic BaseModel and bytes"""
+    
+    def __init__(self, model_class: Type[BaseModel]):
+        self._model_class = model_class
+    
+    def encode(self, payload: BaseModel) -> bytes:
+        """Encode a Pydantic model to JSON bytes"""
+        json_str = payload.model_dump_json()
+        return json_str.encode('utf-8')
+    
+    def decode(self, payload: bytes) -> BaseModel:
+        """Decode JSON bytes to a Pydantic model"""
         try:
-            payload = payload_type.model_validate_json(encoded.payload)
-        except ValidationError:
-            raise  # Re-raise the original Pydantic ValidationError
-        except Exception as e:
+            json_data = json.loads(payload.decode('utf-8'))
+            return self._model_class.model_validate(json_data)
+        except (json.JSONDecodeError, ValidationError, UnicodeDecodeError) as e:
             raise ValueError(f"Failed to decode JSON payload: {e}")
 
-        # Decode headers from dict
+
+class JsonCodecFactory(CodecFactory[BaseModel, bytes]):
+    """Factory for creating JSON codecs for Pydantic models
+    
+    This factory dynamically resolves Pydantic model classes from the generated code's
+    messages.json module. It expects the following structure in the root module:
+    
+    root_module/
+    ├── messages/
+    │   └── json.py  # Contains all Pydantic model classes
+    
+    Model Resolution:
+    - Converts message names to PascalCase class names (e.g., "user.created" -> "UserCreated")
+    - Looks up the model class in root_module.messages.json
+    - Creates a JsonCodec instance for the resolved model class
+    
+    Registry:
+    - Caches codec instances to avoid creating them multiple times for the same message
+    - Uses message specs as cache keys (message specs are hashable)
+    - Shared across all JsonCodecFactory instances via class variable
+    """
+    
+    _codec_registry: ClassVar[dict[Message, JsonCodec]] = {}
+    
+    def __init__(self, module):
+        super().__init__(module)
+    
+    def create(self, message: Message) -> JsonCodec:
+        """Creates a JSON codec instance from the message spec"""
+        # Check if codec already exists in registry
+        if message in self._codec_registry:
+            return self._codec_registry[message]
+        
+        if not message.payload:
+            raise ValueError("Message payload is required for JSON codec")
+        
+        # Try to resolve the model class from the module
+        model_class = self._resolve_model_class(message)
+        codec = JsonCodec(model_class)
+        
+        # Cache the codec in registry
+        self._codec_registry[message] = codec
+        return codec
+    
+    def _resolve_model_class(self, message: Message) -> Type[BaseModel]:
+        """Resolve the Pydantic model class from the message"""
+        if not message.name:
+            raise ValueError("Message name is required to resolve model class")
+        
+        # Convert message name to expected class name (e.g., "user.created" -> "UserCreated")
+        class_name = self._to_class_name(message.name)
+        
         try:
-            headers = headers_type.model_validate(encoded.headers)
-        except ValidationError:
-            raise  # Re-raise the original Pydantic ValidationError
-
-        return payload, headers
-
-    def validate(
-        self, payload: BaseModel, headers: BaseModel, asyncapi_message: AsyncAPIMessage
-    ) -> tuple[BaseModel, BaseModel]:
-        """
-        Validate models against AsyncAPI specification
-
-        Default implementation uses Pydantic's built-in validation.
-        Override for custom AsyncAPI schema validation.
-
-        Args:
-            payload: Payload model to validate
-            headers: Headers model to validate
-            asyncapi_message: AsyncAPI message specification
-
-        Returns:
-            Validated models (may be normalized by Pydantic)
-        """
-        # Pydantic models self-validate on construction
-        # Re-validate to ensure consistency
-        payload_validated = payload.model_validate(payload.model_dump())
-        headers_validated = headers.model_validate(headers.model_dump())
-
-        return payload_validated, headers_validated
+            # Look for models in messages.json submodule
+            messages_json_module = getattr(self._module, 'messages').json
+            model_class = getattr(messages_json_module, class_name)
+            if not issubclass(model_class, BaseModel):
+                raise ValueError(f"Class {class_name} is not a Pydantic BaseModel")
+            return cast(Type[BaseModel], model_class)
+        except AttributeError as e:
+            raise ValueError(f"Model class {class_name} not found in {self._module}.messages.json: {e}")
+    
+    def _to_class_name(self, message_name: str) -> str:
+        """Convert message name to PascalCase class name"""
+        # Handle dot-separated names like "user.created" -> "UserCreated"
+        parts = message_name.replace('-', '_').replace('.', '_').split('_')
+        return ''.join(part.capitalize() for part in parts if part)
