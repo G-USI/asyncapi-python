@@ -1,39 +1,6 @@
-from typing import Any, AsyncGenerator, Generic, Protocol, TypeVar
+from typing import AsyncGenerator, Generic, Protocol
 
-
-class Message(Protocol):
-    @property
-    def payload(self) -> bytes:
-        """Payload of the message"""
-
-    @property
-    def headers(self) -> dict[str, Any]:
-        """Message headers"""
-
-    @property
-    def correlation_id(self) -> str | None:
-        """AsyncAPI 3.0 correlation ID for RPC request/response matching"""
-
-    @property
-    def reply_to(self) -> str | None:
-        """AsyncAPI 3.0 reply-to address for dynamic RPC responses"""
-
-
-class IncomingMessage(Message, Protocol):
-    async def ack(self) -> None:
-        """Processing of the message successful"""
-
-    async def nack(self) -> None:
-        """Processing of the message failed due to app internal reason"""
-
-    async def reject(self) -> None:
-        """Processing of the message failed due to external reasons (e.g. protocol validation)"""
-
-
-T_Send = TypeVar("T_Send", bound=Message)
-
-
-T_Recv = TypeVar("T_Recv", covariant=True, bound=IncomingMessage)
+from ..typing import T_Send, T_Recv
 
 
 class EndpointLifecycle(Protocol):

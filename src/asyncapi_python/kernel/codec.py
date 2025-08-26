@@ -1,13 +1,9 @@
 from abc import ABC, abstractmethod
 from types import ModuleType
 from typing import Generic, Protocol
-from typing_extensions import TypeVar
 
 from asyncapi_python.kernel.document.message import Message
-
-
-T_DecodedPayload = TypeVar("T_DecodedPayload")
-T_EncodedPayload = TypeVar("T_EncodedPayload", default=bytes)
+from .typing import T_DecodedPayload, T_EncodedPayload
 
 
 class Codec(Protocol, Generic[T_DecodedPayload, T_EncodedPayload]):
