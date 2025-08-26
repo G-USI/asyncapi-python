@@ -2,19 +2,19 @@ from typing import Callable, Generic, overload
 from typing_extensions import Unpack
 
 from .abc import AbstractEndpoint, Receive, HandlerParams
-from ..typing import T_Input, T_Output, Handler
+from ..typing import T_Input, Handler
 from asyncapi_python.kernel.wire import Consumer
 
 
 class Subscriber(
-    AbstractEndpoint, Receive[T_Input, T_Output], Generic[T_Input, T_Output]
+    AbstractEndpoint, Receive[T_Input, None], Generic[T_Input]
 ):
     """Subscriber endpoint for receiving messages without sending replies"""
 
     def __init__(self, **kwargs: Unpack[AbstractEndpoint.Inputs]):
         super().__init__(**kwargs)
         self._consumer: Consumer | None = None
-        self._handler: Handler[T_Input, T_Output] | None = None
+        self._handler: Handler[T_Input, None] | None = None
 
     async def start(self) -> None:
         """Initialize the subscriber endpoint"""
@@ -43,21 +43,21 @@ class Subscriber(
 
     @overload
     def __call__(
-        self, fn: Handler[T_Input, T_Output]
-    ) -> Handler[T_Input, T_Output]: ...
+        self, fn: Handler[T_Input, None]
+    ) -> Handler[T_Input, None]: ...
 
     @overload
     def __call__(
         self, fn: None = None, **kwargs: Unpack[HandlerParams]
-    ) -> Callable[[Handler[T_Input, T_Output]], Handler[T_Input, T_Output]]: ...
+    ) -> Callable[[Handler[T_Input, None]], Handler[T_Input, None]]: ...
 
     def __call__(
         self,
-        fn: Handler[T_Input, T_Output] | None = None,
+        fn: Handler[T_Input, None] | None = None,
         **kwargs: Unpack[HandlerParams],
     ) -> (
-        Handler[T_Input, T_Output]
-        | Callable[[Handler[T_Input, T_Output]], Handler[T_Input, T_Output]]
+        Handler[T_Input, None]
+        | Callable[[Handler[T_Input, None]], Handler[T_Input, None]]
     ):
         """Register a handler for incoming messages
 
@@ -72,8 +72,8 @@ class Subscriber(
         if fn is None:
             # Called with parameters: @subscriber(queue=...)
             def decorator(
-                handler_fn: Handler[T_Input, T_Output],
-            ) -> Handler[T_Input, T_Output]:
+                handler_fn: Handler[T_Input, None],
+            ) -> Handler[T_Input, None]:
                 self._register_handler(handler_fn, kwargs)
                 return handler_fn
 
@@ -84,7 +84,7 @@ class Subscriber(
             return fn
 
     def _register_handler(
-        self, handler: Handler[T_Input, T_Output], _params: HandlerParams
+        self, handler: Handler[T_Input, None], _params: HandlerParams
     ) -> None:
         """Register a handler and start consuming messages"""
         self._handler = handler
