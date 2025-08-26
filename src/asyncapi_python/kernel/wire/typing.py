@@ -1,4 +1,4 @@
-from typing import AsyncGenerator, Generic, Protocol, TypeVar
+from typing import Any, AsyncGenerator, Generic, Protocol, TypeVar
 
 
 class Message(Protocol):
@@ -7,7 +7,7 @@ class Message(Protocol):
         """Payload of the message"""
 
     @property
-    def headers(self) -> dict[str, str]:
+    def headers(self) -> dict[str, Any]:
         """Message headers"""
 
     @property
