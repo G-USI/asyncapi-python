@@ -6,14 +6,14 @@ from typing_extensions import TypeVar
 from asyncapi_python.kernel.document.message import Message
 
 
-T_DecodedPayload = TypeVar("T_DecodedPayload", covariant=True)
-T_EncodedPayload = TypeVar("T_EncodedPayload", covariant=True, default=bytes)
+T_DecodedPayload = TypeVar("T_DecodedPayload")
+T_EncodedPayload = TypeVar("T_EncodedPayload", default=bytes)
 
 
 class Codec(Protocol, Generic[T_DecodedPayload, T_EncodedPayload]):
-    def encode(payload: T_DecodedPayload) -> T_EncodedPayload: ...
+    def encode(self, payload: T_DecodedPayload) -> T_EncodedPayload: ...
 
-    def decode(payload: T_EncodedPayload) -> T_DecodedPayload: ...
+    def decode(self, payload: T_EncodedPayload) -> T_DecodedPayload: ...
 
 
 class CodecFactory(ABC, Generic[T_DecodedPayload, T_EncodedPayload]):
