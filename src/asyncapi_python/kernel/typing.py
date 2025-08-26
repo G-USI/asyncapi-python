@@ -60,7 +60,7 @@ T_Output = TypeVar("T_Output", covariant=True, bound=Serializable)
 T_DecodedPayload = TypeVar("T_DecodedPayload", bound=Serializable)
 """Application-level payload data (what codecs decode to/encode from)"""
 
-T_EncodedPayload = TypeVar("T_EncodedPayload", bound=WireData, default=bytes)
+T_EncodedPayload = TypeVar("T_EncodedPayload", bound=WireData)
 """Wire-level encoded data (what codecs encode to/decode from)"""
 
 # Wire layer types - transport-specific message types

@@ -11,11 +11,11 @@ class EndpointLifecycle(Protocol):
         """Signals stop to the endpoint. Receiving side must stop its background tasks and terminate self."""
 
 
-class Producer(Protocol, EndpointLifecycle, Generic[T_Send]):
+class Producer(EndpointLifecycle, Protocol, Generic[T_Send]):
     async def send_batch(self, messages: list[T_Send]) -> None:
         """Sends batch of messages to channel"""
 
 
-class Consumer(Protocol, EndpointLifecycle, Generic[T_Recv]):
+class Consumer(EndpointLifecycle, Protocol, Generic[T_Recv]):
     def recv(self) -> AsyncGenerator[T_Recv, None]:
         """Starts streaming incoming messages"""
