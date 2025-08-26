@@ -9,6 +9,11 @@ from asyncapi_python.kernel.document import Operation
 from asyncapi_python.kernel.codec import Codec, CodecFactory
 
 
+class HandlerParams(TypedDict, total=False):
+    """Parameters for message handlers"""
+    pass
+
+
 class AbstractEndpoint(ABC):
     class Inputs(TypedDict):
         operation: Operation
@@ -96,15 +101,14 @@ class Receive(ABC, Generic[T_Input, T_Output]):
 
     @overload
     def __call__(
-        self, fn: None = None, *, params: dict[str, str]
+        self, fn: None = None, **kwargs: Unpack[HandlerParams]
     ) -> Callable[[Handler[T_Input, T_Output]], Handler[T_Input, T_Output]]: ...
 
     @abstractmethod
     def __call__(
         self,
         fn: Handler[T_Input, T_Output] | None = None,
-        *,
-        params: dict[str, str] | None = None,
+        **kwargs: Unpack[HandlerParams],
     ) -> (
         Handler[T_Input, T_Output]
         | Callable[[Handler[T_Input, T_Output]], Handler[T_Input, T_Output]]
