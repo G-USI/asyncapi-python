@@ -93,6 +93,9 @@ class JsonCodecFactory(CodecFactory[BaseModel, bytes]):
     
     def _to_class_name(self, message_name: str) -> str:
         """Convert message name to PascalCase class name"""
+        # If already in PascalCase (no dots, underscores, or hyphens), return as-is
+        if '.' not in message_name and '_' not in message_name and '-' not in message_name:
+            return message_name
         # Handle dot-separated names like "user.created" -> "UserCreated"
         parts = message_name.replace('-', '_').replace('.', '_').split('_')
         return ''.join(part.capitalize() for part in parts if part)
