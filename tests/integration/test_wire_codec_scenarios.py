@@ -13,6 +13,7 @@ from .scenarios import (
     producer_consumer_roundtrip,
     reply_channel_creation,
     error_handling,
+    malformed_message_handling,
 )
 
 # Import test app module
@@ -38,6 +39,7 @@ JSON_CODEC = JsonCodecFactory(test_app)
         producer_consumer_roundtrip,
         reply_channel_creation,
         error_handling,
+        malformed_message_handling,
     ],
 )
 @pytest.mark.asyncio

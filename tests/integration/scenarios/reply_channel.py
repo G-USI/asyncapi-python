@@ -1,47 +1,114 @@
 """Reply channel creation scenario"""
 
+import asyncio
 from asyncapi_python.kernel.wire import AbstractWireFactory
 from asyncapi_python.kernel.codec import CodecFactory
+from asyncapi_python.kernel.document.message import Message
 from asyncapi_python.kernel.document.channel import Channel
+from asyncapi_python.kernel.document.operation import Operation
+from asyncapi_python.kernel.application import BaseApplication
+
+# Import test app and models
+from ..test_app.messages.json import TestEvent
+from ..test_app.app_2 import OrderProcessingApp
 
 
 async def reply_channel_creation(wire: AbstractWireFactory, codec: CodecFactory) -> None:
-    """Test reply channel creation with null address"""
+    """Test reply channel creation using OrderProcessingApp's RPC endpoint"""
     print(f"Testing reply channel with {wire.__class__.__name__} + {codec.__class__.__name__}")
     
-    # 1. Create channel with null address (global reply queue)
-    reply_channel = Channel(
-        address=None,  # Null address triggers global reply queue
-        title=None, summary=None, description=None,
-        servers=[], messages={}, parameters={},
-        tags=[], external_docs=None, bindings=None
-    )
+    # 1. Create OrderProcessingApp which has RPC endpoint with null address
+    app = OrderProcessingApp(wire, codec)
     
-    # 2. Create reply consumer with is_reply=True
-    reply_consumer = await wire.create_consumer(
-        channel=reply_channel,
-        parameters={},
-        op_bindings=None,
-        is_reply=True  # This should trigger reply queue creation
-    )
+    # Create a consumer for the default/reply queue
+    class ReplyConsumerApp(BaseApplication):
+        def __init__(self, wire_factory: AbstractWireFactory, codec_factory: CodecFactory):
+            super().__init__(wire_factory, codec_factory)
+            self._setup_endpoints()
+        
+        def _setup_endpoints(self):
+            # Consumer for reply messages (null address -> "default" queue in AMQP)
+            reply_channel = Channel(
+                address=None,  # Same null address to consume from default queue
+                title=None, summary=None, description=None,
+                servers=[], messages={}, parameters={},
+                tags=[], external_docs=None, bindings=None
+            )
+            
+            reply_message = Message(
+                name="TestEvent",
+                title=None, summary=None, description=None,
+                tags=[], externalDocs=None, traits=[],
+                payload={"type": "object"}, headers=None,
+                bindings=None, correlation_id=None,
+                content_type=None, deprecated=None
+            )
+            
+            reply_operation = Operation(
+                channel=reply_channel,
+                messages=[reply_message],
+                action="receive",
+                title=None, summary=None, description=None,
+                tags=[], external_docs=None, traits=[],
+                bindings=None, reply=None, security=None
+            )
+            
+            self.on_reply = self._register_endpoint(reply_operation)
+    
+    reply_consumer = ReplyConsumerApp(wire, codec)
+    replies_consumed = []
+    
+    @reply_consumer.on_reply
+    async def consume_reply(event: TestEvent):
+        replies_consumed.append(event)
+        print(f"✓ Consumed reply message: {event.event_type}")
     
     try:
-        # 3. Start the reply consumer
+        # 2. Start consumer first, then the application
         await reply_consumer.start()
+        await app.start()
+        print("✓ OrderProcessingApp started successfully")
         
-        # 4. Verify successful creation based on wire type
+        # 3. The rpc_replies endpoint should be created with null address
+        # This should trigger global reply queue creation
         if "InMemory" in wire.__class__.__name__:
-            print("✓ In-memory reply channel created successfully")
-            # For in-memory: should use default reply routing
+            print("✓ In-memory global reply channel created via app")
         else:  # AMQP
-            print("✓ AMQP reply queue created: reply-queue-test-integration")
-            # For AMQP: should create "reply-queue-test-integration" queue
+            print("✓ AMQP global reply queue created: reply-queue-test-integration")
         
-        # 5. Test that we can start/stop without errors
-        await reply_consumer.stop()
-        await reply_consumer.start()
+        # 4. Test sending a reply message through the RPC endpoint
+        test_event = TestEvent(
+            event_type="order.processed",
+            user_id=456,
+            timestamp="2024-01-01T00:00:00Z",
+            payload={"order_id": "order-123", "status": "completed"}
+        )
         
-        print("✓ Reply channel lifecycle operations successful")
+        # Send reply via the RPC endpoint
+        await app.rpc_replies(test_event)
+        print(f"✓ Sent RPC reply: {test_event}")
+        
+        # 5. Test lifecycle operations - restart the app
+        await app.stop()
+        await app.start()
+        print("✓ App lifecycle operations successful")
+        
+        # 6. Test sending another reply after restart
+        test_event2 = TestEvent(
+            event_type="order.cancelled",
+            user_id=789,
+            timestamp="2024-01-01T01:00:00Z",
+            payload={"order_id": "order-456", "reason": "customer_request"}
+        )
+        
+        await app.rpc_replies(test_event2)
+        print(f"✓ Sent RPC reply after restart: {test_event2}")
+        
+        # Wait a bit for messages to be consumed
+        await asyncio.sleep(0.1)
+        
+        print(f"✓ Reply channel creation and operations successful (consumed {len(replies_consumed)} replies)")
         
     finally:
+        await app.stop()
         await reply_consumer.stop()

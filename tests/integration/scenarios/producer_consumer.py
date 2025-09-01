@@ -1,100 +1,195 @@
 """Producer->Consumer roundtrip scenario"""
 
+import asyncio
 from asyncapi_python.kernel.wire import AbstractWireFactory
 from asyncapi_python.kernel.codec import CodecFactory
-from asyncapi_python.kernel.document.channel import Channel
 from asyncapi_python.kernel.document.message import Message
-
-# Import test models
-import sys
-from pathlib import Path
-test_app_path = Path(__file__).parent.parent / "test_app"
-sys.path.insert(0, str(test_app_path.parent))
-import test_app.messages.json as test_models
+from asyncapi_python.kernel.document.channel import Channel
+from asyncapi_python.kernel.document.operation import Operation
+from asyncapi_python.kernel.application import BaseApplication
+from ..test_app.messages.json import UserCreated, UserUpdated
+from ..test_app.app_1 import UserManagementApp
 
 
-async def producer_consumer_roundtrip(wire: AbstractWireFactory, codec: CodecFactory) -> None:
-    """Test producer->consumer message roundtrip"""
-    print(f"Testing roundtrip with {wire.__class__.__name__} + {codec.__class__.__name__}")
+class ConsumerApp(BaseApplication):
+    """Consumer app to receive messages"""
     
-    # 1. Create test channel
-    test_channel = Channel(
-        address="test.roundtrip.channel",
-        title=None, summary=None, description=None,
-        servers=[], messages={}, parameters={},
-        tags=[], external_docs=None, bindings=None
+    def __init__(self, wire_factory: AbstractWireFactory, codec_factory: CodecFactory):
+        super().__init__(wire_factory, codec_factory)
+        self._setup_endpoints()
+    
+    def _setup_endpoints(self):
+        """Setup consumer endpoints to match producer channels"""
+        
+        # Consumer for user.created events
+        user_created_channel = Channel(
+            address="users.created",
+            title=None, summary=None, description=None,
+            servers=[], messages={}, parameters={},
+            tags=[], external_docs=None, bindings=None
+        )
+        
+        user_created_message = Message(
+            name="UserCreated",
+            title=None, summary=None, description=None,
+            tags=[], externalDocs=None, traits=[],
+            payload={"type": "object"}, headers=None,
+            bindings=None, correlation_id=None,
+            content_type=None, deprecated=None
+        )
+        
+        user_created_operation = Operation(
+            channel=user_created_channel,
+            messages=[user_created_message],
+            action="receive",  # Consumer receives messages
+            title=None, summary=None, description=None,
+            tags=[], external_docs=None, traits=[],
+            bindings=None, reply=None, security=None
+        )
+        
+        self.on_user_created = self._register_endpoint(user_created_operation)
+
+
+async def producer_consumer_roundtrip(
+    wire: AbstractWireFactory, codec: CodecFactory
+) -> None:
+    """Test producer->consumer message roundtrip using UserManagementApp"""
+    print(
+        f"Testing roundtrip with {wire.__class__.__name__} + {codec.__class__.__name__}"
     )
+
+    # 1. Create producer and consumer apps
+    producer_app = UserManagementApp(wire, codec)
+    consumer_app = ConsumerApp(wire, codec)
+
+    # 2. Set up consumer handler BEFORE starting to avoid missing messages
+    received_messages = []
+    consume_event = asyncio.Event()
     
-    # 2. Create test message specification
-    test_message = Message(
-        name="test.user",  # Maps to TestUser class via _to_class_name conversion
-        title=None, summary=None, description=None,
-        tags=[], externalDocs=None, traits=[],
-        payload={"type": "object"}, headers=None,
-        bindings=None, correlation_id=None,
-        content_type=None, deprecated=None
-    )
-    
-    # 3. Create codec instance
-    message_codec = codec.create(test_message)
-    
-    # 4. Create test data
-    test_user = test_models.TestUser(id=123, name="Alice", email="alice@example.com")
-    
-    # 5. Create producer and consumer
-    producer = await wire.create_producer(
-        channel=test_channel, parameters={}, op_bindings=None, is_reply=False
-    )
-    consumer = await wire.create_consumer(
-        channel=test_channel, parameters={}, op_bindings=None, is_reply=False
-    )
-    
+    @consumer_app.on_user_created
+    async def handle_user_created(user: UserCreated):
+        received_messages.append(user)
+        print(f"✓ Consumer received user created event: {user}")
+        # Only set event when we receive the message we expect (from this test)
+        if user.user_id == 123 and user.name == "Alice":
+            consume_event.set()
+
     try:
-        # 6. Start endpoints
-        await producer.start()
-        await consumer.start()
+        # 3. Start both applications (consumer will start consuming immediately)
+        await producer_app.start()
+        await consumer_app.start()
+
+        # 4. Create and send test user data
+        test_user = UserCreated(
+            user_id=123,
+            name="Alice",
+            email="alice@example.com",
+            timestamp="2024-01-01T00:00:00Z",
+        )
+
+        await producer_app.user_created(test_user)
+        print(f"✓ Producer sent user created event: {test_user}")
+
+        # 5. Wait for consumer to receive the message
+        try:
+            await asyncio.wait_for(consume_event.wait(), timeout=2.0)
+        except asyncio.TimeoutError:
+            raise AssertionError("Consumer did not receive message within timeout")
+
+        # 6. Verify we received our specific message
+        our_message = None
+        for msg in received_messages:
+            if msg.user_id == 123 and msg.name == "Alice":
+                our_message = msg
+                break
         
-        # 7. Encode and send message
-        encoded_payload = message_codec.encode(test_user)
+        assert our_message is not None, f"Expected message not found. Received: {received_messages}"
+        assert our_message.user_id == test_user.user_id
+        assert our_message.name == test_user.name
+        assert our_message.email == test_user.email
+        print("✓ Message content verified correctly")
         
-        # Create wire message based on wire type
-        if "InMemory" in wire.__class__.__name__:
-            from asyncapi_python.contrib.wire.in_memory import InMemoryMessage
-            wire_message = InMemoryMessage(
-                _payload=encoded_payload,
-                _headers={"content-type": "application/json"},
-                _correlation_id="test-123",
-                _reply_to=None
-            )
-        else:  # AMQP
-            from asyncapi_python.contrib.wire.amqp import AmqpWireMessage
-            wire_message = AmqpWireMessage(
-                _payload=encoded_payload,
-                _headers={"content-type": "application/json"},
-                _correlation_id="test-123",
-                _reply_to=None
-            )
+        # Log if we consumed extra messages from queue
+        if len(received_messages) > 1:
+            print(f"ℹ Consumed {len(received_messages)} total messages from queue (including {len(received_messages)-1} from previous tests)")
+
+        # 7. Test user updates with producer receiving
+        received_updates = []
+        update_event = asyncio.Event()
+
+        @producer_app.user_updates
+        async def handle_user_update(update: UserUpdated):
+            received_updates.append(update)
+            print(f"✓ Producer received user update: {update}")
+            update_event.set()
+
+        # 8. Create a second producer to send updates
+        class Producer2App(BaseApplication):
+            def __init__(self, wire_factory: AbstractWireFactory, codec_factory: CodecFactory):
+                super().__init__(wire_factory, codec_factory)
+                self._setup_endpoints()
+            
+            def _setup_endpoints(self):
+                # Setup publisher for user updates
+                user_update_channel = Channel(
+                    address="users.update",
+                    title=None, summary=None, description=None,
+                    servers=[], messages={}, parameters={},
+                    tags=[], external_docs=None, bindings=None
+                )
+                
+                user_update_message = Message(
+                    name="UserUpdated",
+                    title=None, summary=None, description=None,
+                    tags=[], externalDocs=None, traits=[],
+                    payload={"type": "object"}, headers=None,
+                    bindings=None, correlation_id=None,
+                    content_type=None, deprecated=None
+                )
+                
+                user_update_operation = Operation(
+                    channel=user_update_channel,
+                    messages=[user_update_message],
+                    action="send",
+                    title=None, summary=None, description=None,
+                    tags=[], external_docs=None, traits=[],
+                    bindings=None, reply=None, security=None
+                )
+                
+                self.send_update = self._register_endpoint(user_update_operation)
         
-        await producer.send_batch([wire_message])
+        producer2_app = Producer2App(wire, codec)
+        await producer2_app.start()
+
+        # 9. Send update from producer2
+        test_update = UserUpdated(
+            user_id=123,
+            name="Alice Updated",
+            email="alice.updated@example.com",
+            timestamp="2024-01-01T01:00:00Z",
+        )
         
-        # 8. Receive and verify message
-        received_message = None
-        async for msg in consumer.recv():
-            received_message = msg
-            await msg.ack()
-            break
-        
-        assert received_message is not None, "No message received"
-        assert received_message.correlation_id == "test-123"
-        
-        # 9. Decode and verify payload
-        decoded_user = message_codec.decode(received_message.payload)
-        assert decoded_user.id == test_user.id
-        assert decoded_user.name == test_user.name
-        assert decoded_user.email == test_user.email
-        
-        print(f"✓ Roundtrip successful: {decoded_user}")
-        
+        await producer2_app.send_update(test_update)
+        print(f"✓ Producer2 sent user update: {test_update}")
+
+        # 10. Wait for producer1 to receive the update
+        try:
+            await asyncio.wait_for(update_event.wait(), timeout=2.0)
+        except asyncio.TimeoutError:
+            raise AssertionError("Producer did not receive update within timeout")
+
+        # 11. Verify the update was received correctly
+        assert len(received_updates) == 1
+        received_update = received_updates[0]
+        assert received_update.user_id == test_update.user_id
+        assert received_update.name == test_update.name
+        assert received_update.email == test_update.email
+
+        print("✓ Roundtrip successful: all messages produced and consumed correctly")
+
     finally:
-        await producer.stop()
-        await consumer.stop()
+        # Clean shutdown of all apps
+        await producer_app.stop()
+        await consumer_app.stop()
+        if 'producer2_app' in locals():
+            await producer2_app.stop()
