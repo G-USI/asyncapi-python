@@ -1,3 +1,3 @@
 """AsyncAPI Python contrib modules - optional implementations"""
 
-__all__ = []
+__all__: list[str] = []

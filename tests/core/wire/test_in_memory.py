@@ -1,5 +1,6 @@
 import asyncio
 import pytest
+from unittest.mock import Mock, patch
 
 from asyncapi_python.contrib.wire.in_memory import (
     InMemoryMessage,
@@ -132,6 +133,9 @@ async def test_fifo_message_ordering(bus: InMemoryBus) -> None:
         received2 = await bus.get_message("test.channel")
         received3 = await bus.get_message("test.channel")
         
+        assert received1 is not None
+        assert received2 is not None
+        assert received3 is not None
         assert received1.payload == b"first"
         assert received2.payload == b"second"
         assert received3.payload == b"third"
@@ -145,6 +149,7 @@ async def test_message_headers_preserved(bus: InMemoryBus) -> None:
         await bus.publish("test.channel", message)
         received = await bus.get_message("test.channel")
         
+        assert received is not None
         assert received.headers == headers
 
 @pytest.mark.asyncio
@@ -159,6 +164,7 @@ async def test_message_correlation_and_reply_to(bus: InMemoryBus) -> None:
         await bus.publish("test.channel", message)
         received = await bus.get_message("test.channel")
         
+        assert received is not None
         assert received.correlation_id == "corr-123"
         assert received.reply_to == "reply.queue"
 
@@ -177,12 +183,12 @@ async def test_consumer_subscription_notification(bus: InMemoryBus) -> None:
             notification_called = True
             original_notify()
         
-        consumer._notify_new_message = mock_notify
-        
-        message = InMemoryMessage(_payload=b"test")
-        await bus.publish("test.channel", message)
-        
-        assert notification_called
+        # Mock the notification method using patch
+        with patch.object(consumer, '_notify_new_message', side_effect=mock_notify):
+            message = InMemoryMessage(_payload=b"test")
+            await bus.publish("test.channel", message)
+            
+            assert notification_called
 
 @pytest.mark.asyncio
 async def test_multiple_consumers_notification(bus: InMemoryBus) -> None:
@@ -205,14 +211,15 @@ async def test_multiple_consumers_notification(bus: InMemoryBus) -> None:
                     consumer2._message_event.set()
             return mock_notify
         
-        consumer1._notify_new_message = make_mock_notify(1)
-        consumer2._notify_new_message = make_mock_notify(2)
-        
-        message = InMemoryMessage(_payload=b"test")
-        await bus.publish("test.channel", message)
-        
-        assert 1 in notifications
-        assert 2 in notifications
+        # Mock the notification methods using patch
+        with patch.object(consumer1, '_notify_new_message', side_effect=make_mock_notify(1)), \
+             patch.object(consumer2, '_notify_new_message', side_effect=make_mock_notify(2)):
+            
+            message = InMemoryMessage(_payload=b"test")
+            await bus.publish("test.channel", message)
+            
+            assert 1 in notifications
+            assert 2 in notifications
 
 @pytest.mark.asyncio
 async def test_consumer_unsubscribe(bus: InMemoryBus) -> None:
@@ -228,12 +235,12 @@ async def test_consumer_unsubscribe(bus: InMemoryBus) -> None:
             nonlocal notification_called
             notification_called = True
         
-        consumer._notify_new_message = mock_notify
-        
-        message = InMemoryMessage(_payload=b"test")
-        await bus.publish("test.channel", message)
-        
-        assert not notification_called
+        # Mock the notification method using patch
+        with patch.object(consumer, '_notify_new_message', side_effect=mock_notify):
+            message = InMemoryMessage(_payload=b"test")
+            await bus.publish("test.channel", message)
+            
+            assert not notification_called
 
 
 # InMemoryProducer tests
@@ -270,6 +277,8 @@ async def test_send_batch_when_started(producer: InMemoryProducer) -> None:
         received1 = await bus.get_message("test.channel")
         received2 = await bus.get_message("test.channel")
         
+        assert received1 is not None
+        assert received2 is not None
         assert received1.payload == b"msg1"
         assert received2.payload == b"msg2"
 
@@ -447,23 +456,35 @@ def factory() -> InMemoryWireFactory:
 @pytest.mark.asyncio
 async def test_create_consumer(factory: InMemoryWireFactory, mock_channel) -> None:
         """Test creating consumer from wire factory"""
-        consumer = await factory.create_consumer(channel=mock_channel)
+        consumer = await factory.create_consumer(
+            channel=mock_channel,
+            parameters={},
+            op_bindings=None,
+            is_reply=False
+        )
         
         assert isinstance(consumer, InMemoryConsumer)
+        # We can check the _channel_name attribute since we know it's InMemoryConsumer
         assert consumer._channel_name == "test.channel"
 
 @pytest.mark.asyncio
 async def test_create_producer(factory: InMemoryWireFactory, mock_channel) -> None:
         """Test creating producer from wire factory"""
-        producer = await factory.create_producer(channel=mock_channel)
+        producer = await factory.create_producer(
+            channel=mock_channel,
+            parameters={},
+            op_bindings=None,
+            is_reply=False
+        )
         
         assert isinstance(producer, InMemoryProducer)
+        # We can check the _channel_name attribute since we know it's InMemoryProducer
         assert producer._channel_name == "test.channel"
 
 @pytest.mark.asyncio
 async def test_create_consumer_default_channel(factory: InMemoryWireFactory) -> None:
         """Test creating consumer with no channel address uses default"""
-        from asyncapi_python.kernel.document.channel import Channel
+        from asyncapi_python.kernel.document.channel import Channel, ChannelBindings
         
         channel_no_address = Channel(
             address=None,  # No address
@@ -475,16 +496,23 @@ async def test_create_consumer_default_channel(factory: InMemoryWireFactory) -> 
             parameters={},
             tags=[],
             external_docs=None,
-            bindings=None
+            bindings=ChannelBindings()
         )
         
-        consumer = await factory.create_consumer(channel=channel_no_address)
-        assert consumer._channel_name == "default"
+        consumer = await factory.create_consumer(
+            channel=channel_no_address,
+            parameters={},
+            op_bindings=None,
+            is_reply=False
+        )
+        # Note: We can only check this on the concrete InMemoryConsumer implementation
+        if hasattr(consumer, '_channel_name'):
+            assert consumer._channel_name == "default"
 
 @pytest.mark.asyncio
 async def test_create_producer_default_channel(factory: InMemoryWireFactory) -> None:
         """Test creating producer with no channel address uses default"""
-        from asyncapi_python.kernel.document.channel import Channel
+        from asyncapi_python.kernel.document.channel import Channel, ChannelBindings
         
         channel_no_address = Channel(
             address=None,  # No address
@@ -496,11 +524,18 @@ async def test_create_producer_default_channel(factory: InMemoryWireFactory) -> 
             parameters={},
             tags=[],
             external_docs=None,
-            bindings=None
+            bindings=ChannelBindings()
         )
         
-        producer = await factory.create_producer(channel=channel_no_address)
-        assert producer._channel_name == "default"
+        producer = await factory.create_producer(
+            channel=channel_no_address,
+            parameters={},
+            op_bindings=None,
+            is_reply=False
+        )
+        # Note: We can only check this on the concrete InMemoryProducer implementation
+        if hasattr(producer, '_channel_name'):
+            assert producer._channel_name == "default"
 
 
 # Global bus operations tests

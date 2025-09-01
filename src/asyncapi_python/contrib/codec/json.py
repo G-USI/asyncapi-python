@@ -77,6 +77,8 @@ class JsonCodecFactory(CodecFactory[BaseModel, bytes]):
         """Resolve the Pydantic model class from the message"""
         
         # Convert message name to expected class name (e.g., "user.created" -> "UserCreated")
+        if message.name is None:
+            raise ValueError("Message name is required for model class resolution")
         class_name = self._to_class_name(message.name)
         
         try:

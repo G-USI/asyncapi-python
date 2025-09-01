@@ -73,7 +73,7 @@ class InMemoryIncomingMessage(InMemoryMessage):
 class InMemoryBus:
     """Central message bus for in-memory wire communication"""
     
-    def __init__(self):
+    def __init__(self) -> None:
         # Channel name -> queue of messages
         self._channels: dict[str, deque[InMemoryIncomingMessage]] = defaultdict(deque)
         # Active consumers per channel

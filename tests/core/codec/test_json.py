@@ -1,6 +1,7 @@
 import json
 import pytest
 from pydantic import BaseModel, ValidationError
+from typing import cast
 
 from asyncapi_python.contrib.codec.json import JsonCodec, JsonCodecFactory
 from asyncapi_python.kernel.document.message import Message
@@ -93,7 +94,7 @@ def test_decode_missing_required_fields(user_codec: JsonCodec) -> None:
 def test_different_model_types(order_codec: JsonCodec, sample_order: OrderModel) -> None:
     """Test codec works with different model types"""
     encoded = order_codec.encode(sample_order)
-    decoded = order_codec.decode(encoded)
+    decoded = cast(OrderModel, order_codec.decode(encoded))
     
     assert decoded == sample_order
     assert decoded.id == "order-123"

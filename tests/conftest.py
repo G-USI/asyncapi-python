@@ -15,6 +15,7 @@
 
 import asyncio
 from os import environ
+from typing import Generator
 import pytest
 from pydantic import BaseModel
 
@@ -202,7 +203,7 @@ def in_memory_wire_factory() -> InMemoryWireFactory:
 
 
 @pytest.fixture(autouse=True)
-def reset_in_memory_bus() -> None:
+def reset_in_memory_bus() -> Generator[None, None, None]:
     """Auto-reset the in-memory bus between tests"""
     reset_bus()
     yield

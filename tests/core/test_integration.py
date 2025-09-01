@@ -1,10 +1,12 @@
 # pyright: reportUnusedFunction=false
 import asyncio
+from typing import Generator, cast
 import pytest
 
 from asyncapi_python.kernel.endpoint.publisher import Publisher
 from asyncapi_python.kernel.endpoint.subscriber import Subscriber
 from asyncapi_python.contrib.wire.in_memory import reset_bus
+from asyncapi_python.kernel.typing import Handler
 from pydantic import BaseModel
 
 class UserModel(BaseModel):
@@ -20,7 +22,7 @@ class OrderModel(BaseModel):
 
 # Fixtures
 @pytest.fixture(autouse=True)
-def setup_clean_environment() -> None:
+def setup_clean_environment() -> Generator[None, None, None]:
     """Ensure clean environment for each test"""
     reset_bus()
     yield
@@ -32,13 +34,13 @@ def setup_clean_environment() -> None:
 async def test_publisher_to_subscriber_basic_flow(mock_operation, json_codec_factory, in_memory_wire_factory) -> None:
         """Test basic message flow from publisher to subscriber"""
         # Create publisher and subscriber
-        publisher = Publisher(
+        publisher: Publisher = Publisher(
             operation=mock_operation,
             wire_factory=in_memory_wire_factory,
             codec_factory=json_codec_factory
         )
         
-        subscriber = Subscriber(
+        subscriber: Subscriber = Subscriber(
             operation=mock_operation,
             wire_factory=in_memory_wire_factory,
             codec_factory=json_codec_factory
@@ -47,9 +49,11 @@ async def test_publisher_to_subscriber_basic_flow(mock_operation, json_codec_fac
         # Set up message handler
         received_messages = []
         
-        @subscriber
         async def handle_user_message(message: UserModel) -> None:
             received_messages.append(message)
+        
+        # Register handler with explicit cast
+        subscriber(cast(Handler[UserModel, None], handle_user_message))
         
         # Start both endpoints
         await publisher.start()
@@ -77,13 +81,13 @@ async def test_publisher_to_subscriber_basic_flow(mock_operation, json_codec_fac
 @pytest.mark.asyncio
 async def test_multiple_messages_flow(mock_operation, json_codec_factory, in_memory_wire_factory) -> None:
         """Test multiple messages flow through the system"""
-        publisher = Publisher(
+        publisher: Publisher = Publisher(
             operation=mock_operation,
             wire_factory=in_memory_wire_factory,
             codec_factory=json_codec_factory
         )
         
-        subscriber = Subscriber(
+        subscriber: Subscriber = Subscriber(
             operation=mock_operation,
             wire_factory=in_memory_wire_factory,
             codec_factory=json_codec_factory
@@ -91,9 +95,10 @@ async def test_multiple_messages_flow(mock_operation, json_codec_factory, in_mem
         
         received_messages = []
         
-        @subscriber
         async def handle_user_message(message: UserModel) -> None:
             received_messages.append(message.name)
+        
+        subscriber(cast(Handler[UserModel, None], handle_user_message))
         
         await publisher.start()
         await subscriber.start()
@@ -126,19 +131,19 @@ async def test_multiple_messages_flow(mock_operation, json_codec_factory, in_mem
 @pytest.mark.asyncio
 async def test_multiple_subscribers_same_channel(mock_operation, json_codec_factory, in_memory_wire_factory) -> None:
         """Test multiple subscribers on same channel receive messages"""
-        publisher = Publisher(
+        publisher: Publisher = Publisher(
             operation=mock_operation,
             wire_factory=in_memory_wire_factory,
             codec_factory=json_codec_factory
         )
         
-        subscriber1 = Subscriber(
+        subscriber1: Subscriber = Subscriber(
             operation=mock_operation,
             wire_factory=in_memory_wire_factory,
             codec_factory=json_codec_factory
         )
         
-        subscriber2 = Subscriber(
+        subscriber2: Subscriber = Subscriber(
             operation=mock_operation,
             wire_factory=in_memory_wire_factory,
             codec_factory=json_codec_factory
@@ -147,13 +152,14 @@ async def test_multiple_subscribers_same_channel(mock_operation, json_codec_fact
         received_by_sub1 = []
         received_by_sub2 = []
         
-        @subscriber1
-        async def handle_user_message_1(message) -> None:  # Accept any message type
+        async def handle_user_message_1(message: UserModel) -> None:
             received_by_sub1.append(message.name)
         
-        @subscriber2
-        async def handle_user_message_2(message) -> None:  # Accept any message type
+        async def handle_user_message_2(message: UserModel) -> None:
             received_by_sub2.append(message.name)
+        
+        subscriber1(cast(Handler[UserModel, None], handle_user_message_1))
+        subscriber2(cast(Handler[UserModel, None], handle_user_message_2))
         
         await publisher.start()
         await subscriber1.start()
@@ -184,19 +190,19 @@ async def test_multiple_subscribers_same_channel(mock_operation, json_codec_fact
 @pytest.mark.asyncio
 async def test_concurrent_publishers_single_subscriber(mock_operation, json_codec_factory, in_memory_wire_factory) -> None:
         """Test multiple publishers sending to single subscriber"""
-        publisher1 = Publisher(
+        publisher1: Publisher = Publisher(
             operation=mock_operation,
             wire_factory=in_memory_wire_factory,
             codec_factory=json_codec_factory
         )
         
-        publisher2 = Publisher(
+        publisher2: Publisher = Publisher(
             operation=mock_operation,
             wire_factory=in_memory_wire_factory,
             codec_factory=json_codec_factory
         )
         
-        subscriber = Subscriber(
+        subscriber: Subscriber = Subscriber(
             operation=mock_operation,
             wire_factory=in_memory_wire_factory,
             codec_factory=json_codec_factory
@@ -204,9 +210,10 @@ async def test_concurrent_publishers_single_subscriber(mock_operation, json_code
         
         received_messages = []
         
-        @subscriber
         async def handle_user_message(message: UserModel) -> None:
             received_messages.append(message.name)
+        
+        subscriber(cast(Handler[UserModel, None], handle_user_message))
         
         await publisher1.start()
         await publisher2.start()
@@ -247,13 +254,13 @@ async def test_concurrent_publishers_single_subscriber(mock_operation, json_code
 @pytest.mark.asyncio
 async def test_error_handling_in_integration(mock_operation, json_codec_factory, in_memory_wire_factory) -> None:
         """Test error handling in integrated system"""
-        publisher = Publisher(
+        publisher: Publisher = Publisher(
             operation=mock_operation,
             wire_factory=in_memory_wire_factory,
             codec_factory=json_codec_factory
         )
         
-        subscriber = Subscriber(
+        subscriber: Subscriber = Subscriber(
             operation=mock_operation,
             wire_factory=in_memory_wire_factory,
             codec_factory=json_codec_factory
@@ -261,11 +268,12 @@ async def test_error_handling_in_integration(mock_operation, json_codec_factory,
         
         successful_messages = []
         
-        @subscriber
         async def handle_user_message(message: UserModel) -> None:
             if message.name == "ErrorUser":
                 raise ValueError("Handler error")
             successful_messages.append(message.name)
+        
+        subscriber(cast(Handler[UserModel, None], handle_user_message))
         
         await publisher.start()
         await subscriber.start()
@@ -297,13 +305,13 @@ async def test_error_handling_in_integration(mock_operation, json_codec_factory,
 @pytest.mark.asyncio
 async def test_message_ordering_preservation(mock_operation, json_codec_factory, in_memory_wire_factory) -> None:
         """Test that message ordering is preserved in the system"""
-        publisher = Publisher(
+        publisher: Publisher = Publisher(
             operation=mock_operation,
             wire_factory=in_memory_wire_factory,
             codec_factory=json_codec_factory
         )
         
-        subscriber = Subscriber(
+        subscriber: Subscriber = Subscriber(
             operation=mock_operation,
             wire_factory=in_memory_wire_factory,
             codec_factory=json_codec_factory
@@ -311,9 +319,10 @@ async def test_message_ordering_preservation(mock_operation, json_codec_factory,
         
         received_order = []
         
-        @subscriber
         async def handle_user_message(message: UserModel) -> None:
             received_order.append(message.name)
+        
+        subscriber(cast(Handler[UserModel, None], handle_user_message))
         
         await publisher.start()
         await subscriber.start()
@@ -342,7 +351,7 @@ async def test_message_ordering_preservation(mock_operation, json_codec_factory,
 async def test_system_with_different_message_types(mock_operation, json_codec_factory, in_memory_wire_factory) -> None:
         """Test system handles different message types correctly"""
         # Use operation with reply that has OrderPlaced message type
-        publisher = Publisher(
+        publisher: Publisher = Publisher(
             operation=mock_operation,  # UserCreated messages
             wire_factory=in_memory_wire_factory,
             codec_factory=json_codec_factory
@@ -350,7 +359,7 @@ async def test_system_with_different_message_types(mock_operation, json_codec_fa
         
         # Create a subscriber for a different channel/message type
         # This tests codec selection and multiple message types
-        subscriber = Subscriber(
+        subscriber: Subscriber = Subscriber(
             operation=mock_operation,
             wire_factory=in_memory_wire_factory,
             codec_factory=json_codec_factory
@@ -358,9 +367,10 @@ async def test_system_with_different_message_types(mock_operation, json_codec_fa
         
         received_messages = []
         
-        @subscriber
         async def handle_message(message: UserModel) -> None:
             received_messages.append(message)
+        
+        subscriber(cast(Handler[UserModel, None], handle_message))
         
         await publisher.start()
         await subscriber.start()
@@ -387,13 +397,13 @@ async def test_system_with_different_message_types(mock_operation, json_codec_fa
 @pytest.mark.asyncio
 async def test_graceful_shutdown_integration(mock_operation, json_codec_factory, in_memory_wire_factory) -> None:
         """Test graceful shutdown of integrated system"""
-        publisher = Publisher(
+        publisher: Publisher = Publisher(
             operation=mock_operation,
             wire_factory=in_memory_wire_factory,
             codec_factory=json_codec_factory
         )
         
-        subscriber = Subscriber(
+        subscriber: Subscriber = Subscriber(
             operation=mock_operation,
             wire_factory=in_memory_wire_factory,
             codec_factory=json_codec_factory
@@ -402,11 +412,12 @@ async def test_graceful_shutdown_integration(mock_operation, json_codec_factory,
         processing_complete = asyncio.Event()
         messages_processed = []
         
-        @subscriber
-        async def handle_user_message(message) -> None:  # Accept any message type
+        async def handle_user_message(message: UserModel) -> None:
             messages_processed.append(message.name)
             if len(messages_processed) == 3:
                 processing_complete.set()
+        
+        subscriber(cast(Handler[UserModel, None], handle_user_message))
         
         await publisher.start()
         await subscriber.start()
@@ -429,27 +440,28 @@ async def test_graceful_shutdown_integration(mock_operation, json_codec_factory,
 @pytest.mark.asyncio
 async def test_system_resilience_with_bus_reset(mock_operation, json_codec_factory, in_memory_wire_factory) -> None:
         """Test system handles bus reset gracefully"""
-        publisher = Publisher(
+        publisher: Publisher = Publisher(
             operation=mock_operation,
             wire_factory=in_memory_wire_factory,
             codec_factory=json_codec_factory
         )
         
-        subscriber = Subscriber(
+        subscriber: Subscriber = Subscriber(
             operation=mock_operation,
             wire_factory=in_memory_wire_factory,
             codec_factory=json_codec_factory
         )
         
-        received_before = []
-        received_after = []
+        received_before: list[str] = []
+        received_after: list[str] = []
         
-        @subscriber
         async def handle_user_message(message: UserModel) -> None:
             if len(received_before) < 2:
                 received_before.append(message.name)
             else:
                 received_after.append(message.name)
+        
+        subscriber(cast(Handler[UserModel, None], handle_user_message))
         
         await publisher.start()
         await subscriber.start()

@@ -14,6 +14,7 @@
 
 
 from functools import cache
+from typing import TypeAlias
 from aio_pika.robust_connection import (
     AbstractRobustConnection,
     AbstractRobustChannel,
@@ -30,7 +31,7 @@ def connection_pool(amqp_uri: str) -> Pool[AbstractRobustConnection]:
     return Pool(get_connection, max_size=2)
 
 
-AmqpPool = Pool[AbstractRobustChannel]
+AmqpPool: TypeAlias = Pool[AbstractRobustChannel]
 
 
 @cache
