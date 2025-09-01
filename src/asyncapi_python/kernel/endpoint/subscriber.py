@@ -1,3 +1,4 @@
+import asyncio
 from typing import Callable, Generic, overload
 from typing_extensions import Unpack
 
@@ -15,6 +16,7 @@ class Subscriber(
         super().__init__(**kwargs)
         self._consumer: Consumer | None = None
         self._handler: Handler[T_Input, None] | None = None
+        self._consume_task: asyncio.Task | None = None
 
     async def start(self) -> None:
         """Initialize the subscriber endpoint"""
@@ -32,11 +34,24 @@ class Subscriber(
         # Start the consumer
         if self._consumer:
             await self._consumer.start()
+            
+            # Start consuming task if we have a handler but no task yet
+            if self._handler and not self._consume_task:
+                self._consume_task = asyncio.create_task(self._consume_messages())
 
     async def stop(self) -> None:
         """Cleanup the subscriber endpoint"""
         if not self._consumer:
             return
+
+        # Cancel the consume task
+        if self._consume_task:
+            self._consume_task.cancel()
+            try:
+                await self._consume_task
+            except asyncio.CancelledError:
+                pass
+            self._consume_task = None
 
         await self._consumer.stop()
         self._consumer = None
@@ -88,8 +103,13 @@ class Subscriber(
     ) -> None:
         """Register a handler and start consuming messages"""
         self._handler = handler
-        # TODO: Start background task to consume messages and call handler
-        # This will need to be implemented based on the wire consumer interface
+        # Start background task to consume messages if consumer is ready
+        if self._consumer and not self._consume_task:
+            try:
+                self._consume_task = asyncio.create_task(self._consume_messages())
+            except RuntimeError:
+                # No event loop running, task will be created later when start() is called
+                pass
 
     async def _consume_messages(self) -> None:
         """Background task that consumes messages and calls the handler"""

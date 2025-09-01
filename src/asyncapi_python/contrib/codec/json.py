@@ -48,16 +48,19 @@ class JsonCodecFactory(CodecFactory[BaseModel, bytes]):
     - Shared across all JsonCodecFactory instances via class variable
     """
     
-    _codec_registry: ClassVar[dict[Message, JsonCodec]] = {}
+    _codec_registry: ClassVar[dict[str, JsonCodec]] = {}
     
     def __init__(self, module):
         super().__init__(module)
     
     def create(self, message: Message) -> JsonCodec:
         """Creates a JSON codec instance from the message spec"""
+        if not message.name:
+            raise ValueError("Message name is required to resolve model class")
+            
         # Check if codec already exists in registry
-        if message in self._codec_registry:
-            return self._codec_registry[message]
+        if message.name in self._codec_registry:
+            return self._codec_registry[message.name]
         
         if not message.payload:
             raise ValueError("Message payload is required for JSON codec")
@@ -67,13 +70,11 @@ class JsonCodecFactory(CodecFactory[BaseModel, bytes]):
         codec = JsonCodec(model_class)
         
         # Cache the codec in registry
-        self._codec_registry[message] = codec
+        self._codec_registry[message.name] = codec
         return codec
     
     def _resolve_model_class(self, message: Message) -> Type[BaseModel]:
         """Resolve the Pydantic model class from the message"""
-        if not message.name:
-            raise ValueError("Message name is required to resolve model class")
         
         # Convert message name to expected class name (e.g., "user.created" -> "UserCreated")
         class_name = self._to_class_name(message.name)
