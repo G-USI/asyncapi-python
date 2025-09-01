@@ -16,7 +16,9 @@ codegen = [
     "datamodel-code-generator[http]>=0.26.4",
     "black",
 ]
-amqp = ["aio-pika"]
+amqp = [
+    "aio-pika",
+]
 
 [project.scripts]
 asyncapi-python-codegen = "asyncapi_python_codegen:app"
