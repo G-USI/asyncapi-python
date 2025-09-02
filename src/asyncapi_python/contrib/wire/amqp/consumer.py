@@ -51,7 +51,7 @@ class AmqpConsumer(Consumer[AmqpIncomingMessage]):
             return
 
         self._channel = cast(AbstractRobustChannel, await self._connection.channel())
-        
+
         # Pattern matching for queue setup based on binding type
         match self._binding_type:
             # Reply channel pattern
@@ -60,86 +60,104 @@ class AmqpConsumer(Consumer[AmqpIncomingMessage]):
                     name=self._queue_name,
                     durable=self._queue_properties.get("durable", True),
                     exclusive=self._queue_properties.get("exclusive", False),
-                    auto_delete=self._queue_properties.get("auto_delete", False)
+                    auto_delete=self._queue_properties.get("auto_delete", False),
                 )
-                
+
             # Simple queue binding pattern (default exchange)
             case AmqpBindingType.QUEUE:
                 self._queue = await self._channel.declare_queue(
                     name=self._queue_name,
                     durable=self._queue_properties.get("durable", True),
                     exclusive=self._queue_properties.get("exclusive", False),
-                    auto_delete=self._queue_properties.get("auto_delete", False)
+                    auto_delete=self._queue_properties.get("auto_delete", False),
                 )
-                
+
             # Routing key binding pattern (pub/sub with named exchange)
             case AmqpBindingType.ROUTING_KEY:
                 # Declare the exchange
                 match self._exchange_type:
                     case "direct":
                         self._exchange = await self._channel.declare_exchange(
-                            name=self._exchange_name, type=ExchangeType.DIRECT, durable=True
+                            name=self._exchange_name,
+                            type=ExchangeType.DIRECT,
+                            durable=True,
                         )
                     case "topic":
                         self._exchange = await self._channel.declare_exchange(
-                            name=self._exchange_name, type=ExchangeType.TOPIC, durable=True
+                            name=self._exchange_name,
+                            type=ExchangeType.TOPIC,
+                            durable=True,
                         )
                     case "fanout":
                         self._exchange = await self._channel.declare_exchange(
-                            name=self._exchange_name, type=ExchangeType.FANOUT, durable=True
+                            name=self._exchange_name,
+                            type=ExchangeType.FANOUT,
+                            durable=True,
                         )
                     case "headers":
                         self._exchange = await self._channel.declare_exchange(
-                            name=self._exchange_name, type=ExchangeType.HEADERS, durable=True
+                            name=self._exchange_name,
+                            type=ExchangeType.HEADERS,
+                            durable=True,
                         )
                     case unknown_type:
                         raise ValueError(f"Unsupported exchange type: {unknown_type}")
-                
+
                 # Create exclusive queue for this consumer
                 self._queue = await self._channel.declare_queue(
                     name="",  # Auto-generated name
                     durable=self._queue_properties.get("durable", False),
                     exclusive=self._queue_properties.get("exclusive", True),
-                    auto_delete=self._queue_properties.get("auto_delete", True)
+                    auto_delete=self._queue_properties.get("auto_delete", True),
                 )
-                
+
                 # Bind queue to exchange with routing key
                 await self._queue.bind(self._exchange, routing_key=self._routing_key)
-                
+
             # Exchange binding pattern (advanced pub/sub with binding arguments)
             case AmqpBindingType.EXCHANGE:
                 # Declare the exchange
                 match self._exchange_type:
                     case "fanout":
                         self._exchange = await self._channel.declare_exchange(
-                            name=self._exchange_name, type=ExchangeType.FANOUT, durable=True
+                            name=self._exchange_name,
+                            type=ExchangeType.FANOUT,
+                            durable=True,
                         )
                     case "headers":
                         self._exchange = await self._channel.declare_exchange(
-                            name=self._exchange_name, type=ExchangeType.HEADERS, durable=True
+                            name=self._exchange_name,
+                            type=ExchangeType.HEADERS,
+                            durable=True,
                         )
                     case "topic":
                         self._exchange = await self._channel.declare_exchange(
-                            name=self._exchange_name, type=ExchangeType.TOPIC, durable=True
+                            name=self._exchange_name,
+                            type=ExchangeType.TOPIC,
+                            durable=True,
                         )
                     case "direct":
                         self._exchange = await self._channel.declare_exchange(
-                            name=self._exchange_name, type=ExchangeType.DIRECT, durable=True
+                            name=self._exchange_name,
+                            type=ExchangeType.DIRECT,
+                            durable=True,
                         )
                     case unknown_type:
                         raise ValueError(f"Unsupported exchange type: {unknown_type}")
-                
+
                 # Create exclusive queue for this consumer
                 self._queue = await self._channel.declare_queue(
                     name="",  # Auto-generated name
                     durable=self._queue_properties.get("durable", False),
                     exclusive=self._queue_properties.get("exclusive", True),
-                    auto_delete=self._queue_properties.get("auto_delete", True)
+                    auto_delete=self._queue_properties.get("auto_delete", True),
                 )
-                
+
                 # Bind queue to exchange with binding arguments (for headers exchange)
                 if self._binding_arguments:
-                    await self._queue.bind(self._exchange, arguments=self._binding_arguments)
+                    await self._queue.bind(
+                        self._exchange, arguments=self._binding_arguments
+                    )
                 else:
                     await self._queue.bind(self._exchange)
 

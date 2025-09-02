@@ -13,6 +13,7 @@ from asyncapi_python.kernel.wire.typing import Producer, Consumer
 @dataclass
 class InMemoryMessage:
     """In-memory implementation of Message protocol"""
+
     _payload: bytes
     _headers: dict[str, Any] = field(default_factory=dict)
     _correlation_id: str | None = None
@@ -38,6 +39,7 @@ class InMemoryMessage:
 @dataclass
 class InMemoryIncomingMessage(InMemoryMessage):
     """In-memory implementation of IncomingMessage protocol with ack/nack/reject"""
+
     _acked: bool = field(default=False, init=False)
     _nacked: bool = field(default=False, init=False)
     _rejected: bool = field(default=False, init=False)
@@ -72,12 +74,12 @@ class InMemoryIncomingMessage(InMemoryMessage):
 
 class InMemoryBus:
     """Central message bus for in-memory wire communication"""
-    
+
     def __init__(self) -> None:
         # Channel name -> queue of messages
         self._channels: dict[str, deque[InMemoryIncomingMessage]] = defaultdict(deque)
         # Active consumers per channel
-        self._consumers: dict[str, list['InMemoryConsumer']] = defaultdict(list)
+        self._consumers: dict[str, list["InMemoryConsumer"]] = defaultdict(list)
         self._lock = asyncio.Lock()
 
     async def publish(self, channel_name: str, message: InMemoryMessage) -> None:
@@ -88,23 +90,25 @@ class InMemoryBus:
                 _payload=message.payload,
                 _headers=message.headers.copy(),
                 _correlation_id=message.correlation_id,
-                _reply_to=message.reply_to
+                _reply_to=message.reply_to,
             )
-            
+
             # Add to channel queue
             self._channels[channel_name].append(incoming_msg)
-            
+
             # Notify all consumers on this channel
             for consumer in self._consumers[channel_name]:
                 consumer._notify_new_message()
 
-    async def subscribe(self, channel_name: str, consumer: 'InMemoryConsumer') -> None:
+    async def subscribe(self, channel_name: str, consumer: "InMemoryConsumer") -> None:
         """Subscribe a consumer to a channel"""
         async with self._lock:
             if consumer not in self._consumers[channel_name]:
                 self._consumers[channel_name].append(consumer)
 
-    async def unsubscribe(self, channel_name: str, consumer: 'InMemoryConsumer') -> None:
+    async def unsubscribe(
+        self, channel_name: str, consumer: "InMemoryConsumer"
+    ) -> None:
         """Unsubscribe a consumer from a channel"""
         async with self._lock:
             if consumer in self._consumers[channel_name]:
@@ -125,7 +129,7 @@ _bus = InMemoryBus()
 
 class InMemoryProducer(Producer[InMemoryMessage]):
     """In-memory producer implementation"""
-    
+
     def __init__(self, channel_name: str):
         self._channel_name = channel_name
         self._started = False
@@ -142,14 +146,14 @@ class InMemoryProducer(Producer[InMemoryMessage]):
         """Send a batch of messages to the channel"""
         if not self._started:
             raise RuntimeError("Producer not started")
-            
+
         for message in messages:
             await _bus.publish(self._channel_name, message)
 
 
 class InMemoryConsumer(Consumer[InMemoryIncomingMessage]):
     """In-memory consumer implementation"""
-    
+
     def __init__(self, channel_name: str):
         self._channel_name = channel_name
         self._started = False
@@ -179,34 +183,40 @@ class InMemoryConsumer(Consumer[InMemoryIncomingMessage]):
         """Internal async generator for messages"""
         if not self._started:
             raise RuntimeError("Consumer not started")
-            
+
         while self._started and not self._stop_event.is_set():
             # Try to get a message
             message = await _bus.get_message(self._channel_name)
             if message:
                 yield message
                 continue
-            
+
             # No message available, wait for notification or stop
             try:
                 await asyncio.wait_for(
                     self._message_event.wait(),
-                    timeout=0.1  # Small timeout to check stop condition
+                    timeout=0.1,  # Small timeout to check stop condition
                 )
                 self._message_event.clear()
             except asyncio.TimeoutError:
                 continue
 
 
-class InMemoryWireFactory(AbstractWireFactory[InMemoryMessage, InMemoryIncomingMessage]):
+class InMemoryWireFactory(
+    AbstractWireFactory[InMemoryMessage, InMemoryIncomingMessage]
+):
     """In-memory wire factory for testing"""
 
-    async def create_consumer(self, **kwargs: Unpack[EndpointParams]) -> Consumer[InMemoryIncomingMessage]:
+    async def create_consumer(
+        self, **kwargs: Unpack[EndpointParams]
+    ) -> Consumer[InMemoryIncomingMessage]:
         """Create an in-memory consumer"""
         channel = kwargs["channel"]
         return InMemoryConsumer(channel.address or "default")
 
-    async def create_producer(self, **kwargs: Unpack[EndpointParams]) -> Producer[InMemoryMessage]:
+    async def create_producer(
+        self, **kwargs: Unpack[EndpointParams]
+    ) -> Producer[InMemoryMessage]:
         """Create an in-memory producer"""
         channel = kwargs["channel"]
         return InMemoryProducer(channel.address or "default")

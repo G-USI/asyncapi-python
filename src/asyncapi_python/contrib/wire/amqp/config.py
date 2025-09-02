@@ -7,6 +7,7 @@ from typing import Any
 
 class AmqpBindingType(Enum):
     """Types of AMQP bindings supported"""
+
     QUEUE = "queue"
     ROUTING_KEY = "routingKey"
     EXCHANGE = "exchange"
@@ -16,6 +17,7 @@ class AmqpBindingType(Enum):
 @dataclass
 class AmqpConfig:
     """Resolved AMQP configuration from AsyncAPI bindings and precedence rules"""
+
     queue_name: str
     exchange_name: str = ""
     exchange_type: str = "direct"
@@ -23,7 +25,7 @@ class AmqpConfig:
     binding_type: AmqpBindingType = AmqpBindingType.QUEUE
     queue_properties: dict[str, Any] = field(default_factory=dict)
     binding_arguments: dict[str, Any] = field(default_factory=dict)
-    
+
     def to_producer_args(self) -> dict[str, Any]:
         """Convert to AmqpProducer constructor arguments"""
         return {
@@ -33,7 +35,7 @@ class AmqpConfig:
             "routing_key": self.routing_key,
             "queue_properties": self.queue_properties,
         }
-    
+
     def to_consumer_args(self) -> dict[str, Any]:
         """Convert to AmqpConsumer constructor arguments"""
         return {

@@ -33,68 +33,60 @@ class AmqpWireFactory(AbstractWireFactory[AmqpWireMessage, AmqpIncomingMessage])
         return self._connection
 
     async def create_consumer(
-        self, 
-        **kwargs: Unpack[EndpointParams]
+        self, **kwargs: Unpack[EndpointParams]
     ) -> Consumer[AmqpIncomingMessage]:
         """
         Create an AMQP consumer using comprehensive binding resolution.
-        
+
         Args:
             **kwargs: EndpointParams with channel, parameters, bindings, etc.
         """
         # Generate operation name from available information
         operation_name = self._generate_operation_name(kwargs)
-        
+
         # Resolve AMQP configuration using pattern matching
         config = resolve_amqp_config(kwargs, operation_name, self._app_id)
-        
+
         connection = await self._get_connection()
-        
-        return AmqpConsumer(
-            connection=connection,
-            **config.to_consumer_args()
-        )
+
+        return AmqpConsumer(connection=connection, **config.to_consumer_args())
 
     async def create_producer(
-        self, 
-        **kwargs: Unpack[EndpointParams]
+        self, **kwargs: Unpack[EndpointParams]
     ) -> Producer[AmqpWireMessage]:
         """
         Create an AMQP producer using comprehensive binding resolution.
-        
+
         Args:
             **kwargs: EndpointParams with channel, parameters, bindings, etc.
         """
         # Generate operation name from available information
         operation_name = self._generate_operation_name(kwargs)
-        
+
         # Resolve AMQP configuration using pattern matching
         config = resolve_amqp_config(kwargs, operation_name, self._app_id)
-        
+
         connection = await self._get_connection()
-            
-        return AmqpProducer(
-            connection=connection,
-            **config.to_producer_args()
-        )
-    
+
+        return AmqpProducer(connection=connection, **config.to_producer_args())
+
     def _generate_operation_name(self, params: EndpointParams) -> str:
         """Generate operation name from available endpoint parameters"""
         channel = params["channel"]
-        
+
         # Use channel address if available
         if channel.address:
             return channel.address
-            
-        # Use channel title if available  
+
+        # Use channel title if available
         if channel.title:
             return channel.title
-            
+
         # Use first message name if available
         if channel.messages:
             first_msg_name = next(iter(channel.messages.keys()))
             return f"op-{first_msg_name}"
-            
+
         # Last resort - generate from app_id
         return f"op-{self._app_id}" if self._app_id else "op-default"
 

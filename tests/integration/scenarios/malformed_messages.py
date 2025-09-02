@@ -263,7 +263,7 @@ async def malformed_message_handling(
     for malformed_json in malformed_json_cases:
         with pytest.raises((json.JSONDecodeError, ValueError, TypeError)):
             message_codec.decode(malformed_json)
-        print(f"✓ JSON decode error correctly raised for: {malformed_json[:20]}...")
+        print(f"✓ JSON decode error correctly raised for: {malformed_json[:20]!r}...")
 
     # 2. Test non-UTF8 bytes
     non_utf8_cases = [
@@ -387,7 +387,7 @@ async def malformed_message_handling(
 
         for invalid_obj in invalid_user_objects:
             with pytest.raises((ValueError, TypeError, AttributeError)):
-                UserCreated(**invalid_obj)
+                UserCreated(**invalid_obj)  # type: ignore
             print(
                 "✓ Pydantic model validation correctly prevents invalid object creation"
             )
@@ -441,8 +441,8 @@ async def malformed_message_handling(
             },
         ]
 
-        valid_payload_data = []
-        invalid_payload_data = []
+        valid_payload_data: list[dict[str, object]] = []
+        invalid_payload_data: list[dict[str, object]] = []
 
         for event_data in malformed_payload_data:
             if event_data["payload"] == "not_a_dict":
@@ -451,14 +451,14 @@ async def malformed_message_handling(
                 valid_payload_data.append(event_data)
 
         # Test invalid payloads that should fail
-        for invalid_data in invalid_payload_data:
+        for invalid_payload in invalid_payload_data:
             with pytest.raises((ValueError, TypeError)):
-                TestEvent(**invalid_data)
+                TestEvent(**invalid_payload)  # type: ignore
             print("✓ Event with invalid payload appropriately rejected")
 
         # Test valid payloads that should work
-        for valid_data in valid_payload_data:
-            event = TestEvent(**valid_data)
+        for valid_payload in valid_payload_data:
+            event = TestEvent(**valid_payload)  # type: ignore
             await order_app.order_events(event)
             print(f"✓ Event with payload handled: {type(event.payload)}")
 
@@ -495,12 +495,12 @@ async def malformed_message_handling(
 
     # 8. Test deeply nested JSON in the payload field of TestEvent
     nested_levels = 100  # Reduced to avoid stack overflow
-    deeply_nested = {}
+    deeply_nested: dict[str, object] = {}
     current = deeply_nested
     for i in range(nested_levels):
         current["level"] = {}
-        current = current["level"]
-    current["value"] = "deep"
+        current = current["level"]  # type: ignore
+    current["value"] = "deep"  # type: ignore
 
     nested_event_data = {
         "event_type": "nested.test",

@@ -10,7 +10,7 @@ from .many_to_many_microservices import many_to_many_microservices
 
 __all__ = [
     "producer_consumer_roundtrip",
-    "reply_channel_creation", 
+    "reply_channel_creation",
     "error_handling",
     "malformed_message_handling",
     "fan_in_logging",

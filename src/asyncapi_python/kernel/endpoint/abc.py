@@ -11,6 +11,7 @@ from asyncapi_python.kernel.codec import Codec, CodecFactory
 
 class HandlerParams(TypedDict, total=False):
     """Parameters for message handlers"""
+
     pass
 
 

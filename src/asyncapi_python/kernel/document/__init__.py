@@ -1,6 +1,12 @@
 from .channel import AddressParameter, Channel, ChannelBindings
 from .common import ExternalDocs, Server, Tag
-from .message import CorrelationId, Message, MessageBindings, MessageExample, MessageTrait
+from .message import (
+    CorrelationId,
+    Message,
+    MessageBindings,
+    MessageExample,
+    MessageTrait,
+)
 from .operation import (
     Operation,
     OperationBindings,

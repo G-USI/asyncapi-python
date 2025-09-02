@@ -7,9 +7,7 @@ from ..typing import T_Input, Handler
 from asyncapi_python.kernel.wire import Consumer
 
 
-class Subscriber(
-    AbstractEndpoint, Receive[T_Input, None], Generic[T_Input]
-):
+class Subscriber(AbstractEndpoint, Receive[T_Input, None], Generic[T_Input]):
     """Subscriber endpoint for receiving messages without sending replies"""
 
     def __init__(self, **kwargs: Unpack[AbstractEndpoint.Inputs]):
@@ -34,7 +32,7 @@ class Subscriber(
         # Start the consumer
         if self._consumer:
             await self._consumer.start()
-            
+
             # Start consuming task if we have a handler but no task yet
             if self._handler and not self._consume_task:
                 self._consume_task = asyncio.create_task(self._consume_messages())
@@ -57,9 +55,7 @@ class Subscriber(
         self._consumer = None
 
     @overload
-    def __call__(
-        self, fn: Handler[T_Input, None]
-    ) -> Handler[T_Input, None]: ...
+    def __call__(self, fn: Handler[T_Input, None]) -> Handler[T_Input, None]: ...
 
     @overload
     def __call__(

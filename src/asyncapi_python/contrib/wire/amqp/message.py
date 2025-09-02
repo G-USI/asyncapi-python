@@ -9,6 +9,7 @@ from aio_pika.abc import AbstractIncomingMessage
 @dataclass
 class AmqpWireMessage:
     """AMQP wire message implementation"""
+
     _payload: bytes
     _headers: dict[str, Any] = field(default_factory=dict)
     _correlation_id: str | None = None
@@ -34,6 +35,7 @@ class AmqpWireMessage:
 @dataclass
 class AmqpIncomingMessage(AmqpWireMessage):
     """AMQP incoming message with ack/nack/reject support"""
+
     _amqp_message: AbstractIncomingMessage | None = field(repr=False, default=None)
 
     async def ack(self) -> None:

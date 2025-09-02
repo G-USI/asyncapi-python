@@ -10,19 +10,19 @@ from asyncapi_python.kernel.document import Channel, Operation
 
 class GlobalRpcReplyHandler:
     """Manages global reply queue and routing for all RPC clients
-    
+
     This class handles the shared state and background task that processes
     all RPC replies and routes them to the correct waiting client based
     on correlation IDs.
     """
-    
+
     def __init__(self) -> None:
         self._futures: dict[str, asyncio.Future[IncomingMessage]] = {}
         self._reply_consumer: Consumer[IncomingMessage] | None = None
         self._consume_task: asyncio.Task[None] | None = None
         self._reply_queue_name: str | None = None
         self._instance_count: int = 0
-    
+
     async def ensure_reply_handler(
         self, wire_factory: AbstractWireFactory, operation: Operation
     ) -> None:
@@ -30,23 +30,23 @@ class GlobalRpcReplyHandler:
         if self._reply_consumer is None:
             # Create reply consumer (only once for all instances)
             reply_channel = self._get_or_create_reply_channel(operation)
-            
+
             self._reply_consumer = await wire_factory.create_consumer(
                 channel=reply_channel,
                 parameters={},
                 op_bindings=None,
                 is_reply=True,
             )
-            
+
             # Generate unique reply queue name for all clients
             self._reply_queue_name = f"reply-{cuid_wrapper()}"
-            
+
             # Start the consumer
             await self._reply_consumer.start()
-            
+
             # Start background task
             self._consume_task = asyncio.create_task(self._consume_all_replies())
-    
+
     def _get_or_create_reply_channel(self, operation: Operation) -> Channel:
         """Get reply channel from operation or create default one"""
         if operation.reply and operation.reply.channel:
@@ -65,7 +65,7 @@ class GlobalRpcReplyHandler:
                 external_docs=None,
                 bindings=None,
             )
-    
+
     async def _consume_all_replies(self) -> None:
         """Background task consuming ALL RPC replies from all clients"""
         if not self._reply_consumer:
@@ -77,7 +77,9 @@ class GlobalRpcReplyHandler:
                     # Match reply to waiting request by correlation ID
                     correlation_id: str | None = wire_message.correlation_id
                     if correlation_id and correlation_id in self._futures:
-                        future: asyncio.Future[IncomingMessage] = self._futures.pop(correlation_id)  # Remove and resolve
+                        future: asyncio.Future[IncomingMessage] = self._futures.pop(
+                            correlation_id
+                        )  # Remove and resolve
                         if not future.done():
                             future.set_result(wire_message)
 
@@ -93,31 +95,31 @@ class GlobalRpcReplyHandler:
                 if not future.done():
                     future.cancel()
             self._futures.clear()
-    
+
     def register_request(self, correlation_id: str) -> asyncio.Future[IncomingMessage]:
         """Register a new RPC request and return its future"""
         future: asyncio.Future[IncomingMessage] = asyncio.Future()
         self._futures[correlation_id] = future
         return future
-    
+
     def cleanup_request(self, correlation_id: str) -> None:
         """Clean up a request future (used on timeout/error)"""
         self._futures.pop(correlation_id, None)
-    
+
     @property
     def reply_queue_name(self) -> str | None:
         """Get the global reply queue name"""
         return self._reply_queue_name
-    
+
     def increment_instance_count(self) -> None:
         """Increment the instance count"""
         self._instance_count += 1
-    
+
     def decrement_instance_count(self) -> int:
         """Decrement instance count and return new count"""
         self._instance_count -= 1
         return self._instance_count
-    
+
     async def cleanup_if_last_instance(self) -> None:
         """Clean up global resources if no instances remain"""
         if self._instance_count == 0:

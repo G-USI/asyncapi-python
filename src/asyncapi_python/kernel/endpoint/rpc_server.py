@@ -13,7 +13,7 @@ class RpcServer(
     AbstractEndpoint, Receive[T_Input, T_Output], Generic[T_Input, T_Output]
 ):
     """RPC server endpoint for handling requests and sending responses
-    
+
     Receives requests with correlation IDs and sends responses
     back to the reply_to address.
     """
@@ -49,6 +49,7 @@ class RpcServer(
         else:
             # Create a default reply channel (null address for direct reply)
             from asyncapi_python.kernel.document import Channel
+
             reply_channel = Channel(
                 address=None,  # Use default/null address for direct reply
                 title="Reply Channel",
@@ -61,7 +62,7 @@ class RpcServer(
                 external_docs=None,
                 bindings=None,
             )
-        
+
         self._reply_producer = await self._wire.create_producer(
             channel=reply_channel,
             parameters={},
@@ -74,7 +75,7 @@ class RpcServer(
             await self._consumer.start()
         if self._reply_producer:
             await self._reply_producer.start()
-            
+
         # Start consuming task if we have a handler but no task yet
         if self._handler and not self._consume_task:
             self._consume_task = asyncio.create_task(self._consume_requests())
@@ -117,11 +118,11 @@ class RpcServer(
         | Callable[[Handler[T_Input, T_Output]], Handler[T_Input, T_Output]]
     ):
         """Register a handler for incoming RPC requests
-        
+
         Can be used as a decorator:
         @rpc_server
         async def handle_request(msg) -> Response: ...
-        
+
         Or with parameters:
         @rpc_server(queue="high-priority")
         async def handle_request(msg) -> Response: ...
@@ -146,7 +147,7 @@ class RpcServer(
         """Register a handler and start consuming requests"""
         if self._handler:
             raise ValueError("RPC server already has a handler registered")
-            
+
         self._handler = handler
         # Start background task to consume requests if consumer is ready
         if self._consumer and not self._consume_task:
@@ -166,7 +167,7 @@ class RpcServer(
                 # Validate RPC metadata
                 if not wire_message.correlation_id or not wire_message.reply_to:
                     # Not an RPC request, skip
-                    if hasattr(wire_message, 'nack'):
+                    if hasattr(wire_message, "nack"):
                         await wire_message.nack()
                     continue
 
@@ -179,11 +180,9 @@ class RpcServer(
                 except Exception as e:
                     # Handler error - send error response if possible
                     await self._send_error_response(
-                        wire_message.correlation_id,
-                        wire_message.reply_to,
-                        str(e)
+                        wire_message.correlation_id, wire_message.reply_to, str(e)
                     )
-                    if hasattr(wire_message, 'ack'):
+                    if hasattr(wire_message, "ack"):
                         await wire_message.ack()
                     continue
 
@@ -203,19 +202,19 @@ class RpcServer(
                 await self._send_reply(reply_message, wire_message.reply_to)
 
                 # Acknowledge successful processing
-                if hasattr(wire_message, 'ack'):
+                if hasattr(wire_message, "ack"):
                     await wire_message.ack()
 
             except Exception:
                 # Handle processing errors
-                if hasattr(wire_message, 'nack'):
+                if hasattr(wire_message, "nack"):
                     await wire_message.nack()
 
     async def _send_reply(self, reply_message: WireMessage, reply_to: str) -> None:
         """Send reply message to the specified address"""
         if not self._reply_producer:
             return
-            
+
         # Send the reply
         # The wire implementation should route this to the reply_to address
         await self._reply_producer.send_batch([reply_message])

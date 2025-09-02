@@ -46,7 +46,7 @@ def populate_jsonschema_defs(schema: Any) -> Any:
 def _count_references(schema: Any, this: Reference, counter: ReferenceCounter):
     """Recursively constructs back references within the JsonSchema"""
 
-    # List case   
+    # List case
     if isinstance(schema, list):
         for v in schema:
             _count_references(v, this, counter)
@@ -55,7 +55,7 @@ def _count_references(schema: Any, this: Reference, counter: ReferenceCounter):
     if not isinstance(schema, dict):
         return
 
-    if "$ref" in schema: # If dict is $ref object
+    if "$ref" in schema:  # If dict is $ref object
         ref: Ref[Any] = Ref.model_validate(schema)
         with set_current_doc_path(ref.filepath):
             ref = ref.flatten()
@@ -68,7 +68,7 @@ def _count_references(schema: Any, this: Reference, counter: ReferenceCounter):
         with set_current_doc_path(ref.filepath):
             return _count_references(doc, child, counter)
 
-    for v in schema.values(): # Recur
+    for v in schema.values():  # Recur
         _count_references(v, this, counter)
 
 
@@ -82,7 +82,10 @@ def _populate_jsonschema_recur(
 
     # List case
     if isinstance(schema, list):
-        return [_populate_jsonschema_recur(v, counter, shared_schemas, ignore_shared) for v in schema]
+        return [
+            _populate_jsonschema_recur(v, counter, shared_schemas, ignore_shared)
+            for v in schema
+        ]
 
     # Dict case
     if not isinstance(schema, dict):

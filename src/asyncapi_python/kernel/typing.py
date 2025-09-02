@@ -11,11 +11,13 @@ from typing_extensions import TypeAlias
 # Base protocols for type bounds
 class Serializable(Protocol):
     """Protocol for data that can be serialized"""
+
     pass
 
 
 class WireData(Protocol):
     """Protocol for wire-level data"""
+
     pass
 
 
@@ -67,7 +69,7 @@ T_EncodedPayload = TypeVar("T_EncodedPayload", bound=WireData)
 T_Send = TypeVar("T_Send", bound=Message)
 """Outgoing wire messages (bound to Message protocol)"""
 
-T_Recv = TypeVar("T_Recv", covariant=True, bound=IncomingMessage) 
+T_Recv = TypeVar("T_Recv", covariant=True, bound=IncomingMessage)
 """Incoming wire messages (bound to IncomingMessage protocol)"""
 
 

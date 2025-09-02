@@ -42,50 +42,44 @@ class AmqpProducer(Producer[AmqpWireMessage]):
             return
 
         self._channel = cast(AbstractRobustChannel, await self._connection.channel())
-        
+
         # Pattern matching for exchange setup based on type
         match (self._exchange_name, self._exchange_type):
             # Default exchange pattern (queue-based routing)
             case ("", _):
-                self._target_exchange = cast(AbstractRobustExchange, self._channel.default_exchange)
+                self._target_exchange = cast(
+                    AbstractRobustExchange, self._channel.default_exchange
+                )
                 # Declare queue for default exchange routing
                 if self._queue_name:
                     await self._channel.declare_queue(
                         name=self._queue_name,
                         durable=self._queue_properties.get("durable", True),
                         exclusive=self._queue_properties.get("exclusive", False),
-                        auto_delete=self._queue_properties.get("auto_delete", False)
+                        auto_delete=self._queue_properties.get("auto_delete", False),
                     )
-            
+
             # Named exchange patterns
             case (exchange_name, "direct"):
                 self._target_exchange = await self._channel.declare_exchange(
-                    name=exchange_name, 
-                    type=ExchangeType.DIRECT,
-                    durable=True
+                    name=exchange_name, type=ExchangeType.DIRECT, durable=True
                 )
-                
+
             case (exchange_name, "topic"):
                 self._target_exchange = await self._channel.declare_exchange(
-                    name=exchange_name, 
-                    type=ExchangeType.TOPIC,
-                    durable=True
+                    name=exchange_name, type=ExchangeType.TOPIC, durable=True
                 )
-                
+
             case (exchange_name, "fanout"):
                 self._target_exchange = await self._channel.declare_exchange(
-                    name=exchange_name, 
-                    type=ExchangeType.FANOUT,
-                    durable=True
+                    name=exchange_name, type=ExchangeType.FANOUT, durable=True
                 )
-                
+
             case (exchange_name, "headers"):
                 self._target_exchange = await self._channel.declare_exchange(
-                    name=exchange_name, 
-                    type=ExchangeType.HEADERS,
-                    durable=True
+                    name=exchange_name, type=ExchangeType.HEADERS, durable=True
                 )
-                
+
             case (exchange_name, unknown_type):
                 raise ValueError(f"Unsupported exchange type: {unknown_type}")
 
