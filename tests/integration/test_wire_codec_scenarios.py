@@ -15,6 +15,9 @@ from .scenarios import (
     reply_channel_creation,
     error_handling,
     malformed_message_handling,
+    fan_in_logging,
+    fan_out_broadcasting,
+    many_to_many_microservices,
 )
 
 # Import test app module
@@ -42,6 +45,9 @@ JSON_CODEC = JsonCodecFactory(test_app)
         reply_channel_creation,
         error_handling,
         malformed_message_handling,
+        fan_in_logging,
+        fan_out_broadcasting,
+        many_to_many_microservices,
     ],
 )
 @pytest.mark.asyncio
