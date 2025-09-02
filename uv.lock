@@ -67,6 +67,7 @@ name = "asyncapi-python"
 version = "0.2.5"
 source = { editable = "." }
 dependencies = [
+    { name = "cuid2" },
     { name = "pydantic" },
     { name = "pytz" },
 ]
@@ -100,6 +101,7 @@ dev = [
 requires-dist = [
     { name = "aio-pika", marker = "extra == 'amqp'" },
     { name = "black", marker = "extra == 'codegen'" },
+    { name = "cuid2", specifier = ">=2.0.1" },
     { name = "datamodel-code-generator", extras = ["http"], marker = "extra == 'codegen'", specifier = ">=0.26.4" },
     { name = "jinja2", marker = "extra == 'codegen'", specifier = ">=3.1.4" },
     { name = "pydantic", specifier = ">=2" },
@@ -193,6 +195,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d8/53/6f443c9a4a8358a93a6792e2acffb9d9d5cb0a5cfd8802644b7b1c9a02e4/colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44", size = 27697, upload-time = "2022-10-25T02:36:22.414Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6", size = 25335, upload-time = "2022-10-25T02:36:20.889Z" },
+]
+
+[[package]]
+name = "cuid2"
+version = "2.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/db/63/97ffc74f33e5a5f913bf073e8250a5b5a64d52d411b09a9c36c902db2cc4/cuid2-2.0.1.tar.gz", hash = "sha256:8d262eb467c16b81419361e18e47f41da77c4446dd2cf0640eac2616680bc924", size = 7033, upload-time = "2024-04-16T23:51:52.05Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/00/d2/90fce0050c5a9196d259ac8f0c4720c69ec6b5a322612edf3892f0036c5d/cuid2-2.0.1-py3-none-any.whl", hash = "sha256:943bdf86dc3ed07f32253e1be6e3c34dda8c7bda1c453f851f4ebaaa5a2dcfbf", size = 8154, upload-time = "2024-04-16T23:51:50.953Z" },
 ]
 
 [[package]]

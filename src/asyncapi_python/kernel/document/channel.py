@@ -44,4 +44,4 @@ class Channel:
     parameters: dict[str, AddressParameter]
     tags: list[Tag]
     external_docs: ExternalDocs | None
-    bindings: ChannelBindings
+    bindings: ChannelBindings | None

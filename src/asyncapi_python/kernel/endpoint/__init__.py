@@ -6,8 +6,8 @@ from asyncapi_python.kernel.wire import AbstractWireFactory
 from asyncapi_python.kernel.codec import CodecFactory
 from .publisher import Publisher
 from .subscriber import Subscriber
-# from .rpc_client import Client
-# from .rpc_server import Server
+from .rpc_client import RpcClient
+from .rpc_server import RpcServer
 
 
 class EndpointFactory:
@@ -16,8 +16,8 @@ class EndpointFactory:
     ] = {
         ("send", False): Publisher,
         ("receive", False): Subscriber,
-        # ("send", True): Client,
-        # ("receive", True): Server,
+        ("send", True): RpcClient,
+        ("receive", True): RpcServer,
     }
 
     @classmethod
