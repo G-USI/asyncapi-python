@@ -39,5 +39,5 @@ jobs:
 
       - name: Run tests
         env:
-          AMQP_URI: amqp://localhost:${{ job.services.rabbitmq.ports[5672] }}
+          PYTEST_AMQP_URI: amqp://guest:guest@rabbitmq/
         run: uv run pytest

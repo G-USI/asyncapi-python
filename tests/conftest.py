@@ -23,9 +23,9 @@ from asyncapi_python.contrib.wire.in_memory import reset_bus
 
 @pytest.fixture(scope="session")
 def amqp_uri() -> str:
-    if env_uri := environ.get("AMQP_URI"):
+    if env_uri := environ.get("PYTEST_AMQP_URI"):
         return env_uri
-    return "amqp://guest:guest@rabbitmq/"
+    return "amqp://guest:guest@localhost:5672/"
 
 
 @pytest.fixture(scope="session")

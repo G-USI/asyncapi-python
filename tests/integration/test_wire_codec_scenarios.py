@@ -1,5 +1,6 @@
 """Integration tests for wire+codec+scenario combinations"""
 
+import os
 from typing import Awaitable, Callable
 import pytest
 
@@ -23,7 +24,8 @@ from . import test_app
 # Wire implementations
 IN_MEMORY_WIRE = InMemoryWireFactory()
 AMQP_WIRE = AmqpWireFactory(
-    connection_url="amqp://guest:guest@rabbitmq:5672/", app_id="test-integration"
+    connection_url=os.environ.get("PYTEST_AMQP_URI", "amqp://guest:guest@localhost:5672/"), 
+    app_id="test-integration"
 )
 
 # Codec implementations
