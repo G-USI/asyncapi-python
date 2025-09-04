@@ -1,7 +1,6 @@
 """Codec implementations for various formats"""
 
-from .json import JsonCodecFactory
+from .registry import CodecRegistry
 
-__all__ = [
-    "JsonCodecFactory",
-]
+
+__all__ = ["CodecRegistry"]

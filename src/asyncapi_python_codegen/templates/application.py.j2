@@ -4,7 +4,7 @@ from __future__ import annotations
 from asyncapi_python.kernel.application import BaseApplication
 from asyncapi_python.kernel.wire import AbstractWireFactory
 from asyncapi_python.kernel.codec import CodecFactory
-from asyncapi_python.contrib.codec.json import JsonCodecFactory
+from asyncapi_python.contrib.codec.registry import CodecRegistry
 from asyncapi_python.kernel.endpoint import AbstractEndpoint
 
 from .router import ProducerRouter, ConsumerRouter
@@ -24,9 +24,9 @@ class Application(BaseApplication):
         Args:
             wire_factory: Wire protocol factory for message transport
         """
-        # Use JsonCodecFactory with current module for message serialization
+        # Use CodecRegistry with current module for message serialization
         current_module = sys.modules[self.__module__.rsplit('.', 1)[0]]
-        codec_factory = JsonCodecFactory(current_module)
+        codec_factory = CodecRegistry(current_module)
         
         super().__init__(wire_factory, codec_factory)
         
