@@ -19,13 +19,41 @@ class RouterInfo:
 
     @property
     def channel_repr(self) -> str:
-        """Get string representation of channel for template."""
-        return repr(self.channel)
+        """Get string representation of channel for template with spec prefix."""
+        channel_str = repr(self.channel)
+        
+        # Replace all document struct references with spec. prefix
+        document_classes = [
+            'Channel', 'Operation', 'Message', 'ChannelBindings', 'OperationReply',
+            'AddressParameter', 'ExternalDocs', 'Server', 'Tag',
+            'CorrelationId', 'MessageBindings', 'MessageExample', 'MessageTrait',
+            'OperationBindings', 'OperationReplyAddress', 'OperationTrait', 'SecurityScheme'
+        ]
+        
+        for class_name in document_classes:
+            # Replace standalone class calls like Tag( with spec.Tag(
+            channel_str = channel_str.replace(f'{class_name}(', f'spec.{class_name}(')
+        
+        return channel_str
 
     @property
     def operation_repr(self) -> str:
-        """Get string representation of operation for template."""
-        return repr(self.operation)
+        """Get string representation of operation for template with spec prefix."""
+        operation_str = repr(self.operation)
+        
+        # Replace all document struct references with spec. prefix
+        document_classes = [
+            'Channel', 'Operation', 'Message', 'ChannelBindings', 'OperationReply',
+            'AddressParameter', 'ExternalDocs', 'Server', 'Tag',
+            'CorrelationId', 'MessageBindings', 'MessageExample', 'MessageTrait',
+            'OperationBindings', 'OperationReplyAddress', 'OperationTrait', 'SecurityScheme'
+        ]
+        
+        for class_name in document_classes:
+            # Replace standalone class calls like Tag( with spec.Tag(
+            operation_str = operation_str.replace(f'{class_name}(', f'spec.{class_name}(')
+        
+        return operation_str
 
 
 class RouterGenerator:

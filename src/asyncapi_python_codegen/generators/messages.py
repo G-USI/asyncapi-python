@@ -1,90 +1,190 @@
-"""Message model generation from JSON Schema."""
+"""Message model generation using datamodel-code-generator."""
 
 import json
-from typing import Any, Dict
+import re
+import tempfile
+import yaml
+from pathlib import Path
+from typing import Any, Dict, List
 from asyncapi_python.kernel.document import Operation
+
+from datamodel_code_generator.__main__ import main as datamodel_codegen
 
 
 class MessageGenerator:
-    """Generates Pydantic message models from AsyncAPI message schemas."""
+    """Generates Pydantic message models using datamodel-code-generator."""
 
-    def extract_messages(self, operations: Dict[str, Operation]) -> Dict[str, Any]:
-        """Extract message definitions from operations."""
-        messages = {}
+    def generate_message_models(self, operations: Dict[str, Operation], spec_path: Path = None) -> str:
+        """Generate complete Pydantic models code using datamodel-code-generator."""
+        # Collect all message schemas from operations
+        message_schemas = self._collect_message_schemas(operations)
+        
+        if not message_schemas:
+            return self._generate_empty_messages()
+            
+        # If we have a spec path, load component schemas for reference resolution
+        component_schemas = {}
+        if spec_path:
+            component_schemas = self._load_component_schemas(spec_path)
+            
+        # Create unified JSON Schema with $defs including both message and component schemas
+        all_schemas = {**message_schemas, **component_schemas}
+        
+        # Resolve references from #/components/schemas/... to #/$defs/...
+        resolved_schemas = self._resolve_references(all_schemas)
+        
+        unified_schema = {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$defs": resolved_schemas
+        }
+        
+        # Use datamodel-code-generator to create Pydantic models
+        return self._generate_with_datamodel_codegen(unified_schema)
 
-        for op_id, operation in operations.items():
+    def _collect_message_schemas(self, operations: Dict[str, Operation]) -> Dict[str, Any]:
+        """Collect all message schemas from operations."""
+        schemas = {}
+        
+        for operation in operations.values():
             # Extract messages from channel
             for msg_name, message in operation.channel.messages.items():
-                class_name = self._to_pascal_case(msg_name)
-                if class_name not in messages:
-                    messages[class_name] = self._build_message_info(message)
-
+                schema_name = self._to_pascal_case(msg_name)
+                if schema_name not in schemas:
+                    schemas[schema_name] = self._extract_message_schema(message)
+            
             # Extract reply messages
             if operation.reply:
                 for msg_name, message in operation.reply.channel.messages.items():
-                    class_name = self._to_pascal_case(msg_name)
-                    if class_name not in messages:
-                        messages[class_name] = self._build_message_info(message)
-
-        return messages
-
-    def _build_message_info(self, message) -> Dict[str, Any]:
-        """Build message information for template."""
-        info = {
-            "description": getattr(message, "description", None) or "",
-            "fields": {},
-        }
-
-        # Extract fields from payload
+                    schema_name = self._to_pascal_case(msg_name)
+                    if schema_name not in schemas:
+                        schemas[schema_name] = self._extract_message_schema(message)
+        
+        return schemas
+    
+    def _load_component_schemas(self, spec_path: Path) -> Dict[str, Any]:
+        """Load component schemas from the AsyncAPI specification file."""
+        try:
+            with spec_path.open('r') as f:
+                spec = yaml.safe_load(f)
+            
+            components = spec.get('components', {})
+            schemas = components.get('schemas', {})
+            messages = components.get('messages', {})
+            
+            # Combine schemas and message payloads
+            all_schemas = {}
+            
+            # Add component schemas directly
+            for schema_name, schema_def in schemas.items():
+                all_schemas[schema_name] = schema_def
+            
+            # Add message payloads from components
+            for msg_name, msg_def in messages.items():
+                if isinstance(msg_def, dict) and 'payload' in msg_def:
+                    schema_name = self._to_pascal_case(msg_name)
+                    all_schemas[schema_name] = msg_def['payload']
+            
+            return all_schemas
+            
+        except Exception as e:
+            print(f"Warning: Could not load component schemas from {spec_path}: {e}")
+            return {}
+    
+    def _resolve_references(self, schemas: Dict[str, Any]) -> Dict[str, Any]:
+        """Recursively resolve $ref references to use #/$defs/... instead of #/components/schemas/..."""
+        def resolve_in_object(obj):
+            if isinstance(obj, dict):
+                resolved_obj = {}
+                for key, value in obj.items():
+                    if key == "$ref" and isinstance(value, str):
+                        # Transform references from #/components/schemas/... to #/$defs/...
+                        if value.startswith("#/components/schemas/"):
+                            schema_name = value.split("/")[-1]
+                            resolved_obj[key] = f"#/$defs/{schema_name}"
+                        elif value.startswith("#/components/messages/"):
+                            # Handle message references - convert message name to PascalCase
+                            msg_name = value.split("/")[-1]
+                            schema_name = self._to_pascal_case(msg_name)
+                            resolved_obj[key] = f"#/$defs/{schema_name}"
+                        else:
+                            resolved_obj[key] = value
+                    else:
+                        resolved_obj[key] = resolve_in_object(value)
+                return resolved_obj
+            elif isinstance(obj, list):
+                return [resolve_in_object(item) for item in obj]
+            else:
+                return obj
+        
+        return {name: resolve_in_object(schema) for name, schema in schemas.items()}
+    
+    def _extract_message_schema(self, message) -> Dict[str, Any]:
+        """Extract JSON Schema from a message object."""
         if hasattr(message, "payload") and isinstance(message.payload, dict):
-            payload = message.payload
-            if payload.get("type") == "object" and "properties" in payload:
-                for prop_name, prop_schema in payload["properties"].items():
-                    field_info = {
-                        "type": self._json_type_to_python(
-                            prop_schema.get("type", "Any")
-                        ),
-                        "default": None,
-                    }
+            return message.payload
+        else:
+            # Fallback to a basic object schema
+            return {"type": "object", "properties": {}}
+    
+    def _generate_with_datamodel_codegen(self, schema: Dict[str, Any]) -> str:
+        """Generate Pydantic models using datamodel-code-generator."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            schema_path = Path(temp_dir) / "schema.json"
+            models_path = Path(temp_dir) / "models.py"
+            
+            # Write the unified schema to a temporary file
+            with schema_path.open("w") as schema_file:
+                json.dump(schema, schema_file, indent=2)
+            
+            
+            # Configure datamodel-code-generator arguments
+            args = [
+                "--input", str(schema_path.absolute()),
+                "--output", str(models_path.absolute()),
+                "--output-model-type", "pydantic_v2.BaseModel",
+                "--input-file-type", "jsonschema",
+                "--reuse-model",
+                "--allow-extra-fields",
+                "--collapse-root-models",
+                "--target-python-version", "3.10",
+                "--use-title-as-name",
+                "--capitalize-enum-members",
+                "--snake-case-field",
+                "--allow-population-by-field-name",
+            ]
+            
+            # Run datamodel-code-generator
+            datamodel_codegen(args=args)
+            
+            # Read the generated models and add __all__ export
+            with models_path.open() as models_file:
+                generated_code = models_file.read()
+            
+            return self._add_all_export(generated_code)
+    
+    def _add_all_export(self, generated_code: str) -> str:
+        """Add __all__ list to the generated code."""
+        # Extract class names from the generated code
+        model_names = re.findall(r'^class (\w+)', generated_code, re.MULTILINE)
+        
+        if not model_names:
+            return generated_code + '\n__all__ = []\n'
+        
+        # Add the __all__ list at the end
+        all_list = f"\n__all__ = {model_names!r}\n"
+        return generated_code + all_list
+    
+    def _generate_empty_messages(self) -> str:
+        """Generate empty message module when no schemas found."""
+        return '''"""Generated message models from AsyncAPI specification."""
 
-                    # Handle const/literal
-                    if "const" in prop_schema:
-                        const_val = prop_schema["const"]
-                        field_info["type"] = f"Literal[{json.dumps(const_val)}]"
-                        field_info["default"] = json.dumps(const_val)
+from __future__ import annotations
 
-                    # Handle enum
-                    elif "enum" in prop_schema:
-                        enum_vals = ", ".join(
-                            json.dumps(v) for v in prop_schema["enum"]
-                        )
-                        field_info["type"] = f"Literal[{enum_vals}]"
+from typing import Any, Optional, List, Dict
+from pydantic import BaseModel, Field
 
-                    # Handle format
-                    elif "format" in prop_schema:
-                        if prop_schema["format"] == "uuid":
-                            field_info["type"] = "str"
-                        elif prop_schema["format"] == "date-time":
-                            field_info["type"] = "str"
-                        elif prop_schema["format"] == "email":
-                            field_info["type"] = "str"
-
-                    info["fields"][prop_name] = field_info
-
-        return info
-
-    def _json_type_to_python(self, json_type: str) -> str:
-        """Convert JSON type to Python type."""
-        type_map = {
-            "string": "str",
-            "number": "float",
-            "integer": "int",
-            "boolean": "bool",
-            "array": "List[Any]",
-            "object": "Dict[str, Any]",
-            "null": "None",
-        }
-        return type_map.get(json_type, "Any")
+# No message schemas found in the specification
+'''
 
     def _to_pascal_case(self, name: str) -> str:
         """Convert name to PascalCase."""
@@ -92,3 +192,8 @@ class MessageGenerator:
             word.capitalize()
             for word in name.replace("-", "_").replace(".", "_").split("_")
         )
+    
+    # Legacy method for backward compatibility - now returns empty dict since we generate complete code
+    def extract_messages(self, operations: Dict[str, Operation]) -> Dict[str, Any]:
+        """Extract message definitions from operations (legacy compatibility)."""
+        return {}

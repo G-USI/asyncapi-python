@@ -4,6 +4,7 @@ from typing import Any
 
 from asyncapi_python.kernel.wire import EndpointParams
 from asyncapi_python.kernel.document.channel import Channel
+from asyncapi_python.kernel.document.bindings import create_amqp_binding_from_dict
 
 from .config import AmqpConfig, AmqpBindingType
 from .utils import validate_parameters_strict, substitute_parameters
@@ -54,16 +55,24 @@ def resolve_amqp_config(
                 queue_properties={"durable": True, "exclusive": False},
             )
 
-        # AMQP queue binding pattern
-        case (False, binding, _, _) if (
-            binding and hasattr(binding, "type") and binding.type == "queue"
+        # AMQP queue binding pattern (object or dict)
+        case (False, binding, _, _) if binding and (
+            (hasattr(binding, "type") and binding.type == "queue") or
+            (isinstance(binding, dict) and binding.get("type") == "queue")
         ):
+            # Convert dict to proper binding object if needed
+            if isinstance(binding, dict):
+                binding = create_amqp_binding_from_dict(binding)
             return resolve_queue_binding(binding, param_values, channel, operation_name)
 
-        # AMQP routing key binding pattern
-        case (False, binding, _, _) if (
-            binding and hasattr(binding, "type") and binding.type == "routingKey"
+        # AMQP routing key binding pattern (object or dict)
+        case (False, binding, _, _) if binding and (
+            (hasattr(binding, "type") and binding.type == "routingKey") or
+            (isinstance(binding, dict) and binding.get("type") == "routingKey")
         ):
+            # Convert dict to proper binding object if needed
+            if isinstance(binding, dict):
+                binding = create_amqp_binding_from_dict(binding)
             return resolve_routing_key_binding(
                 binding, param_values, channel, operation_name
             )

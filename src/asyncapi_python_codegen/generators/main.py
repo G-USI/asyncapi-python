@@ -44,7 +44,10 @@ class CodeGenerator:
         routers = self.router_generator.build_routers(operations)
         producer_routers, consumer_routers = self.router_generator.split_routers(routers)
 
-        # Extract and generate message models using SRP
+        # Generate message models using datamodel-code-generator
+        message_models_code = self.message_generator.generate_message_models(operations, spec_path)
+        
+        # Legacy compatibility - extract messages for router generation  
         messages = self.message_generator.extract_messages(operations)
 
         # Generate nested classes using SRP
@@ -66,6 +69,7 @@ class CodeGenerator:
             "consumer_nested_classes": consumer_nested_classes,
             # Messages
             "messages": messages,
+            "message_models_code": message_models_code,
         }
 
         # Generate files using SRP
@@ -77,11 +81,11 @@ class CodeGenerator:
         # Generate application.py
         self.template_renderer.render_file("application.py.j2", output_dir / "application.py", context)
 
-        # Generate messages/json/__init__.py (for CodecRegistry compatibility)
+        # Generate messages/json/__init__.py using datamodel-code-generator
         messages_json_dir = output_dir / "messages" / "json"
         messages_json_dir.mkdir(parents=True, exist_ok=True)
         self.template_renderer.render_file(
-            "messages.py.j2", messages_json_dir / "__init__.py", context
+            "messages_datamodel.py.j2", messages_json_dir / "__init__.py", context
         )
 
         # Generate __init__.py

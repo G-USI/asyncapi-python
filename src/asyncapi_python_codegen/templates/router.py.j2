@@ -7,19 +7,19 @@ from asyncapi_python.kernel.application import BaseApplication
 from asyncapi_python.kernel.endpoint import Publisher, Subscriber, RpcClient, RpcServer
 from asyncapi_python.kernel.wire import AbstractWireFactory
 from asyncapi_python.kernel.codec import CodecFactory
-from asyncapi_python.kernel.document import Channel, Operation, Message, ChannelBindings, OperationReply
-from .messages.json import *
+import asyncapi_python.kernel.document as spec
+from .messages import json
 
 {% for router in routers %}
 class {{ router.class_name }}(
 {%- if router.operation.reply and router.operation.action == "send" -%}
-    RpcClient[{{ router.input_type }}, {{ router.output_type }}]
+    RpcClient[json.{{ router.input_type }}, json.{{ router.output_type }}]
 {%- elif router.operation.action == "send" -%}
-    Publisher[{{ router.input_type }}]
+    Publisher[json.{{ router.input_type }}]
 {%- elif router.operation.reply and router.operation.action == "receive" -%}
-    RpcServer[{{ router.input_type }}, {{ router.output_type }}]
+    RpcServer[json.{{ router.input_type }}, json.{{ router.output_type }}]
 {%- else -%}
-    Subscriber[{{ router.input_type }}]
+    Subscriber[json.{{ router.input_type }}]
 {%- endif -%}
 ):
     """{{ router.description }}"""
