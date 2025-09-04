@@ -37,34 +37,26 @@ class {{ router.class_name }}(
 
 {% endfor %}
 
+{% for nested_class in producer_nested_classes %}
+{{ nested_class }}
+
+{% endfor %}
+
+{% for nested_class in consumer_nested_classes %}
+{{ nested_class }}
+
+{% endfor %}
+
 class ProducerRouter:
     """Router aggregating all producer (send) operations."""
     
     def __init__(self, wire_factory: AbstractWireFactory, codec_factory: CodecFactory):
         """Initialize producer router with all send operations."""
-{% for path, router in producer_routers.items() %}
-        # {{ '.'.join(path) }} -> {{ router.class_name }}
-        {% if path|length == 1 %}
-        self.{{ path[0]|lower }} = {{ router.class_name }}(wire_factory, codec_factory)
-        {% else %}
-        # TODO: Multi-segment paths like {{ '.'.join(path) }} need static routing implementation
-        # For now, flatten to single attribute: {{ '_'.join(path) }}
-        self.{{ '_'.join(path)|lower }} = {{ router.class_name }}(wire_factory, codec_factory)
-        {% endif %}
-{% endfor %}
+{{ generate_nested_routers(producer_routers, 8, "Producer") }}
 
 class ConsumerRouter:
     """Router aggregating all consumer (receive) operations."""
     
     def __init__(self, wire_factory: AbstractWireFactory, codec_factory: CodecFactory):
         """Initialize consumer router with all receive operations."""
-{% for path, router in consumer_routers.items() %}
-        # {{ '.'.join(path) }} -> {{ router.class_name }}
-        {% if path|length == 1 %}
-        self.{{ path[0]|lower }} = {{ router.class_name }}(wire_factory, codec_factory)
-        {% else %}
-        # TODO: Multi-segment paths like {{ '.'.join(path) }} need static routing implementation
-        # For now, flatten to single attribute: {{ '_'.join(path) }}
-        self.{{ '_'.join(path)|lower }} = {{ router.class_name }}(wire_factory, codec_factory)
-        {% endif %}
-{% endfor %}
+{{ generate_nested_routers(consumer_routers, 8, "Consumer") }}

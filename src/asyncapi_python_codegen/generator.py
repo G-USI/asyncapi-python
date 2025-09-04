@@ -49,6 +49,12 @@ class CodeGenerator:
         )
         # Add custom filters
         self.env.filters["repr"] = repr
+        
+        # Add custom functions for template
+        self.env.globals.update(
+            generate_nested_routers=self._generate_nested_routers_code,
+            is_router_info=lambda x: isinstance(x, RouterInfo)
+        )
 
     def generate(self, spec_path: Path, output_dir: Path, force: bool = False) -> None:
         """Generate code from AsyncAPI spec.
@@ -78,6 +84,10 @@ class CodeGenerator:
         # Extract and generate message models
         messages = self._extract_messages(operations)
 
+        # Generate nested classes
+        producer_nested_classes = self._collect_nested_classes(producer_routers, router_type="Producer")
+        consumer_nested_classes = self._collect_nested_classes(consumer_routers, router_type="Consumer")
+        
         # Prepare template context
         context = {
             # Document info
@@ -89,6 +99,8 @@ class CodeGenerator:
             "routers": routers,
             "producer_routers": producer_routers,
             "consumer_routers": consumer_routers,
+            "producer_nested_classes": producer_nested_classes,
+            "consumer_nested_classes": consumer_nested_classes,
             # Messages
             "messages": messages,
         }
@@ -165,18 +177,85 @@ class CodeGenerator:
 
     def _split_routers(
         self, routers: List[RouterInfo]
-    ) -> Tuple[Dict[Tuple[str, ...], RouterInfo], Dict[Tuple[str, ...], RouterInfo]]:
-        """Split routers into producer and consumer groups."""
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        """Split routers into producer and consumer groups with nested structure."""
         producer_routers = {}
         consumer_routers = {}
 
         for router in routers:
-            if router.operation.action == "send":
-                producer_routers[router.path] = router
-            else:
-                consumer_routers[router.path] = router
+            target = producer_routers if router.operation.action == "send" else consumer_routers
+            self._insert_nested_router(target, router.path, router)
 
         return producer_routers, consumer_routers
+    
+    def _insert_nested_router(self, tree: Dict[str, Any], path: Tuple[str, ...], router: RouterInfo) -> None:
+        """Insert a router into a nested tree structure."""
+        current = tree
+        
+        # Navigate to the parent level
+        for segment in path[:-1]:
+            segment_lower = segment.lower()
+            if segment_lower not in current:
+                current[segment_lower] = {}
+            current = current[segment_lower]
+        
+        # Insert the router at the final level
+        final_segment = path[-1].lower()
+        current[final_segment] = router
+    
+    def _generate_nested_routers_code(self, routers_dict: Dict[str, Any], indent: int = 2, router_type: str = "") -> str:
+        """Generate nested router initialization code."""
+        lines = []
+        indent_str = " " * indent
+        
+        for key, value in routers_dict.items():
+            if isinstance(value, RouterInfo):
+                # This is a router endpoint
+                lines.append(f"{indent_str}self.{key} = {value.class_name}(wire_factory, codec_factory)")
+            else:
+                # This is a nested router level - create a sub-router class
+                subclass_name = f"{router_type}{key.title()}Router" if router_type else f"{key.title()}Router"
+                lines.append(f"{indent_str}self.{key} = {subclass_name}(wire_factory, codec_factory)")
+        
+        return "\n".join(lines)
+    
+    def _collect_nested_classes(self, routers_dict: Dict[str, Any], prefix: str = "", router_type: str = "") -> List[str]:
+        """Collect all nested router class definitions."""
+        classes = []
+        
+        for key, value in routers_dict.items():
+            if not isinstance(value, RouterInfo):
+                # This is a nested level - generate a sub-router class
+                # Make class name unique by including router type prefix
+                class_name = f"{router_type}{key.title()}Router" if router_type else f"{key.title()}Router"
+                full_prefix = f"{prefix}.{key}" if prefix else key
+                
+                # Generate class definition
+                class_def = self._generate_nested_class(class_name, value, router_type)
+                classes.append(class_def)
+                
+                # Recursively collect nested classes
+                classes.extend(self._collect_nested_classes(value, full_prefix, router_type))
+        
+        return classes
+    
+    def _generate_nested_class(self, class_name: str, routers_dict: Dict[str, Any], router_type: str = "") -> str:
+        """Generate a nested router class definition."""
+        lines = [
+            f"class {class_name}:",
+            f'    """Nested router for {class_name.lower().replace("router", "").replace(router_type.lower(), "")} operations."""',
+            "",
+            f"    def __init__(self, wire_factory: AbstractWireFactory, codec_factory: CodecFactory):",
+        ]
+        
+        for key, value in routers_dict.items():
+            if isinstance(value, RouterInfo):
+                lines.append(f"        self.{key} = {value.class_name}(wire_factory, codec_factory)")
+            else:
+                subclass_name = f"{router_type}{key.title()}Router" if router_type else f"{key.title()}Router"
+                lines.append(f"        self.{key} = {subclass_name}(wire_factory, codec_factory)")
+        
+        return "\n".join(lines)
 
     def _get_message_type(self, operation: Operation, is_input: bool) -> str:
         """Get message type name for operation."""
