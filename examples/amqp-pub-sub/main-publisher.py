@@ -2,13 +2,13 @@ import asyncio
 from os import environ
 from publisher import Application
 from publisher.messages.json import Ping
-from asyncapi_python.contrib.wire.amqp import AmqpWireFactory
+from asyncapi_python.contrib.wire.amqp import AmqpWire
 
 
 AMQP_URI = environ.get("AMQP_URI", "amqp://guest:guest@localhost")
 NUM_REQUESTS = 3
 
-app = Application(AmqpWireFactory(AMQP_URI))
+app = Application(AmqpWire(AMQP_URI))
 
 
 async def main() -> None:

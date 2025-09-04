@@ -1,6 +1,6 @@
 # Generated code directories
-client/
-server/
+producer/
+worker/
 
 # Virtual environment
 .venv/

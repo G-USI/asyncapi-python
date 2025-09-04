@@ -3,14 +3,14 @@ from os import environ
 from sys import exit
 from server import Application
 from server.messages.json import Ping, Pong
-from asyncapi_python.contrib.wire.amqp import AmqpWireFactory
+from asyncapi_python.contrib.wire.amqp import AmqpWire
 
 
 AMQP_URI = environ.get("AMQP_URI", "amqp://guest:guest@localhost")
 MAX_REQUESTS = 3
 request_count = 0
 
-app = Application(AmqpWireFactory(AMQP_URI))
+app = Application(AmqpWire(AMQP_URI))
 
 
 @app.consumer.onpingrequest
