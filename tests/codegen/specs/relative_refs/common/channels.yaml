@@ -1,0 +1,22 @@
+# File B: Common channels that reference File C  
+user_channel:
+  address: users.queue
+  title: User Channel from File B
+  description: Channel defined in common/channels.yaml
+  messages:
+    user_request:
+      $ref: "../shared/messages.yaml#/user_create_request"
+    user_response:
+      # Reference within same directory level
+      $ref: "../shared/messages.yaml#/user_create_response"
+      
+admin_channel:
+  address: admin.queue
+  messages:
+    admin_message:
+      payload:
+        type: object
+        properties:
+          from_file_b:
+            type: string
+            const: common_channels

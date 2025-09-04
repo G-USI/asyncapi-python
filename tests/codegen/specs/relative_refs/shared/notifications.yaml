@@ -1,0 +1,10 @@
+# File B2: Notification channel that references File C
+notification_channel:
+  address: notifications.fanout
+  title: Notification Channel
+  description: Channel for notifications with reference to shared messages
+  messages:
+    notification:
+      $ref: "messages.yaml#/notification_message"
+    alert:
+      $ref: "messages.yaml#/alert_message"
