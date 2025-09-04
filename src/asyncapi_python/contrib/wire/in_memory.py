@@ -202,9 +202,7 @@ class InMemoryConsumer(Consumer[InMemoryIncomingMessage]):
                 continue
 
 
-class InMemoryWireFactory(
-    AbstractWireFactory[InMemoryMessage, InMemoryIncomingMessage]
-):
+class InMemoryWire(AbstractWireFactory[InMemoryMessage, InMemoryIncomingMessage]):
     """In-memory wire factory for testing"""
 
     async def create_consumer(

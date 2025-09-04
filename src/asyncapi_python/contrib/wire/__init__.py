@@ -1,7 +1,5 @@
 """Wire implementations for various transport protocols"""
 
-from .in_memory import InMemoryWireFactory
+from .in_memory import InMemoryWire
 
-__all__ = [
-    "InMemoryWireFactory",
-]
+__all__ = ["InMemoryWire"]

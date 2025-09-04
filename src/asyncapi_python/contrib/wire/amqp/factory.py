@@ -14,7 +14,7 @@ from .consumer import AmqpConsumer
 from .resolver import resolve_amqp_config
 
 
-class AmqpWireFactory(AbstractWireFactory[AmqpWireMessage, AmqpIncomingMessage]):
+class AmqpWire(AbstractWireFactory[AmqpWireMessage, AmqpIncomingMessage]):
     """AMQP wire factory implementation with comprehensive binding support"""
 
     def __init__(

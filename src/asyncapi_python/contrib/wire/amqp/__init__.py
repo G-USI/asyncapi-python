@@ -1,5 +1,5 @@
 """AMQP wire implementation with comprehensive binding support"""
 
-from .factory import AmqpWireFactory
+from .factory import AmqpWire
 
-__all__ = ["AmqpWireFactory"]
+__all__ = ["AmqpWire"]
