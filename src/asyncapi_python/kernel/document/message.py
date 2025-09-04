@@ -1,10 +1,8 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import Any, TYPE_CHECKING
+from dataclasses import dataclass
+from typing import Any
 from .common import *
-
-if TYPE_CHECKING:
-    from ..codec.abc import AbstractCodec
+from .bindings import AmqpMessageBinding
 
 __all__ = [
     "CorrelationId",
@@ -82,4 +80,3 @@ class Message:
     bindings: MessageBindings | None
     traits: list[MessageTrait]
     key: str
-    codec: "AbstractCodec" | None = field(default=None, init=False, repr=False)
