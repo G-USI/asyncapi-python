@@ -16,10 +16,10 @@ generate:
 	$(CODEGEN) spec/publisher.asyncapi.yaml publisher --force
 
 client:
-	$(PYTHON) main-subscriber.py
+	$(PYTHON) main-publisher.py
 
 server: 
-	$(PYTHON) main-publisher.py
+	$(PYTHON) main-subscriber.py
 
 clean:
 	rm -rf $(VENV_NAME)

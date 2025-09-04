@@ -1,21 +1,23 @@
 import asyncio
 from os import environ
 from publisher import Application
-from publisher.messages import Ping
+from publisher.messages.json import Ping
+from asyncapi_python.contrib.wire.amqp import AmqpWireFactory
 
 
 AMQP_URI = environ.get("AMQP_URI", "amqp://guest:guest@localhost")
 NUM_REQUESTS = 3
 
-app = Application(AMQP_URI)
+app = Application(AmqpWireFactory(AMQP_URI))
 
 
 async def main() -> None:
-    await app.start(blocking=False)
+    await app.start()
     for _ in range(NUM_REQUESTS):
         req = Ping()
         print(f"Sending request: {req}")
-        await app.producer.application.ping(req)
+        await app.producer.application_ping(req)
+    await app.stop()
 
 
 if __name__ == "__main__":

@@ -27,6 +27,7 @@ class SecurityScheme:
         "HTTPSecurityScheme",
         "SaslSecurityScheme",
     ]
+    key: str
 
 
 @dataclass(frozen=True)
@@ -90,3 +91,4 @@ class Operation:
     tags: list[Tag]
     external_docs: ExternalDocs | None
     bindings: OperationBindings | None
+    key: str

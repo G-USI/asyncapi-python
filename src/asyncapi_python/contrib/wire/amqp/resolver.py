@@ -36,7 +36,7 @@ def resolve_amqp_config(
 
     # Comprehensive pattern matching for precedence
     match (
-        is_reply or channel.address is None,
+        is_reply,
         amqp_binding,
         channel.address,
         operation_name,
@@ -68,12 +68,12 @@ def resolve_amqp_config(
                 binding, param_values, channel, operation_name
             )
 
-        # AMQP exchange binding pattern
+        # AMQP exchange binding pattern - detect by presence of exchange field
         case (False, binding, _, _) if (
-            binding and hasattr(binding, "type") and binding.type == "exchange"
+            binding and (hasattr(binding, "exchange") or (isinstance(binding, dict) and "exchange" in binding))
         ):
             return resolve_exchange_binding(
-                binding, param_values, channel, operation_name
+                binding, param_values, channel, operation_name, channel.key
             )
 
         # Channel address pattern (with parameter substitution)
@@ -191,34 +191,55 @@ def resolve_routing_key_binding(
 
 
 def resolve_exchange_binding(
-    binding: Any, param_values: dict[str, str], channel: Channel, operation_name: str
+    binding: Any, param_values: dict[str, str], channel: Channel, operation_name: str, channel_key: str = ""
 ) -> AmqpConfig:
     """Resolve AMQP exchange binding configuration for advanced pub/sub"""
 
-    # Determine exchange name
-    exchange_config = getattr(binding, "exchange", None)
+    # Determine exchange name with proper fallback chain
+    # Handle both object attributes and dictionary keys
+    if isinstance(binding, dict):
+        exchange_config = binding.get("exchange")
+    else:
+        exchange_config = getattr(binding, "exchange", None)
+    # Extract exchange name from config (handle both dict and object)
+    exchange_name = None
+    if exchange_config:
+        if isinstance(exchange_config, dict):
+            exchange_name = exchange_config.get("name")
+        else:
+            exchange_name = getattr(exchange_config, "name", None)
+    
     match (
-        exchange_config and getattr(exchange_config, "name", None),
+        exchange_name,
         channel.address,
+        channel_key,
         operation_name,
     ):
-        case (exchange_name, _, _) if exchange_name:
+        case (exchange_name, _, _, _) if exchange_name:
             resolved_exchange = substitute_parameters(exchange_name, param_values)
-        case (None, address, _) if address:
+        case (None, address, _, _) if address:
             resolved_exchange = substitute_parameters(address, param_values)
-        case (None, None, op_name) if op_name:
+        case (None, None, ch_key, _) if ch_key:
+            # Use channel key as fallback when address is null
+            resolved_exchange = ch_key.lstrip("/")  # Remove leading slash
+        case (None, None, "", op_name) if op_name:
             resolved_exchange = op_name
         case _:
             raise ValueError("Cannot determine exchange name for exchange binding")
 
     # Determine exchange type
     exchange_type = "fanout"  # Default for exchange bindings
-    if exchange_config and hasattr(exchange_config, "type"):
-        exchange_type = exchange_config.type
+    if exchange_config:
+        if isinstance(exchange_config, dict):
+            exchange_type = exchange_config.get("type", "fanout")
+        elif hasattr(exchange_config, "type"):
+            exchange_type = exchange_config.type
 
     # Extract binding arguments for headers exchange
     binding_args = {}
-    if hasattr(binding, "bindingKeys") and binding.bindingKeys:
+    if isinstance(binding, dict):
+        binding_args = binding.get("bindingKeys", {})
+    elif hasattr(binding, "bindingKeys") and binding.bindingKeys:
         binding_args = binding.bindingKeys
 
     return AmqpConfig(

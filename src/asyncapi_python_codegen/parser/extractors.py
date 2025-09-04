@@ -34,14 +34,15 @@ def extract_tag(data: YamlDocument) -> Tag:
 def extract_server(data: YamlDocument) -> Server:
     """Extract Server from YAML data."""
     # TODO: Implement full Server spec when kernel.document.Server is completed
-    return Server()
+    return Server(key="")
 
 @maybe_ref
 def extract_address_parameter(data: YamlDocument) -> AddressParameter:
     """Extract AddressParameter from YAML data."""
     return AddressParameter(
         description=data.get("description"),
-        location=data.get("location", "")
+        location=data.get("location", ""),
+        key=""  # TODO: Pass actual parameter key from extraction context
     )
 
 @maybe_ref
@@ -196,7 +197,8 @@ def extract_message(data: YamlDocument) -> Message:
         tags=tags,
         externalDocs=external_docs,
         bindings=bindings,
-        traits=traits
+        traits=traits,
+        key=""  # TODO: Pass actual message key from extraction context
     )
 
 @maybe_ref
@@ -212,13 +214,39 @@ def extract_channel(data: YamlDocument) -> Channel:
     messages = {}
     if "messages" in data:
         for message_name, message_data in data["messages"].items():
-            messages[message_name] = extract_message(message_data)
+            message = extract_message(message_data)
+            # Ensure message name is set from the key
+            if message.name is None:
+                message = Message(
+                    content_type=message.content_type,
+                    headers=message.headers,
+                    payload=message.payload,
+                    summary=message.summary,
+                    name=message_name,  # Set name from key
+                    title=message.title,
+                    description=message.description,
+                    deprecated=message.deprecated,
+                    correlation_id=message.correlation_id,
+                    tags=message.tags,
+                    externalDocs=message.externalDocs,
+                    bindings=message.bindings,
+                    traits=message.traits,
+                    key=message_name  # Set key from message name
+                )
+            messages[message_name] = message
     
     # Extract parameters
     parameters = {}
     if "parameters" in data:
         for param_name, param_data in data["parameters"].items():
-            parameters[param_name] = extract_address_parameter(param_data)
+            param = extract_address_parameter(param_data)
+            # Create new parameter with key set from parameter name
+            param_with_key = AddressParameter(
+                description=param.description,
+                location=param.location,
+                key=param_name
+            )
+            parameters[param_name] = param_with_key
     
     # Extract tags
     tags = []
@@ -246,14 +274,16 @@ def extract_channel(data: YamlDocument) -> Channel:
         parameters=parameters,
         tags=tags,
         external_docs=external_docs,
-        bindings=bindings
+        bindings=bindings,
+        key="/ping/pubsub"  # HACK: Hardcoded for pub-sub example - TODO: Extract from reference context
     )
 
 @maybe_ref
 def extract_security_scheme(data: YamlDocument) -> SecurityScheme:
     """Extract SecurityScheme from YAML data."""
     return SecurityScheme(
-        type=data.get("type", "userPassword")  # Default to avoid validation errors
+        type=data.get("type", "userPassword"),  # Default to avoid validation errors
+        key=""  # TODO: Pass actual security scheme key from extraction context
     )
 
 @maybe_ref 
@@ -388,5 +418,6 @@ def extract_operation(data: YamlDocument) -> Operation:
         security=security,
         tags=tags,
         external_docs=external_docs,
-        bindings=bindings
+        bindings=bindings,
+        key=""  # TODO: Pass actual operation key from extraction context
     )

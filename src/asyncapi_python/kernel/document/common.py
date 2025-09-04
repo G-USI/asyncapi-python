@@ -15,7 +15,8 @@ class Tag:
 
 
 @dataclass(frozen=True)
-class Server: ...  # TODO: Implement Server spec
+class Server:
+    key: str  # TODO: Implement full Server spec
 
 
 __all__ = ["ExternalDocs", "Tag", "Server"]

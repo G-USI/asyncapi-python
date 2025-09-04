@@ -10,6 +10,7 @@ __all__ = ["AddressParameter", "ChannelBindings", "Channel"]
 class AddressParameter:
     description: str | None
     location: str
+    key: str
 
 
 @dataclass(frozen=True)
@@ -45,3 +46,4 @@ class Channel:
     tags: list[Tag]
     external_docs: ExternalDocs | None
     bindings: ChannelBindings | None
+    key: str

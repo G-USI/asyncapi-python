@@ -81,4 +81,5 @@ class Message:
     externalDocs: ExternalDocs | None
     bindings: MessageBindings | None
     traits: list[MessageTrait]
+    key: str
     codec: "AbstractCodec" | None = field(default=None, init=False, repr=False)

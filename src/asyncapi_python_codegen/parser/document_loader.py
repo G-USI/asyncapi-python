@@ -45,7 +45,23 @@ def extract_all_operations(yaml_path: Path) -> Dict[str, Operation]:
             try:
                 # Extract operation with reference resolution
                 operation = extract_operation(operation_data)
-                operations[operation_id] = operation
+                # Create new operation with key set from operation ID
+                operation_with_key = Operation(
+                    action=operation.action,
+                    title=operation.title,
+                    summary=operation.summary,
+                    description=operation.description,
+                    channel=operation.channel,
+                    messages=operation.messages,
+                    reply=operation.reply,
+                    traits=operation.traits,
+                    security=operation.security,
+                    tags=operation.tags,
+                    external_docs=operation.external_docs,
+                    bindings=operation.bindings,
+                    key=operation_id
+                )
+                operations[operation_id] = operation_with_key
             except Exception as e:
                 raise RuntimeError(f"Failed to extract operation '{operation_id}': {e}") from e
         
