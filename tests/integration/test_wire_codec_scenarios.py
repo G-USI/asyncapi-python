@@ -6,8 +6,8 @@ import pytest
 
 from asyncapi_python.kernel.wire import AbstractWireFactory
 from asyncapi_python.kernel.codec import CodecFactory
-from asyncapi_python.contrib.wire.in_memory import InMemoryWireFactory
-from asyncapi_python.contrib.wire.amqp import AmqpWireFactory
+from asyncapi_python.contrib.wire.in_memory import InMemoryWire
+from asyncapi_python.contrib.wire.amqp import AmqpWire
 from asyncapi_python.contrib.codec.json import JsonCodecFactory
 
 from .scenarios import (
@@ -25,8 +25,8 @@ from . import test_app
 
 
 # Wire implementations
-IN_MEMORY_WIRE = InMemoryWireFactory()
-AMQP_WIRE = AmqpWireFactory(
+IN_MEMORY_WIRE = InMemoryWire()
+AMQP_WIRE = AmqpWire(
     connection_url=os.environ.get(
         "PYTEST_AMQP_URI", "amqp://guest:guest@localhost:5672/"
     ),
