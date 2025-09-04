@@ -6,7 +6,9 @@ permissions:
 
 on:
   push:
-    tags: "v*.*.*"
+    tags: 
+      - "v*.*.*"
+      - "v*.*.*rc*"
 
 jobs:
   test:
@@ -56,7 +58,7 @@ jobs:
           tag_name: ${{ github.ref }}
           release_name: ${{ github.ref }}
           draft: true
-          prerelease: false
+          prerelease: ${{ contains(github.ref, 'rc') }}
       
       - name: Build sdist, wheel, and pex
         run: >
