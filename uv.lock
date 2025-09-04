@@ -64,7 +64,7 @@ wheels = [
 
 [[package]]
 name = "asyncapi-python"
-version = "0.2.5"
+version = "0.3.0rc1"
 source = { editable = "." }
 dependencies = [
     { name = "cuid2" },

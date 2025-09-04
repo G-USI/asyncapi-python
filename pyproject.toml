@@ -1,16 +1,12 @@
 [project]
 name = "asyncapi-python"
-version = "0.2.5"
+version = "0.3.0rc1"
 license = { text = "Apache-2.0" }
 description = "Easily generate type-safe and async Python applications from AsyncAPI 3 specifications."
 authors = [{ name = "Yaroslav Petrov", email = "yaroslav.v.petrov@gmail.com" }]
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
-dependencies = [
-    "cuid2>=2.0.1",
-    "pydantic>=2",
-    "pytz",
-]
+dependencies = ["cuid2>=2.0.1", "pydantic>=2", "pytz"]
 
 [project.optional-dependencies]
 codegen = [
@@ -20,9 +16,7 @@ codegen = [
     "datamodel-code-generator[http]>=0.26.4",
     "black",
 ]
-amqp = [
-    "aio-pika",
-]
+amqp = ["aio-pika"]
 
 [project.scripts]
 asyncapi-python-codegen = "asyncapi_python_codegen:app"
