@@ -11,7 +11,7 @@ try:
 except ImportError:
     has_typer = False
 
-from .generator import CodeGenerator
+from .generators import CodeGenerator
 
 
 if has_typer:
