@@ -45,6 +45,7 @@ class UserServiceApp(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         user_created_message = Message(
@@ -58,6 +59,7 @@ class UserServiceApp(BaseApplication):
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -74,6 +76,7 @@ class UserServiceApp(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )
@@ -103,6 +106,7 @@ class OrderServiceApp(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         user_created_message = Message(
@@ -116,6 +120,7 @@ class OrderServiceApp(BaseApplication):
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -132,6 +137,7 @@ class OrderServiceApp(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )
@@ -153,6 +159,7 @@ class OrderServiceApp(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         # Inventory service channel
@@ -167,6 +174,7 @@ class OrderServiceApp(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         order_placed_message = Message(
@@ -180,6 +188,7 @@ class OrderServiceApp(BaseApplication):
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -197,6 +206,7 @@ class OrderServiceApp(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )
@@ -213,6 +223,7 @@ class OrderServiceApp(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )
@@ -254,6 +265,7 @@ class PaymentServiceApp(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         order_placed_message = Message(
@@ -267,6 +279,7 @@ class PaymentServiceApp(BaseApplication):
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -283,6 +296,7 @@ class PaymentServiceApp(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )
@@ -301,6 +315,7 @@ class PaymentServiceApp(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         payment_processed_message = Message(
@@ -314,6 +329,7 @@ class PaymentServiceApp(BaseApplication):
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -330,6 +346,7 @@ class PaymentServiceApp(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )
@@ -361,6 +378,7 @@ class InventoryServiceApp(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         order_placed_message = Message(
@@ -374,6 +392,7 @@ class InventoryServiceApp(BaseApplication):
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -390,6 +409,7 @@ class InventoryServiceApp(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )
@@ -408,6 +428,7 @@ class InventoryServiceApp(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         inventory_updated_message = Message(
@@ -421,6 +442,7 @@ class InventoryServiceApp(BaseApplication):
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -437,6 +459,7 @@ class InventoryServiceApp(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )
@@ -468,6 +491,7 @@ class ShippingServiceApp(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         payment_processed_message = Message(
@@ -481,6 +505,7 @@ class ShippingServiceApp(BaseApplication):
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -497,6 +522,7 @@ class ShippingServiceApp(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )
@@ -515,6 +541,7 @@ class ShippingServiceApp(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         inventory_updated_message = Message(
@@ -528,6 +555,7 @@ class ShippingServiceApp(BaseApplication):
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -544,6 +572,7 @@ class ShippingServiceApp(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )
@@ -562,6 +591,7 @@ class ShippingServiceApp(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         order_shipped_message = Message(
@@ -575,6 +605,7 @@ class ShippingServiceApp(BaseApplication):
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -591,6 +622,7 @@ class ShippingServiceApp(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )

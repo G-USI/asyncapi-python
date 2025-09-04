@@ -10,6 +10,7 @@ wire_factory = InMemoryWireFactory()
 client = ClientApp(wire_factory)
 server = ServerApp(wire_factory)
 
+
 @server.consumer.onpingrequest
 async def handle_ping_request(msg: Ping) -> Pong:
     print(f"Server handling request: {msg}")
@@ -22,14 +23,14 @@ async def main() -> None:
     # Start both applications
     await client.start()
     await server.start()
-    
+
     # Send requests
     for i in range(3):
         req = Ping()
         print(f"Client sending request {i}: {req}")
         res = await client.producer.pingrequest(req)
         print(f"Client got response {i}: {res}")
-    
+
     # Stop applications
     await client.stop()
     await server.stop()

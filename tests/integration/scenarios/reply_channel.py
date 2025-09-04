@@ -34,6 +34,7 @@ class OrderProcessingApp(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         order_event_message = Message(
@@ -47,6 +48,7 @@ class OrderProcessingApp(BaseApplication):
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -63,6 +65,7 @@ class OrderProcessingApp(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )
@@ -81,6 +84,7 @@ class OrderProcessingApp(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         # Reply channel with null address (global reply queue)
@@ -95,6 +99,7 @@ class OrderProcessingApp(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         rpc_reply_operation = Operation(
@@ -108,6 +113,7 @@ class OrderProcessingApp(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )
@@ -147,6 +153,7 @@ async def reply_channel_creation(
                 tags=[],
                 external_docs=None,
                 bindings=None,
+                key="test-key",
             )
 
             reply_message = Message(
@@ -160,6 +167,7 @@ async def reply_channel_creation(
                 payload={"type": "object"},
                 headers=None,
                 bindings=None,
+                key="test-key",
                 correlation_id=None,
                 content_type=None,
                 deprecated=None,
@@ -176,6 +184,7 @@ async def reply_channel_creation(
                 external_docs=None,
                 traits=[],
                 bindings=None,
+                key="test-key",
                 reply=None,
                 security=None,
             )

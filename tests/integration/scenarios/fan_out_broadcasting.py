@@ -50,6 +50,7 @@ class EventBroadcaster(BaseApplication):
                 tags=[],
                 external_docs=None,
                 bindings=None,
+                key="test-key",
             )
 
             user_action_message = Message(
@@ -63,6 +64,7 @@ class EventBroadcaster(BaseApplication):
                 payload={"type": "object"},
                 headers=None,
                 bindings=None,
+                key="test-key",
                 correlation_id=None,
                 content_type=None,
                 deprecated=None,
@@ -79,6 +81,7 @@ class EventBroadcaster(BaseApplication):
                 external_docs=None,
                 traits=[],
                 bindings=None,
+                key="test-key",
                 reply=None,
                 security=None,
             )
@@ -124,6 +127,7 @@ class BaseConsumerService(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         user_action_message = Message(
@@ -137,6 +141,7 @@ class BaseConsumerService(BaseApplication):
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -153,6 +158,7 @@ class BaseConsumerService(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )

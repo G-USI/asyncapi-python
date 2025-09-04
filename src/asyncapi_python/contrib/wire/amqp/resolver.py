@@ -69,8 +69,9 @@ def resolve_amqp_config(
             )
 
         # AMQP exchange binding pattern - detect by presence of exchange field
-        case (False, binding, _, _) if (
-            binding and (hasattr(binding, "exchange") or (isinstance(binding, dict) and "exchange" in binding))
+        case (False, binding, _, _) if binding and (
+            hasattr(binding, "exchange")
+            or (isinstance(binding, dict) and "exchange" in binding)
         ):
             return resolve_exchange_binding(
                 binding, param_values, channel, operation_name, channel.key
@@ -191,7 +192,11 @@ def resolve_routing_key_binding(
 
 
 def resolve_exchange_binding(
-    binding: Any, param_values: dict[str, str], channel: Channel, operation_name: str, channel_key: str = ""
+    binding: Any,
+    param_values: dict[str, str],
+    channel: Channel,
+    operation_name: str,
+    channel_key: str = "",
 ) -> AmqpConfig:
     """Resolve AMQP exchange binding configuration for advanced pub/sub"""
 
@@ -208,7 +213,7 @@ def resolve_exchange_binding(
             exchange_name = exchange_config.get("name")
         else:
             exchange_name = getattr(exchange_config, "name", None)
-    
+
     match (
         exchange_name,
         channel.address,

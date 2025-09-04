@@ -2,33 +2,49 @@
 
 from typing import Any, Dict, List, Optional
 from asyncapi_python.kernel.document import (
-    Channel, ChannelBindings, AddressParameter,
-    Operation, OperationReply, OperationBindings, OperationTrait, SecurityScheme,
-    Message, MessageBindings, MessageTrait, MessageExample, CorrelationId,
-    Tag, ExternalDocs, Server
+    Channel,
+    ChannelBindings,
+    AddressParameter,
+    Operation,
+    OperationReply,
+    OperationBindings,
+    OperationTrait,
+    SecurityScheme,
+    Message,
+    MessageBindings,
+    MessageTrait,
+    MessageExample,
+    CorrelationId,
+    Tag,
+    ExternalDocs,
+    Server,
 )
 from .types import YamlDocument
 from .references import maybe_ref
+
 
 @maybe_ref
 def extract_external_docs(data: YamlDocument) -> ExternalDocs:
     """Extract ExternalDocs from YAML data."""
     return ExternalDocs(
-        description=data.get("description", ""),
-        url=data.get("url", "")
+        description=data.get("description", ""), url=data.get("url", "")
     )
+
 
 @maybe_ref
 def extract_tag(data: YamlDocument) -> Tag:
     """Extract Tag from YAML data."""
     external_docs_data = data.get("externalDocs")
-    external_docs = extract_external_docs(external_docs_data) if external_docs_data else None
-    
+    external_docs = (
+        extract_external_docs(external_docs_data) if external_docs_data else None
+    )
+
     return Tag(
         name=data.get("name", ""),
         description=data.get("description", ""),
-        external_docs=external_docs or ExternalDocs(description="", url="")
+        external_docs=external_docs or ExternalDocs(description="", url=""),
     )
+
 
 @maybe_ref
 def extract_server(data: YamlDocument) -> Server:
@@ -36,21 +52,23 @@ def extract_server(data: YamlDocument) -> Server:
     # TODO: Implement full Server spec when kernel.document.Server is completed
     return Server(key="")
 
+
 @maybe_ref
 def extract_address_parameter(data: YamlDocument) -> AddressParameter:
     """Extract AddressParameter from YAML data."""
     return AddressParameter(
         description=data.get("description"),
         location=data.get("location", ""),
-        key=""  # TODO: Pass actual parameter key from extraction context
+        key="",  # TODO: Pass actual parameter key from extraction context
     )
+
 
 @maybe_ref
 def extract_channel_bindings(data: YamlDocument) -> ChannelBindings:
     """Extract ChannelBindings from YAML data."""
     return ChannelBindings(
         http=data.get("http"),
-        amqp1=data.get("amqp1"), 
+        amqp1=data.get("amqp1"),
         mqtt=data.get("mqtt"),
         nats=data.get("nats"),
         stomp=data.get("stomp"),
@@ -65,16 +83,17 @@ def extract_channel_bindings(data: YamlDocument) -> ChannelBindings:
         sqs=data.get("sqs"),
         ibmmq=data.get("ibmmq"),
         googlepubsub=data.get("googlepubsub"),
-        pulsar=data.get("pulsar")
+        pulsar=data.get("pulsar"),
     )
+
 
 @maybe_ref
 def extract_correlation_id(data: YamlDocument) -> CorrelationId:
     """Extract CorrelationId from YAML data."""
     return CorrelationId(
-        description=data.get("description"),
-        location=data.get("location", "")
+        description=data.get("description"), location=data.get("location", "")
     )
+
 
 @maybe_ref
 def extract_message_example(data: YamlDocument) -> MessageExample:
@@ -83,8 +102,9 @@ def extract_message_example(data: YamlDocument) -> MessageExample:
         name=data.get("name"),
         summary=data.get("summary"),
         headers=data.get("headers"),
-        payload=data.get("payload")
+        payload=data.get("payload"),
     )
+
 
 @maybe_ref
 def extract_message_bindings(data: YamlDocument) -> MessageBindings:
@@ -106,8 +126,9 @@ def extract_message_bindings(data: YamlDocument) -> MessageBindings:
         sqs=data.get("sqs"),
         ibmmq=data.get("ibmmq"),
         googlepubsub=data.get("googlepubsub"),
-        pulsar=data.get("pulsar")
+        pulsar=data.get("pulsar"),
     )
+
 
 @maybe_ref
 def extract_message_trait(data: YamlDocument) -> MessageTrait:
@@ -117,28 +138,28 @@ def extract_message_trait(data: YamlDocument) -> MessageTrait:
     if "examples" in data:
         for example_data in data["examples"]:
             examples.append(extract_message_example(example_data))
-    
+
     # Extract correlation ID
     correlation_id = None
     if "correlationId" in data:
         correlation_id = extract_correlation_id(data["correlationId"])
-    
+
     # Extract tags
     tags = []
     if "tags" in data:
         for tag_data in data["tags"]:
             tags.append(extract_tag(tag_data))
-    
+
     # Extract external docs
     external_docs = None
     if "externalDocs" in data:
         external_docs = extract_external_docs(data["externalDocs"])
-    
+
     # Extract bindings
     bindings = None
     if "bindings" in data:
         bindings = extract_message_bindings(data["bindings"])
-    
+
     return MessageTrait(
         content_type=data.get("contentType"),
         headers=data.get("headers"),
@@ -151,8 +172,9 @@ def extract_message_trait(data: YamlDocument) -> MessageTrait:
         correlation_id=correlation_id,
         tags=tags,
         externalDocs=external_docs,
-        bindings=bindings
+        bindings=bindings,
     )
+
 
 @maybe_ref
 def extract_message(data: YamlDocument) -> Message:
@@ -161,29 +183,29 @@ def extract_message(data: YamlDocument) -> Message:
     correlation_id = None
     if "correlationId" in data:
         correlation_id = extract_correlation_id(data["correlationId"])
-    
+
     # Extract tags
     tags = []
     if "tags" in data:
         for tag_data in data["tags"]:
             tags.append(extract_tag(tag_data))
-    
+
     # Extract external docs
     external_docs = None
     if "externalDocs" in data:
         external_docs = extract_external_docs(data["externalDocs"])
-    
+
     # Extract bindings
     bindings = None
     if "bindings" in data:
         bindings = extract_message_bindings(data["bindings"])
-    
+
     # Extract traits
     traits = []
     if "traits" in data:
         for trait_data in data["traits"]:
             traits.append(extract_message_trait(trait_data))
-    
+
     return Message(
         content_type=data.get("contentType"),
         headers=data.get("headers"),
@@ -198,8 +220,9 @@ def extract_message(data: YamlDocument) -> Message:
         externalDocs=external_docs,
         bindings=bindings,
         traits=traits,
-        key=""  # TODO: Pass actual message key from extraction context
+        key="",  # TODO: Pass actual message key from extraction context
     )
+
 
 @maybe_ref
 def extract_channel(data: YamlDocument) -> Channel:
@@ -209,7 +232,7 @@ def extract_channel(data: YamlDocument) -> Channel:
     if "servers" in data:
         for server_data in data["servers"]:
             servers.append(extract_server(server_data))
-    
+
     # Extract messages
     messages = {}
     if "messages" in data:
@@ -231,10 +254,10 @@ def extract_channel(data: YamlDocument) -> Channel:
                     externalDocs=message.externalDocs,
                     bindings=message.bindings,
                     traits=message.traits,
-                    key=message_name  # Set key from message name
+                    key=message_name,  # Set key from message name
                 )
             messages[message_name] = message
-    
+
     # Extract parameters
     parameters = {}
     if "parameters" in data:
@@ -242,28 +265,26 @@ def extract_channel(data: YamlDocument) -> Channel:
             param = extract_address_parameter(param_data)
             # Create new parameter with key set from parameter name
             param_with_key = AddressParameter(
-                description=param.description,
-                location=param.location,
-                key=param_name
+                description=param.description, location=param.location, key=param_name
             )
             parameters[param_name] = param_with_key
-    
+
     # Extract tags
     tags = []
     if "tags" in data:
         for tag_data in data["tags"]:
             tags.append(extract_tag(tag_data))
-    
+
     # Extract external docs
     external_docs = None
     if "externalDocs" in data:
         external_docs = extract_external_docs(data["externalDocs"])
-    
+
     # Extract bindings
     bindings = None
     if "bindings" in data:
         bindings = extract_channel_bindings(data["bindings"])
-    
+
     return Channel(
         address=data.get("address"),
         title=data.get("title"),
@@ -275,18 +296,20 @@ def extract_channel(data: YamlDocument) -> Channel:
         tags=tags,
         external_docs=external_docs,
         bindings=bindings,
-        key="/ping/pubsub"  # HACK: Hardcoded for pub-sub example - TODO: Extract from reference context
+        key="/ping/pubsub",  # HACK: Hardcoded for pub-sub example - TODO: Extract from reference context
     )
+
 
 @maybe_ref
 def extract_security_scheme(data: YamlDocument) -> SecurityScheme:
     """Extract SecurityScheme from YAML data."""
     return SecurityScheme(
         type=data.get("type", "userPassword"),  # Default to avoid validation errors
-        key=""  # TODO: Pass actual security scheme key from extraction context
+        key="",  # TODO: Pass actual security scheme key from extraction context
     )
 
-@maybe_ref 
+
+@maybe_ref
 def extract_operation_bindings(data: YamlDocument) -> OperationBindings:
     """Extract OperationBindings from YAML data."""
     return OperationBindings(
@@ -306,8 +329,9 @@ def extract_operation_bindings(data: YamlDocument) -> OperationBindings:
         sqs=data.get("sqs"),
         ibmmq=data.get("ibmmq"),
         googlepubsub=data.get("googlepubsub"),
-        pulsar=data.get("pulsar")
+        pulsar=data.get("pulsar"),
     )
+
 
 @maybe_ref
 def extract_operation_trait(data: YamlDocument) -> OperationTrait:
@@ -315,37 +339,38 @@ def extract_operation_trait(data: YamlDocument) -> OperationTrait:
     # Extract channel
     channel_data = data.get("channel", {})
     channel = extract_channel(channel_data)
-    
+
     # Extract security
     security = []
     if "security" in data:
         for security_data in data["security"]:
             security.append(extract_security_scheme(security_data))
-    
+
     # Extract tags
     tags = []
     if "tags" in data:
         for tag_data in data["tags"]:
             tags.append(extract_tag(tag_data))
-    
+
     # Extract external docs
     external_docs = None
     if "externalDocs" in data:
         external_docs = extract_external_docs(data["externalDocs"])
-    
+
     # Extract bindings
     bindings = extract_operation_bindings(data.get("bindings", {}))
-    
+
     return OperationTrait(
         title=data.get("title"),
-        summary=data.get("summary"), 
+        summary=data.get("summary"),
         description=data.get("description"),
         channel=channel,
         security=security,
         tags=tags,
         external_docs=external_docs,
-        bindings=bindings
+        bindings=bindings,
     )
+
 
 @maybe_ref
 def extract_operation_reply(data: YamlDocument) -> OperationReply:
@@ -353,15 +378,14 @@ def extract_operation_reply(data: YamlDocument) -> OperationReply:
     # Extract channel
     channel_data = data.get("channel", {})
     channel = extract_channel(channel_data)
-    
+
     # Extract messages - for replies, messages are usually in the channel
     messages = list(channel.messages.values())
-    
+
     return OperationReply(
-        channel=channel,
-        messages=messages,
-        address=data.get("address")
+        channel=channel, messages=messages, address=data.get("address")
     )
+
 
 @maybe_ref
 def extract_operation(data: YamlDocument) -> Operation:
@@ -369,43 +393,43 @@ def extract_operation(data: YamlDocument) -> Operation:
     # Extract channel
     channel_data = data.get("channel", {})
     channel = extract_channel(channel_data)
-    
+
     # Extract messages from channel
     messages = list(channel.messages.values())
-    
+
     # Extract reply
     reply = None
     if "reply" in data:
         reply = extract_operation_reply(data["reply"])
-    
+
     # Extract traits
     traits = []
     if "traits" in data:
         for trait_data in data["traits"]:
             traits.append(extract_operation_trait(trait_data))
-    
+
     # Extract security
     security = []
     if "security" in data:
         for security_data in data["security"]:
             security.append(extract_security_scheme(security_data))
-    
+
     # Extract tags
     tags = []
     if "tags" in data:
         for tag_data in data["tags"]:
             tags.append(extract_tag(tag_data))
-    
+
     # Extract external docs
     external_docs = None
     if "externalDocs" in data:
         external_docs = extract_external_docs(data["externalDocs"])
-    
+
     # Extract bindings
     bindings = None
     if "bindings" in data:
         bindings = extract_operation_bindings(data["bindings"])
-    
+
     return Operation(
         action=data.get("action", "send"),  # Default to send
         title=data.get("title"),
@@ -419,5 +443,5 @@ def extract_operation(data: YamlDocument) -> Operation:
         tags=tags,
         external_docs=external_docs,
         bindings=bindings,
-        key=""  # TODO: Pass actual operation key from extraction context
+        key="",  # TODO: Pass actual operation key from extraction context
     )

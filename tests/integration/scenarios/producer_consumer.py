@@ -32,6 +32,7 @@ class UserManagementApp(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         user_created_message = Message(
@@ -45,6 +46,7 @@ class UserManagementApp(BaseApplication):
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -61,6 +63,7 @@ class UserManagementApp(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )
@@ -79,6 +82,7 @@ class UserManagementApp(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         user_update_message = Message(
@@ -92,6 +96,7 @@ class UserManagementApp(BaseApplication):
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -108,6 +113,7 @@ class UserManagementApp(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )
@@ -137,6 +143,7 @@ class ConsumerApp(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         user_created_message = Message(
@@ -150,6 +157,7 @@ class ConsumerApp(BaseApplication):
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -166,6 +174,7 @@ class ConsumerApp(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )
@@ -271,6 +280,7 @@ async def producer_consumer_roundtrip(
                     tags=[],
                     external_docs=None,
                     bindings=None,
+                    key="test-key",
                 )
 
                 user_update_message = Message(
@@ -284,6 +294,7 @@ async def producer_consumer_roundtrip(
                     payload={"type": "object"},
                     headers=None,
                     bindings=None,
+                    key="test-key",
                     correlation_id=None,
                     content_type=None,
                     deprecated=None,
@@ -300,6 +311,7 @@ async def producer_consumer_roundtrip(
                     external_docs=None,
                     traits=[],
                     bindings=None,
+                    key="test-key",
                     reply=None,
                     security=None,
                 )

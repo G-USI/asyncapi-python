@@ -101,11 +101,11 @@ class JsonCodecFactory(CodecFactory[BaseModel, bytes]):
         # "user_created" -> "UserCreated"
         # "user.created" -> "UserCreated"
         # "user-created" -> "UserCreated"
-        
+
         # If it's already in PascalCase (starts with uppercase and has no separators)
-        if message_name[0].isupper() and not any(c in message_name for c in '._-'):
+        if message_name[0].isupper() and not any(c in message_name for c in "._-"):
             return message_name
-            
+
         # Convert to PascalCase
         parts = message_name.replace("-", "_").replace(".", "_").split("_")
         return "".join(part.capitalize() for part in parts if part)

@@ -35,6 +35,7 @@ class UserManagementApp(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         user_created_message = Message(
@@ -48,6 +49,7 @@ class UserManagementApp(BaseApplication):
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -64,6 +66,7 @@ class UserManagementApp(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )
@@ -82,6 +85,7 @@ class UserManagementApp(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         user_update_message = Message(
@@ -95,6 +99,7 @@ class UserManagementApp(BaseApplication):
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -111,6 +116,7 @@ class UserManagementApp(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )
@@ -140,6 +146,7 @@ class OrderProcessingApp(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         order_event_message = Message(
@@ -153,6 +160,7 @@ class OrderProcessingApp(BaseApplication):
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -169,6 +177,7 @@ class OrderProcessingApp(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )
@@ -187,6 +196,7 @@ class OrderProcessingApp(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         # Reply channel with null address (global reply queue)
@@ -201,6 +211,7 @@ class OrderProcessingApp(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         rpc_reply_operation = Operation(
@@ -214,6 +225,7 @@ class OrderProcessingApp(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )
@@ -241,6 +253,7 @@ async def malformed_message_handling(
         payload={"type": "object"},
         headers=None,
         bindings=None,
+        key="test-key",
         correlation_id=None,
         content_type=None,
         deprecated=None,
@@ -291,6 +304,7 @@ async def malformed_message_handling(
         payload={"type": "object"},
         headers=None,
         bindings=None,
+        key="test-key",
         correlation_id=None,
         content_type=None,
         deprecated=None,
@@ -523,6 +537,7 @@ async def malformed_message_handling(
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,

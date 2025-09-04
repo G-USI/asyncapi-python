@@ -46,6 +46,7 @@ class BaseLoggingService(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         log_message = Message(
@@ -59,6 +60,7 @@ class BaseLoggingService(BaseApplication):
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -75,6 +77,7 @@ class BaseLoggingService(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )
@@ -154,6 +157,7 @@ class LogAggregatorService(BaseApplication):
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         log_message = Message(
@@ -167,6 +171,7 @@ class LogAggregatorService(BaseApplication):
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -183,6 +188,7 @@ class LogAggregatorService(BaseApplication):
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             reply=None,
             security=None,
         )

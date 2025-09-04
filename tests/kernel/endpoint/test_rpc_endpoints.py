@@ -91,6 +91,7 @@ def mock_operation():
         tags=[],
         external_docs=None,
         bindings=None,
+        key="test-key",
     )
 
     reply_channel = Channel(
@@ -104,6 +105,7 @@ def mock_operation():
         tags=[],
         external_docs=None,
         bindings=None,
+        key="test-key",
     )
 
     request_message = Message(
@@ -117,6 +119,7 @@ def mock_operation():
         payload={"type": "object"},
         headers=None,
         bindings=None,
+        key="test-key",
         correlation_id=None,
         content_type=None,
         deprecated=None,
@@ -133,6 +136,7 @@ def mock_operation():
         payload={"type": "object"},
         headers=None,
         bindings=None,
+        key="test-key",
         correlation_id=None,
         content_type=None,
         deprecated=None,
@@ -156,6 +160,7 @@ def mock_operation():
         external_docs=None,
         traits=[],
         bindings=None,
+        key="test-key",
         security=None,
     )
 
@@ -496,6 +501,7 @@ class TestRpcEndpoints:
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             security=None,
         )
 
@@ -556,6 +562,7 @@ class TestRpcEndpoints:
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             security=None,
         )
 
@@ -623,6 +630,7 @@ class TestRpcEndpoints:
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             security=None,
         )
 
@@ -676,6 +684,7 @@ class TestRpcEndpoints:
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         # Create message for events
@@ -690,6 +699,7 @@ class TestRpcEndpoints:
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -708,6 +718,7 @@ class TestRpcEndpoints:
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             security=None,
         )
 
@@ -724,6 +735,7 @@ class TestRpcEndpoints:
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             security=None,
         )
 
@@ -810,6 +822,7 @@ class TestRpcEndpoints:
             tags=[],
             external_docs=None,
             bindings=None,
+            key="test-key",
         )
 
         request_message = Message(
@@ -823,6 +836,7 @@ class TestRpcEndpoints:
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -839,6 +853,7 @@ class TestRpcEndpoints:
             payload={"type": "object"},
             headers=None,
             bindings=None,
+            key="test-key",
             correlation_id=None,
             content_type=None,
             deprecated=None,
@@ -862,6 +877,7 @@ class TestRpcEndpoints:
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             security=None,
         )
 
@@ -877,6 +893,7 @@ class TestRpcEndpoints:
             external_docs=None,
             traits=[],
             bindings=None,
+            key="test-key",
             security=None,
         )
 

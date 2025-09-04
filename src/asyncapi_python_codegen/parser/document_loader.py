@@ -8,15 +8,16 @@ from .references import load_yaml_file
 from .extractors import extract_operation
 from .context import parsing_context
 
+
 def extract_all_operations(yaml_path: Path) -> Dict[str, Operation]:
     """Extract all operations from AsyncAPI document.
-    
+
     Args:
         yaml_path: Path to AsyncAPI YAML file
-        
+
     Returns:
         Dictionary mapping operation IDs to Operation dataclasses
-        
+
     Raises:
         RuntimeError: If file cannot be loaded or parsed
         ValueError: If document structure is invalid
@@ -24,21 +25,23 @@ def extract_all_operations(yaml_path: Path) -> Dict[str, Operation]:
     # Load the main document
     with parsing_context(yaml_path):
         document = load_yaml_file(yaml_path)
-        
+
         # Validate basic document structure
         if not isinstance(document, dict):
-            raise ValueError(f"Expected YAML document to be dictionary, got {type(document)}")
-        
+            raise ValueError(
+                f"Expected YAML document to be dictionary, got {type(document)}"
+            )
+
         if "asyncapi" not in document:
             raise ValueError("Missing 'asyncapi' version field")
-        
+
         if "operations" not in document:
             raise ValueError("Missing 'operations' section")
-        
+
         operations_data = document["operations"]
         if not isinstance(operations_data, dict):
             raise ValueError("'operations' must be a dictionary")
-        
+
         # Extract each operation
         operations = {}
         for operation_id, operation_data in operations_data.items():
@@ -59,30 +62,33 @@ def extract_all_operations(yaml_path: Path) -> Dict[str, Operation]:
                     tags=operation.tags,
                     external_docs=operation.external_docs,
                     bindings=operation.bindings,
-                    key=operation_id
+                    key=operation_id,
                 )
                 operations[operation_id] = operation_with_key
             except Exception as e:
-                raise RuntimeError(f"Failed to extract operation '{operation_id}': {e}") from e
-        
+                raise RuntimeError(
+                    f"Failed to extract operation '{operation_id}': {e}"
+                ) from e
+
         return operations
+
 
 def load_document_info(yaml_path: Path) -> Dict[str, str]:
     """Load basic document info (asyncapi version, title, etc.).
-    
+
     Args:
         yaml_path: Path to AsyncAPI YAML file
-        
+
     Returns:
         Dictionary with document metadata
     """
     with parsing_context(yaml_path):
         document = load_yaml_file(yaml_path)
-        
+
         info = document.get("info", {})
         return {
             "asyncapi_version": document.get("asyncapi", "unknown"),
             "title": info.get("title", "Untitled"),
             "version": info.get("version", "0.0.0"),
-            "description": info.get("description", "")
+            "description": info.get("description", ""),
         }
