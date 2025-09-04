@@ -2,10 +2,10 @@ import asyncio
 from client import Application as ClientApp
 from server import Application as ServerApp
 from client.messages.json import Ping, Pong
-from asyncapi_python.contrib.wire.in_memory import InMemoryWireFactory
+from asyncapi_python.contrib.wire.in_memory import InMemoryWire
 
 # Use the same InMemory instance for both client and server
-wire_factory = InMemoryWireFactory()
+wire_factory = InMemoryWire()
 
 client = ClientApp(wire_factory)
 server = ServerApp(wire_factory)
