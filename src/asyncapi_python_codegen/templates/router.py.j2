@@ -53,10 +53,8 @@ class {{ router.class_name }}(
 {%- endif %}
 
     def __init__(self, wire_factory: AbstractWireFactory[Any, Any], codec_factory: CodecFactory[Any, Any]):
-        # Real Operation object from AsyncAPI spec (contains channel)
         operation = {{ router.operation_repr }}
         
-        # Initialize parent endpoint with real operation data
         super().__init__(
             operation=operation,
             wire_factory=wire_factory,
