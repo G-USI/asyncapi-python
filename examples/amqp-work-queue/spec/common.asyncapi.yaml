@@ -8,6 +8,13 @@ channels:
     address: task.queue
     title: Task Work Queue
     description: Queue for distributing tasks among workers
+    bindings:
+      amqp:
+        queue:
+          name: task-queue
+          durable: true
+          exclusive: false
+          autoDelete: false
     messages:
       Task:
         name: Task
@@ -28,10 +35,3 @@ channels:
           required:
             - id
             - payload
-        bindings:
-          amqp:
-            queue:
-              name: task-queue
-              durable: true
-              exclusive: false
-              autoDelete: false
