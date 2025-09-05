@@ -61,6 +61,7 @@ class RpcServer(
                 tags=[],
                 external_docs=None,
                 bindings=None,
+                key="reply",
             )
 
         self._reply_producer = await self._wire.create_producer(

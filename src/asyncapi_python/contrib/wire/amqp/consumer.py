@@ -3,13 +3,19 @@
 import asyncio
 from typing import Any, AsyncGenerator, cast
 
-from aio_pika import ExchangeType
-from aio_pika.abc import (
-    AbstractRobustConnection,
-    AbstractRobustChannel,
-    AbstractRobustQueue,
-    AbstractRobustExchange,
-)
+try:
+    from aio_pika import ExchangeType  # type: ignore[import-not-found]
+    from aio_pika.abc import (  # type: ignore[import-not-found]
+        AbstractRobustConnection,
+        AbstractRobustChannel,
+        AbstractRobustQueue,
+        AbstractRobustExchange,
+    )
+except ImportError as e:
+    raise ImportError(
+        "aio-pika is required for AMQP support. "
+        "Install with: pip install asyncapi-python[amqp]"
+    ) from e
 
 from asyncapi_python.kernel.wire.typing import Consumer
 

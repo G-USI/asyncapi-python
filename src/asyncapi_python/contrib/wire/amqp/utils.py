@@ -1,5 +1,7 @@
 """Parameter validation and substitution utilities"""
 
+# TODO: This thing should be general wire utils, not tied to specific wire
+
 import re
 from asyncapi_python.kernel.document.channel import Channel
 

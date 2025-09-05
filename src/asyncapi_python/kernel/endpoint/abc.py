@@ -88,13 +88,13 @@ class AbstractEndpoint(ABC):
 class Send(ABC, Generic[T_Input, T_Output]):
     """An interface that sending endpoint implements"""
 
-    class Inputs(TypedDict, total=False):
+    class RouterInputs(TypedDict, total=False):
         """Base inputs for send endpoints. Router subclasses can extend this with specific parameters."""
         pass  # Empty for now, extensible for future fields
 
     @abstractmethod
     async def __call__(
-        self, payload: T_Input, /, **kwargs: Unpack[Inputs]
+        self, payload: T_Input, /, **kwargs: Unpack[RouterInputs]
     ) -> T_Output: ...
 
 

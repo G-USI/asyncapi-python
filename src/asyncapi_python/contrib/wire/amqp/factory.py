@@ -1,9 +1,15 @@
 """AMQP wire factory implementation"""
 
+import secrets
 from typing_extensions import Unpack
 
-from aio_pika import connect_robust
-from aio_pika.abc import AbstractRobustConnection
+try:
+    from aio_pika import connect_robust  # type: ignore[import-not-found]
+    from aio_pika.abc import AbstractRobustConnection  # type: ignore[import-not-found]
+except ImportError as e:
+    raise ImportError(
+        "aio-pika is required for AMQP support. Install with: pip install asyncapi-python[amqp]"
+    ) from e
 
 from asyncapi_python.kernel.wire import AbstractWireFactory, EndpointParams
 from asyncapi_python.kernel.wire.typing import Producer, Consumer
@@ -20,11 +26,18 @@ class AmqpWire(AbstractWireFactory[AmqpWireMessage, AmqpIncomingMessage]):
     def __init__(
         self,
         connection_url: str,
-        app_id: str | None = None,
+        service_name: str = "app",
     ):
         self._connection_url = connection_url
-        self._app_id = app_id
+        # Generate app_id with service name plus 8 random hex characters
+        random_hex = secrets.token_hex(4)  # 4 bytes = 8 hex chars
+        self._app_id = f"{service_name}-{random_hex}"
         self._connection: AbstractRobustConnection | None = None
+
+    @property
+    def app_id(self) -> str:
+        """Get the generated app_id for this wire instance"""
+        return self._app_id
 
     async def _get_connection(self) -> AbstractRobustConnection:
         """Get or create connection"""

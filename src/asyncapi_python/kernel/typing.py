@@ -4,7 +4,7 @@ This module defines all TypeVars used across the kernel with clear relationships
 between application data, encoded data, and wire messages.
 """
 
-from typing import Any, Generic, Protocol, TypeVar, TypedDict
+from typing import Any, Generic, Protocol, TypeVar
 from typing_extensions import TypeAlias
 
 
@@ -73,8 +73,8 @@ T_Recv = TypeVar("T_Recv", covariant=True, bound=IncomingMessage)
 """Incoming wire messages (bound to IncomingMessage protocol)"""
 
 # Channel parameter types
-T_ChannelParams = TypeVar("T_ChannelParams", bound=TypedDict)
-"""Channel parameters for parameterized channels (bound to TypedDict)"""
+T_ChannelParams = TypeVar("T_ChannelParams", bound=dict[str, Any])
+"""Channel parameters for parameterized channels (bound to dict)"""
 
 
 # Type relationships (aliases for clarity)

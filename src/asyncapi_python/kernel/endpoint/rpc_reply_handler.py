@@ -1,7 +1,7 @@
 """Global RPC reply handler for managing shared reply queue across all RPC clients."""
 
 import asyncio
-from cuid2 import cuid_wrapper
+import secrets
 
 from ..typing import IncomingMessage
 from asyncapi_python.kernel.wire import Consumer, AbstractWireFactory
@@ -39,7 +39,7 @@ class GlobalRpcReplyHandler:
             )
 
             # Generate unique reply queue name for all clients
-            self._reply_queue_name = f"reply-{cuid_wrapper()}"
+            self._reply_queue_name = f"reply-{secrets.token_hex(8)}"
 
             # Start the consumer
             await self._reply_consumer.start()
@@ -64,6 +64,7 @@ class GlobalRpcReplyHandler:
                 tags=[],
                 external_docs=None,
                 bindings=None,
+                key="global-reply",
             )
 
     async def _consume_all_replies(self) -> None:

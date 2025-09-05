@@ -2,12 +2,17 @@
 
 from typing import Any, cast
 
-from aio_pika import Message as AmqpMessage, ExchangeType
-from aio_pika.abc import (
-    AbstractRobustConnection,
-    AbstractRobustChannel,
-    AbstractRobustExchange,
-)
+try:
+    from aio_pika import Message as AmqpMessage, ExchangeType  # type: ignore[import-not-found]
+    from aio_pika.abc import (  # type: ignore[import-not-found]
+        AbstractRobustConnection,
+        AbstractRobustChannel,
+        AbstractRobustExchange,
+    )
+except ImportError as e:
+    raise ImportError(
+        "aio-pika is required for AMQP support. Install with: pip install asyncapi-python[amqp]"
+    ) from e
 
 from asyncapi_python.kernel.wire.typing import Producer
 

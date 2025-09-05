@@ -3,7 +3,12 @@
 from dataclasses import dataclass, field
 from typing import Any
 
-from aio_pika.abc import AbstractIncomingMessage
+try:
+    from aio_pika.abc import AbstractIncomingMessage  # type: ignore[import-not-found]
+except ImportError as e:
+    raise ImportError(
+        "aio-pika is required for AMQP support. Install with: pip install asyncapi-python[amqp]"
+    ) from e
 
 
 @dataclass

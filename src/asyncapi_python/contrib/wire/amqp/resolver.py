@@ -1,17 +1,16 @@
 """Binding resolution with comprehensive pattern matching"""
 
-from typing import Any
 
 from asyncapi_python.kernel.wire import EndpointParams
 from asyncapi_python.kernel.document.channel import Channel
-from asyncapi_python.kernel.document.bindings import create_amqp_binding_from_dict
+from asyncapi_python.kernel.document.bindings import AmqpChannelBinding
 
 from .config import AmqpConfig, AmqpBindingType
 from .utils import validate_parameters_strict, substitute_parameters
 
 
 def resolve_amqp_config(
-    params: EndpointParams, operation_name: str, app_id: str | None = None
+    params: EndpointParams, operation_name: str, app_id: str
 ) -> AmqpConfig:
     """
     Resolve AMQP configuration using comprehensive pattern matching for precedence rules.
@@ -43,45 +42,57 @@ def resolve_amqp_config(
         operation_name,
     ):
 
-        # Reply channel pattern (highest precedence)
-        case (True, _, _, _):
+        # Reply channel pattern - anonymous queue (no address, no binding)
+        case (True, None, None, _):
+            # Anonymous reply queue: exclusive and temporary (deleted on connection loss)
             return AmqpConfig(
-                queue_name=f"reply-queue-{app_id}" if app_id else "reply-queue-default",
-                exchange_name="",  # Always default exchange for reply
-                routing_key=(
-                    f"reply-queue-{app_id}" if app_id else "reply-queue-default"
-                ),
+                queue_name=f"reply-{app_id}",  # App-specific reply queue
+                exchange_name="",  # Default exchange for reply
+                routing_key=f"reply-{app_id}",  # Direct routing to the reply queue
+                binding_type=AmqpBindingType.REPLY,
+                queue_properties={"durable": False, "exclusive": True, "auto_delete": True},
+            )
+
+        # Reply channel with explicit address - shared channel with filtering
+        case (True, _, address, _) if address:
+            resolved_address = substitute_parameters(address, param_values)
+            return AmqpConfig(
+                queue_name=f"reply-{app_id}",  # App-specific reply queue
+                exchange_name=resolved_address,  # Shared exchange for replies
+                exchange_type="topic",  # Enable pattern matching for filtering
+                routing_key=app_id,  # Filter messages by app_id
                 binding_type=AmqpBindingType.REPLY,
                 queue_properties={"durable": True, "exclusive": False},
             )
 
-        # AMQP queue binding pattern (object or dict)
-        case (False, binding, _, _) if binding and (
-            (hasattr(binding, "type") and binding.type == "queue") or
-            (isinstance(binding, dict) and binding.get("type") == "queue")
-        ):
-            # Convert dict to proper binding object if needed
-            if isinstance(binding, dict):
-                binding = create_amqp_binding_from_dict(binding)
+        # Reply channel with binding - defer to binding resolution
+        case (True, binding, _, _) if binding and binding.type == "queue":
+            config = resolve_queue_binding(binding, param_values, channel, operation_name)
+            # Override queue name with reply- prefix for reply queues
+            config.queue_name = f"reply-{app_id}-{config.queue_name}"
+            config.routing_key = config.queue_name
+            config.binding_type = AmqpBindingType.REPLY
+            return config
+
+        case (True, binding, _, _) if binding and binding.type == "routingKey":
+            config = resolve_routing_key_binding(binding, param_values, channel, operation_name)
+            # For reply with routing key binding, create a prefixed queue
+            config.queue_name = f"reply-{app_id}"
+            config.binding_type = AmqpBindingType.REPLY
+            return config
+
+        # AMQP queue binding pattern (dataclass only)
+        case (False, binding, _, _) if binding and binding.type == "queue":
             return resolve_queue_binding(binding, param_values, channel, operation_name)
 
-        # AMQP routing key binding pattern (object or dict)
-        case (False, binding, _, _) if binding and (
-            (hasattr(binding, "type") and binding.type == "routingKey") or
-            (isinstance(binding, dict) and binding.get("type") == "routingKey")
-        ):
-            # Convert dict to proper binding object if needed
-            if isinstance(binding, dict):
-                binding = create_amqp_binding_from_dict(binding)
+        # AMQP routing key binding pattern (dataclass only)
+        case (False, binding, _, _) if binding and binding.type == "routingKey":
             return resolve_routing_key_binding(
                 binding, param_values, channel, operation_name
             )
 
-        # AMQP exchange binding pattern - detect by presence of exchange field
-        case (False, binding, _, _) if binding and (
-            hasattr(binding, "exchange")
-            or (isinstance(binding, dict) and "exchange" in binding)
-        ):
+        # AMQP exchange binding pattern (dataclass only)
+        case (False, binding, _, _) if binding and binding.exchange:
             return resolve_exchange_binding(
                 binding, param_values, channel, operation_name, channel.key
             )
@@ -116,7 +127,7 @@ def resolve_amqp_config(
 
 
 def resolve_queue_binding(
-    binding: Any, param_values: dict[str, str], channel: Channel, operation_name: str
+    binding: AmqpChannelBinding, param_values: dict[str, str], channel: Channel, operation_name: str
 ) -> AmqpConfig:
     """Resolve AMQP queue binding configuration"""
 
@@ -154,7 +165,7 @@ def resolve_queue_binding(
 
 
 def resolve_routing_key_binding(
-    binding: Any, param_values: dict[str, str], channel: Channel, operation_name: str
+    binding: AmqpChannelBinding, param_values: dict[str, str], channel: Channel, operation_name: str
 ) -> AmqpConfig:
     """Resolve AMQP routing key binding configuration for pub/sub patterns"""
 
@@ -201,7 +212,7 @@ def resolve_routing_key_binding(
 
 
 def resolve_exchange_binding(
-    binding: Any,
+    binding: AmqpChannelBinding,
     param_values: dict[str, str],
     channel: Channel,
     operation_name: str,
@@ -209,19 +220,9 @@ def resolve_exchange_binding(
 ) -> AmqpConfig:
     """Resolve AMQP exchange binding configuration for advanced pub/sub"""
 
-    # Determine exchange name with proper fallback chain
-    # Handle both object attributes and dictionary keys
-    if isinstance(binding, dict):
-        exchange_config = binding.get("exchange")
-    else:
-        exchange_config = getattr(binding, "exchange", None)
-    # Extract exchange name from config (handle both dict and object)
-    exchange_name = None
-    if exchange_config:
-        if isinstance(exchange_config, dict):
-            exchange_name = exchange_config.get("name")
-        else:
-            exchange_name = getattr(exchange_config, "name", None)
+    # Get exchange config from dataclass binding
+    exchange_config = getattr(binding, "exchange", None)
+    exchange_name = getattr(exchange_config, "name", None) if exchange_config else None
 
     match (
         exchange_name,
@@ -241,19 +242,14 @@ def resolve_exchange_binding(
         case _:
             raise ValueError("Cannot determine exchange name for exchange binding")
 
-    # Determine exchange type
+    # Determine exchange type from dataclass
     exchange_type = "fanout"  # Default for exchange bindings
-    if exchange_config:
-        if isinstance(exchange_config, dict):
-            exchange_type = exchange_config.get("type", "fanout")
-        elif hasattr(exchange_config, "type"):
-            exchange_type = exchange_config.type
+    if exchange_config and hasattr(exchange_config, "type"):
+        exchange_type = exchange_config.type
 
-    # Extract binding arguments for headers exchange
+    # Extract binding arguments for headers exchange from dataclass
     binding_args = {}
-    if isinstance(binding, dict):
-        binding_args = binding.get("bindingKeys", {})
-    elif hasattr(binding, "bindingKeys") and binding.bindingKeys:
+    if hasattr(binding, "bindingKeys") and binding.bindingKeys:
         binding_args = binding.bindingKeys
 
     return AmqpConfig(
