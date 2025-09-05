@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from typing import Callable, Generic, TypedDict, overload
 from typing_extensions import Unpack
 
-from asyncapi_python.kernel.document.message import Message
 from ..typing import Handler, T_Input, T_Output
 from asyncapi_python.kernel.wire import AbstractWireFactory
 from asyncapi_python.kernel.document import Operation
@@ -89,8 +88,14 @@ class AbstractEndpoint(ABC):
 class Send(ABC, Generic[T_Input, T_Output]):
     """An interface that sending endpoint implements"""
 
+    class Inputs(TypedDict, total=False):
+        """Base inputs for send endpoints. Router subclasses can extend this with specific parameters."""
+        pass  # Empty for now, extensible for future fields
+
     @abstractmethod
-    async def __call__(self, payload: T_Input) -> T_Output: ...
+    async def __call__(
+        self, payload: T_Input, /, **kwargs: Unpack[Inputs]
+    ) -> T_Output: ...
 
 
 class Receive(ABC, Generic[T_Input, T_Output]):

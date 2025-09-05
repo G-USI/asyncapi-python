@@ -28,6 +28,10 @@ class BaseApplication:
 
     async def stop(self) -> None:
         _ = await asyncio.gather(*(e.stop() for e in self.__endpoints))
+    
+    def _add_endpoint(self, endpoint: AbstractEndpoint) -> None:
+        """Add an endpoint to this application."""
+        self.__endpoints.add(endpoint)
 
 
 __all__ = ["BaseApplication"]

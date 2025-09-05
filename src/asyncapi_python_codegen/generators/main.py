@@ -7,6 +7,7 @@ from ..parser import extract_all_operations, load_document_info
 from .messages import MessageGenerator
 from .routers import RouterGenerator
 from .templates import TemplateRenderer
+from .parameters import ParameterGenerator
 
 
 class CodeGenerator:
@@ -18,6 +19,7 @@ class CodeGenerator:
         self.template_renderer = TemplateRenderer(template_dir)
         self.message_generator = MessageGenerator()
         self.router_generator = RouterGenerator()
+        self.parameter_generator = ParameterGenerator()
 
     def generate(self, spec_path: Path, output_dir: Path, force: bool = False) -> None:
         """Generate code from AsyncAPI spec.
@@ -47,6 +49,12 @@ class CodeGenerator:
         # Generate message models using datamodel-code-generator
         message_models_code = self.message_generator.generate_message_models(operations, spec_path)
         
+        # Generate parameter TypedDicts for parameterized channels
+        import yaml
+        with spec_path.open() as f:
+            spec = yaml.safe_load(f)
+        parameter_models_code = self.parameter_generator.generate_parameter_models(spec)
+        
         # Legacy compatibility - extract messages for router generation  
         messages = self.message_generator.extract_messages(operations)
 
@@ -70,6 +78,8 @@ class CodeGenerator:
             # Messages
             "messages": messages,
             "message_models_code": message_models_code,
+            # Parameters
+            "parameter_models_code": parameter_models_code,
         }
 
         # Generate files using SRP
@@ -86,6 +96,13 @@ class CodeGenerator:
         messages_json_dir.mkdir(parents=True, exist_ok=True)
         self.template_renderer.render_file(
             "messages_datamodel.py.j2", messages_json_dir / "__init__.py", context
+        )
+
+        # Generate parameters/__init__.py with TypedDicts
+        parameters_dir = output_dir / "parameters"
+        parameters_dir.mkdir(parents=True, exist_ok=True)
+        self.template_renderer.render_file(
+            "parameters.py.j2", parameters_dir / "__init__.py", context
         )
 
         # Generate __init__.py

@@ -29,7 +29,7 @@ class MessageBindings:
     redis: Any = None
     solace: Any = None
     ws: Any = None
-    amqp: Any = None
+    amqp: AmqpMessageBinding | None = None
     kafka: Any = None
     anypointmq: Any = None
     jms: Any = None

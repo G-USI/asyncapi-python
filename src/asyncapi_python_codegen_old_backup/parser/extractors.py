@@ -66,14 +66,6 @@ def extract_address_parameter(data: YamlDocument) -> AddressParameter:
 @maybe_ref
 def extract_channel_bindings(data: YamlDocument) -> ChannelBindings:
     """Extract ChannelBindings from YAML data."""
-    # Extract AMQP binding as proper object
-    amqp_binding = None
-    if "amqp" in data:
-        amqp_data = data["amqp"]
-        if amqp_data:
-            from asyncapi_python.kernel.document.bindings import create_amqp_binding_from_dict
-            amqp_binding = create_amqp_binding_from_dict(amqp_data)
-    
     return ChannelBindings(
         http=data.get("http"),
         amqp1=data.get("amqp1"),
@@ -83,7 +75,7 @@ def extract_channel_bindings(data: YamlDocument) -> ChannelBindings:
         redis=data.get("redis"),
         solace=data.get("solace"),
         ws=data.get("ws"),
-        amqp=amqp_binding,
+        amqp=data.get("amqp"),
         kafka=data.get("kafka"),
         anypointmq=data.get("anypointmq"),
         jms=data.get("jms"),
@@ -320,25 +312,6 @@ def extract_security_scheme(data: YamlDocument) -> SecurityScheme:
 @maybe_ref
 def extract_operation_bindings(data: YamlDocument) -> OperationBindings:
     """Extract OperationBindings from YAML data."""
-    # Extract AMQP binding as proper object
-    amqp_binding = None
-    if "amqp" in data:
-        amqp_data = data["amqp"]
-        if amqp_data:
-            from asyncapi_python.kernel.document.bindings import AmqpOperationBinding
-            # Create operation binding from dict data
-            amqp_binding = AmqpOperationBinding(
-                expiration=amqp_data.get("expiration"),
-                user_id=amqp_data.get("userId"),
-                cc=amqp_data.get("cc"),
-                priority=amqp_data.get("priority"),
-                delivery_mode=amqp_data.get("deliveryMode"),
-                mandatory=amqp_data.get("mandatory"),
-                bcc=amqp_data.get("bcc"),
-                timestamp=amqp_data.get("timestamp"),
-                ack=amqp_data.get("ack"),
-            )
-    
     return OperationBindings(
         http=data.get("http"),
         amqp1=data.get("amqp1"),
@@ -348,7 +321,7 @@ def extract_operation_bindings(data: YamlDocument) -> OperationBindings:
         redis=data.get("redis"),
         solace=data.get("solace"),
         ws=data.get("ws"),
-        amqp=amqp_binding,
+        amqp=data.get("amqp"),
         kafka=data.get("kafka"),
         anypointmq=data.get("anypointmq"),
         jms=data.get("jms"),

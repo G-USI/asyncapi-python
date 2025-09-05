@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Any
 from .message import Message
 from .common import *
+from .bindings import AmqpChannelBinding
 
 __all__ = ["AddressParameter", "ChannelBindings", "Channel"]
 
@@ -23,7 +24,7 @@ class ChannelBindings:
     redis: Any = None
     solace: Any = None
     ws: Any = None
-    amqp: Any = None
+    amqp: AmqpChannelBinding | None = None
     kafka: Any = None
     anypointmq: Any = None
     jms: Any = None

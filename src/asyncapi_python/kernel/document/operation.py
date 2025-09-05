@@ -3,6 +3,7 @@ from typing import Any, Literal
 from .common import *
 from .channel import Channel
 from .message import Message
+from .bindings import AmqpOperationBinding
 
 __all__ = [
     "SecurityScheme",
@@ -54,7 +55,7 @@ class OperationBindings:
     redis: Any = None
     solace: Any = None
     ws: Any = None
-    amqp: Any = None
+    amqp: AmqpOperationBinding | None = None
     kafka: Any = None
     anypointmq: Any = None
     jms: Any = None

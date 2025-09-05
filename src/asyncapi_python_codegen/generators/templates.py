@@ -23,6 +23,7 @@ class TemplateRenderer:
         )
         # Add custom filters
         self.env.filters["repr"] = repr
+        self.env.filters["json_prefix"] = self._json_prefix_filter
 
         # Add custom functions for template
         self.env.globals.update(
@@ -44,7 +45,11 @@ class TemplateRenderer:
         print(f"  Generated: {output_path}")
 
     def _generate_nested_routers(self, routers_dict: Dict[str, Any], indent: int = 2, router_type: str = "") -> str:
-        """Generate nested router initialization code for templates."""
+        """Generate nested router initialization code for templates with full path context."""
+        return self._generate_nested_routers_with_prefix(routers_dict, indent, router_type, "")
+    
+    def _generate_nested_routers_with_prefix(self, routers_dict: Dict[str, Any], indent: int = 2, router_type: str = "", prefix: str = "") -> str:
+        """Generate nested router initialization code with prefix tracking."""
         lines = []
         indent_str = " " * indent
 
@@ -54,10 +59,23 @@ class TemplateRenderer:
                 lines.append(f"{indent_str}self.{key} = {value.class_name}(wire_factory, codec_factory)")
             else:
                 # This is a nested router level - create a sub-router class
-                subclass_name = f"{router_type}{key.title()}Router" if router_type else f"{key.title()}Router"
+                full_prefix = f"{prefix}.{key}" if prefix else key
+                path_parts = full_prefix.split('.')
+                class_name_parts = [router_type] + [part.title() for part in path_parts] + ["Router"]
+                subclass_name = '__'.join(class_name_parts)
                 lines.append(f"{indent_str}self.{key} = {subclass_name}(wire_factory, codec_factory)")
 
         return "\n".join(lines)
+
+    def _json_prefix_filter(self, type_str: str) -> str:
+        """Add json. prefix to message types, handling union types with | syntax."""
+        if " | " in type_str:
+            # Handle union types: "MarketTick | MarketDepth" -> "json.MarketTick | json.MarketDepth"
+            types = [t.strip() for t in type_str.split(" | ")]
+            return " | ".join(f"json.{t}" for t in types)
+        else:
+            # Handle single type: "MarketTick" -> "json.MarketTick"
+            return f"json.{type_str}"
 
     def _format_with_black(self, content: str, filename: str) -> str:
         """Format content with Black, with fallback strategies."""

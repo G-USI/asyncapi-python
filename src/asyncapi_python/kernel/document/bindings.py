@@ -24,6 +24,11 @@ class AmqpExchange:
     durable: Optional[bool] = None
     auto_delete: Optional[bool] = None
     vhost: Optional[str] = None
+    
+    def __repr__(self) -> str:
+        """Custom repr to handle enum properly for code generation."""
+        from asyncapi_python.kernel.document.bindings import AmqpExchangeType
+        return f"spec.AmqpExchange(name={self.name!r}, type=spec.AmqpExchangeType.{self.type.name}, durable={self.durable!r}, auto_delete={self.auto_delete!r}, vhost={self.vhost!r})"
 
 
 @dataclass
@@ -34,6 +39,10 @@ class AmqpQueue:
     exclusive: Optional[bool] = None
     auto_delete: Optional[bool] = None
     vhost: Optional[str] = None
+    
+    def __repr__(self) -> str:
+        """Custom repr for code generation."""
+        return f"spec.AmqpQueue(name={self.name!r}, durable={self.durable!r}, exclusive={self.exclusive!r}, auto_delete={self.auto_delete!r}, vhost={self.vhost!r})"
 
 
 @dataclass
@@ -61,6 +70,10 @@ class AmqpChannelBinding:
         elif self.type == "routingKey" and not self.exchange:
             # Default exchange configuration
             self.exchange = AmqpExchange()
+    
+    def __repr__(self) -> str:
+        """Custom repr for code generation."""
+        return f"spec.AmqpChannelBinding(type={self.type!r}, queue={self.queue!r}, exchange={self.exchange!r}, binding_version={self.binding_version!r}, extensions={self.extensions!r})"
 
 
 @dataclass
@@ -83,6 +96,10 @@ class AmqpOperationBinding:
     
     # Extension fields
     extensions: Dict[str, Any] = field(default_factory=dict)
+    
+    def __repr__(self) -> str:
+        """Custom repr for code generation."""
+        return f"spec.AmqpOperationBinding(expiration={self.expiration!r}, user_id={self.user_id!r}, cc={self.cc!r}, priority={self.priority!r}, delivery_mode={self.delivery_mode!r}, mandatory={self.mandatory!r}, bcc={self.bcc!r}, timestamp={self.timestamp!r}, ack={self.ack!r}, binding_version={self.binding_version!r}, extensions={self.extensions!r})"
 
 
 @dataclass

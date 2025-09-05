@@ -16,6 +16,8 @@ class RouterInfo:
     input_type: str
     output_type: str
     description: str
+    has_parameters: bool = False
+    parameter_type_name: str = ""
 
     @property
     def channel_repr(self) -> str:
@@ -92,6 +94,14 @@ class RouterGenerator:
             elif operation.description:
                 desc = operation.description
 
+            # Check if channel has parameters (indicated by {} in address)
+            has_parameters = "{" in operation.channel.address and "}" in operation.channel.address
+            parameter_type_name = ""
+            
+            if has_parameters:
+                # Generate parameter TypedDict name from channel address
+                parameter_type_name = self._channel_to_param_type_name(operation.channel.address)
+
             router = RouterInfo(
                 class_name=class_name,
                 operation=operation,
@@ -100,10 +110,34 @@ class RouterGenerator:
                 input_type=input_type,
                 output_type=output_type or "None",
                 description=desc,
+                has_parameters=has_parameters,
+                parameter_type_name=parameter_type_name,
             )
             routers.append(router)
 
         return routers
+
+    def _channel_to_param_type_name(self, channel_address: str) -> str:
+        """Convert channel address to parameter TypedDict name.
+        
+        Example: 'market.data.{exchange}.{symbol}' -> 'MarketDataExchangeSymbolParams'
+        """
+        import re
+        
+        # Extract parameter names and include them in the TypedDict name
+        params = re.findall(r'\{([^}]+)\}', channel_address)
+        
+        # Remove all parameter placeholders to get the base name
+        clean_name = re.sub(r'\{[^}]+\}', '', channel_address)
+        
+        # Remove trailing/leading dots and convert to PascalCase
+        parts = [p for p in clean_name.strip('.').split('.') if p]
+        base_name = ''.join(part.title().replace('-', '').replace('_', '') for part in parts)
+        
+        # Add parameter names in PascalCase
+        param_suffix = ''.join(p.title().replace('_', '') for p in params)
+        
+        return f"{base_name}{param_suffix}Params"
 
     def split_routers(
         self, routers: List[RouterInfo]
@@ -133,7 +167,7 @@ class RouterGenerator:
         final_segment = path[-1].lower()
         current[final_segment] = router
 
-    def generate_nested_routers_code(self, routers_dict: Dict[str, Any], indent: int = 2, router_type: str = "") -> str:
+    def generate_nested_routers_code(self, routers_dict: Dict[str, Any], indent: int = 2, router_type: str = "", prefix: str = "") -> str:
         """Generate nested router initialization code."""
         lines = []
         indent_str = " " * indent
@@ -144,7 +178,10 @@ class RouterGenerator:
                 lines.append(f"{indent_str}self.{key} = {value.class_name}(wire_factory, codec_factory)")
             else:
                 # This is a nested router level - create a sub-router class
-                subclass_name = f"{router_type}{key.title()}Router" if router_type else f"{key.title()}Router"
+                full_prefix = f"{prefix}.{key}" if prefix else key
+                path_parts = full_prefix.split('.')
+                class_name_parts = [router_type] + [part.title() for part in path_parts] + ["Router"]
+                subclass_name = '__'.join(class_name_parts)
                 lines.append(f"{indent_str}self.{key} = {subclass_name}(wire_factory, codec_factory)")
 
         return "\n".join(lines)
@@ -156,12 +193,14 @@ class RouterGenerator:
         for key, value in routers_dict.items():
             if not isinstance(value, RouterInfo):
                 # This is a nested level - generate a sub-router class
-                # Make class name unique by including router type prefix
-                class_name = f"{router_type}{key.title()}Router" if router_type else f"{key.title()}Router"
                 full_prefix = f"{prefix}.{key}" if prefix else key
+                # Make class name unique by including the full path to avoid conflicts
+                path_parts = full_prefix.split('.')
+                class_name_parts = [router_type] + [part.title() for part in path_parts] + ["Router"]
+                class_name = '__'.join(class_name_parts)
 
                 # Generate class definition
-                class_def = self._generate_nested_class(class_name, value, router_type)
+                class_def = self._generate_nested_class(class_name, value, router_type, full_prefix)
                 classes.append(class_def)
 
                 # Recursively collect nested classes
@@ -169,20 +208,23 @@ class RouterGenerator:
 
         return classes
 
-    def _generate_nested_class(self, class_name: str, routers_dict: Dict[str, Any], router_type: str = "") -> str:
+    def _generate_nested_class(self, class_name: str, routers_dict: Dict[str, Any], router_type: str = "", prefix: str = "") -> str:
         """Generate a nested router class definition."""
         lines = [
             f"class {class_name}:",
             f'    """Nested router for {class_name.lower().replace("router", "").replace(router_type.lower(), "")} operations."""',
             "",
-            f"    def __init__(self, wire_factory: AbstractWireFactory, codec_factory: CodecFactory):",
+            f"    def __init__(self, wire_factory: AbstractWireFactory[Any, Any], codec_factory: CodecFactory[Any, Any]):",
         ]
 
         for key, value in routers_dict.items():
             if isinstance(value, RouterInfo):
                 lines.append(f"        self.{key} = {value.class_name}(wire_factory, codec_factory)")
             else:
-                subclass_name = f"{router_type}{key.title()}Router" if router_type else f"{key.title()}Router"
+                full_prefix = f"{prefix}.{key}" if prefix else key
+                path_parts = full_prefix.split('.')
+                class_name_parts = [router_type] + [part.title() for part in path_parts] + ["Router"]
+                subclass_name = '__'.join(class_name_parts)
                 lines.append(f"        self.{key} = {subclass_name}(wire_factory, codec_factory)")
 
         return "\n".join(lines)
@@ -190,20 +232,44 @@ class RouterGenerator:
     def _get_message_type(self, operation: Operation, is_input: bool) -> str:
         """Get message type name for operation."""
         if is_input:
-            # Use first message from channel
+            # Handle multiple messages from channel with union types
             if operation.channel.messages:
-                msg_name = next(iter(operation.channel.messages.keys()))
-                return self._to_pascal_case(msg_name)
+                message_types = [
+                    self._to_pascal_case(msg_name) 
+                    for msg_name in operation.channel.messages.keys()
+                ]
+                if len(message_types) == 1:
+                    return message_types[0]
+                else:
+                    # For union types, use Python 3.10+ | syntax
+                    return " | ".join(message_types)
         else:
-            # Use first message from reply channel
+            # Handle multiple messages from reply channel with union types
             if operation.reply and operation.reply.channel.messages:
-                msg_name = next(iter(operation.reply.channel.messages.keys()))
-                return self._to_pascal_case(msg_name)
+                message_types = [
+                    self._to_pascal_case(msg_name) 
+                    for msg_name in operation.reply.channel.messages.keys()
+                ]
+                if len(message_types) == 1:
+                    return message_types[0]
+                else:
+                    # For union types, use Python 3.10+ | syntax
+                    return " | ".join(message_types)
 
         return "Any"
 
     def _to_pascal_case(self, name: str) -> str:
         """Convert name to PascalCase."""
+        # Handle camelCase input by detecting internal capitals
+        if "_" not in name and "-" not in name and "." not in name:
+            # Check if it's camelCase (has internal capital letters)
+            if any(c.isupper() for c in name[1:]):
+                # Split on capital letters for camelCase
+                import re
+                words = re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?=[A-Z][a-z]|\b)', name)
+                return "".join(word.capitalize() for word in words)
+        
+        # Handle underscore/hyphen/dot separated names (existing logic)
         return "".join(
             word.capitalize()
             for word in name.replace("-", "_").replace(".", "_").split("_")

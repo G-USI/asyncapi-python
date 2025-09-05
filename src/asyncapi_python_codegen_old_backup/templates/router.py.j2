@@ -1,0 +1,62 @@
+"""Generated routers for AsyncAPI operations."""
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from asyncapi_python.kernel.application import BaseApplication
+from asyncapi_python.kernel.endpoint import Publisher, Subscriber, RpcClient, RpcServer
+from asyncapi_python.kernel.wire import AbstractWireFactory
+from asyncapi_python.kernel.codec import CodecFactory
+from asyncapi_python.kernel.document import Channel, Operation, Message, ChannelBindings, OperationReply
+from .messages.json import *
+
+{% for router in routers %}
+class {{ router.class_name }}(
+{%- if router.operation.reply and router.operation.action == "send" -%}
+    RpcClient[{{ router.input_type }}, {{ router.output_type }}]
+{%- elif router.operation.action == "send" -%}
+    Publisher[{{ router.input_type }}]
+{%- elif router.operation.reply and router.operation.action == "receive" -%}
+    RpcServer[{{ router.input_type }}, {{ router.output_type }}]
+{%- else -%}
+    Subscriber[{{ router.input_type }}]
+{%- endif -%}
+):
+    """{{ router.description }}"""
+
+    def __init__(self, wire_factory: AbstractWireFactory, codec_factory: CodecFactory):
+        # Real Operation object from AsyncAPI spec (contains channel)
+        operation = {{ router.operation_repr }}
+        
+        # Initialize parent endpoint with real operation data
+        super().__init__(
+            operation=operation,
+            wire_factory=wire_factory,
+            codec_factory=codec_factory
+        )
+
+{% endfor %}
+
+{% for nested_class in producer_nested_classes %}
+{{ nested_class }}
+
+{% endfor %}
+
+{% for nested_class in consumer_nested_classes %}
+{{ nested_class }}
+
+{% endfor %}
+
+class ProducerRouter:
+    """Router aggregating all producer (send) operations."""
+    
+    def __init__(self, wire_factory: AbstractWireFactory, codec_factory: CodecFactory):
+        """Initialize producer router with all send operations."""
+{{ generate_nested_routers(producer_routers, 8, "Producer") }}
+
+class ConsumerRouter:
+    """Router aggregating all consumer (receive) operations."""
+    
+    def __init__(self, wire_factory: AbstractWireFactory, codec_factory: CodecFactory):
+        """Initialize consumer router with all receive operations."""
+{{ generate_nested_routers(consumer_routers, 8, "Consumer") }}

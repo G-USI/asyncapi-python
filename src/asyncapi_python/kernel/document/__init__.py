@@ -15,6 +15,13 @@ from .operation import (
     OperationTrait,
     SecurityScheme,
 )
+from .bindings import (
+    AmqpChannelBinding,
+    AmqpOperationBinding,
+    AmqpExchange,
+    AmqpQueue,
+    AmqpExchangeType,
+)
 
 __all__ = [
     # channel
@@ -38,4 +45,10 @@ __all__ = [
     "OperationReplyAddress",
     "OperationTrait",
     "SecurityScheme",
+    # bindings
+    "AmqpChannelBinding",
+    "AmqpOperationBinding",
+    "AmqpExchange",
+    "AmqpQueue",
+    "AmqpExchangeType",
 ]

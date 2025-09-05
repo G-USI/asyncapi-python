@@ -78,11 +78,13 @@ class MessageGenerator:
             for schema_name, schema_def in schemas.items():
                 all_schemas[schema_name] = schema_def
             
-            # Add message payloads from components
+            # Add message payloads from components (only if not already present from schemas)
             for msg_name, msg_def in messages.items():
                 if isinstance(msg_def, dict) and 'payload' in msg_def:
                     schema_name = self._to_pascal_case(msg_name)
-                    all_schemas[schema_name] = msg_def['payload']
+                    # Only add if we don't already have this schema from the schemas section
+                    if schema_name not in all_schemas:
+                        all_schemas[schema_name] = msg_def['payload']
             
             return all_schemas
             
@@ -188,6 +190,16 @@ from pydantic import BaseModel, Field
 
     def _to_pascal_case(self, name: str) -> str:
         """Convert name to PascalCase."""
+        # Handle camelCase input by detecting internal capitals
+        if "_" not in name and "-" not in name and "." not in name:
+            # Check if it's camelCase (has internal capital letters)
+            if any(c.isupper() for c in name[1:]):
+                # Split on capital letters for camelCase
+                import re
+                words = re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?=[A-Z][a-z]|\b)', name)
+                return "".join(word.capitalize() for word in words)
+        
+        # Handle underscore/hyphen/dot separated names (existing logic)
         return "".join(
             word.capitalize()
             for word in name.replace("-", "_").replace(".", "_").split("_")

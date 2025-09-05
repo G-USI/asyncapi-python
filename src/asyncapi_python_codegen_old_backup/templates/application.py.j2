@@ -1,7 +1,6 @@
 """Generated AsyncAPI application."""
 from __future__ import annotations
 
-from typing import Any
 from asyncapi_python.kernel.application import BaseApplication
 from asyncapi_python.kernel.wire import AbstractWireFactory
 from asyncapi_python.kernel.codec import CodecFactory
@@ -19,7 +18,7 @@ class Application(BaseApplication):
     Application Version: {{ app_version }}
     """
     
-    def __init__(self, wire_factory: AbstractWireFactory[Any, Any]):
+    def __init__(self, wire_factory: AbstractWireFactory):
         """Initialize the AsyncAPI application.
         
         Args:
@@ -47,7 +46,7 @@ class Application(BaseApplication):
         """
         if isinstance(router, AbstractEndpoint):
             # This router is an endpoint - register it directly
-            self._add_endpoint(router)
+            self._BaseApplication__endpoints.add(router)
         elif hasattr(router, '__dict__'):
             # This router aggregates others - recurse through attributes
             for attr_name in dir(router):
