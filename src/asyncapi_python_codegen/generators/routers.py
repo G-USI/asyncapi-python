@@ -95,7 +95,8 @@ class RouterGenerator:
                 desc = operation.description
 
             # Check if channel has parameters (indicated by {} in address)
-            has_parameters = "{" in operation.channel.address and "}" in operation.channel.address
+            has_parameters = (operation.channel.address is not None and 
+                            "{" in operation.channel.address and "}" in operation.channel.address)
             parameter_type_name = ""
             
             if has_parameters:

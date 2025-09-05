@@ -68,11 +68,10 @@ def extract_channel_bindings(data: YamlDocument) -> ChannelBindings:
     """Extract ChannelBindings from YAML data."""
     # Extract AMQP binding as proper object
     amqp_binding = None
-    if "amqp" in data:
+    if "amqp" in data and data["amqp"] is not None:
         amqp_data = data["amqp"]
-        if amqp_data:
-            from asyncapi_python.kernel.document.bindings import create_amqp_binding_from_dict
-            amqp_binding = create_amqp_binding_from_dict(amqp_data)
+        from asyncapi_python.kernel.document.bindings import create_amqp_binding_from_dict
+        amqp_binding = create_amqp_binding_from_dict(amqp_data)
     
     return ChannelBindings(
         http=data.get("http"),

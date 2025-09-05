@@ -30,7 +30,7 @@ AMQP_WIRE = AmqpWire(
     connection_url=os.environ.get(
         "PYTEST_AMQP_URI", "amqp://guest:guest@localhost:5672/"
     ),
-    app_id="test-integration",
+    service_name="test-integration",
 )
 
 # Codec implementations

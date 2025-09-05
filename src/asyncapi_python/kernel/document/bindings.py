@@ -123,10 +123,23 @@ def create_amqp_binding_from_dict(binding_dict: Dict[str, Any]) -> AmqpChannelBi
     This helper function converts the dictionary format used in generated code
     to the proper binding object structure expected by the resolver.
     """
-    if not binding_dict or "type" not in binding_dict:
-        raise ValueError("Invalid AMQP binding: missing type field")
+    if not binding_dict:
+        raise ValueError("Invalid AMQP binding: binding data is empty")
     
-    binding_type = binding_dict["type"]
+    # Derive binding type from presence of fields
+    has_exchange = binding_dict is not None and "exchange" in binding_dict
+    has_routing_key = binding_dict is not None and "routingKey" in binding_dict
+    has_queue = binding_dict is not None and "queue" in binding_dict
+    
+    if has_exchange and has_routing_key:
+        raise ValueError("Invalid AMQP binding: both exchange and routingKey are present")
+    elif has_queue:
+        binding_type = "queue"
+    elif has_exchange or has_routing_key:
+        binding_type = "routingKey"
+    else:
+        # Default fallback - assume it's a queue binding
+        binding_type = "queue"
     
     # Create the binding based on type
     binding = AmqpChannelBinding(type=binding_type)
