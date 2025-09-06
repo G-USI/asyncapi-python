@@ -15,10 +15,13 @@ class Publisher(AbstractEndpoint, Send[T_Input, None], Generic[T_Input]):
         super().__init__(**kwargs)
         self._producer: Producer[WireMessage] | None = None
 
-    async def start(self) -> None:
+    async def start(self, **params: Unpack[AbstractEndpoint.StartParams]) -> None:
         """Initialize the publisher endpoint"""
         if self._producer:
             return
+
+        # Get exception callback from parameters
+        self._exception_callback = params.get("exception_callback")
 
         # Validate we have codecs for messages
         if not self._codecs:

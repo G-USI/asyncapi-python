@@ -4,6 +4,7 @@ from typing_extensions import Unpack
 
 from .abc import AbstractEndpoint, Receive, HandlerParams
 from ..typing import T_Input, Handler
+from ..exceptions import Reject
 from asyncapi_python.kernel.wire import Consumer
 
 
@@ -17,10 +18,13 @@ class Subscriber(AbstractEndpoint, Receive[T_Input, None], Generic[T_Input]):
         self._handler_location: str | None = None
         self._consume_task: asyncio.Task | None = None
 
-    async def start(self) -> None:
+    async def start(self, **params: Unpack[AbstractEndpoint.StartParams]) -> None:
         """Initialize the subscriber endpoint"""
         if self._consumer:
             return
+
+        # Get exception callback from parameters
+        self._exception_callback = params.get("exception_callback")
 
         # Validate that we have exactly one handler (if validation is enabled)
         if self._should_validate_handlers() and not self._handler:
@@ -141,7 +145,14 @@ class Subscriber(AbstractEndpoint, Receive[T_Input, None], Generic[T_Input]):
                 # Acknowledge successful processing
                 await wire_message.ack()
 
-            except Exception:
-                # Handle processing errors
+            except Reject as e:
+                # Handle message rejection - reject and continue
+                await wire_message.reject()
+
+            except Exception as e:
+                # Any other exception should stop the application
                 await wire_message.nack()
-                # TODO: Add proper error handling/logging
+                # Propagate to application level
+                if self._exception_callback:
+                    self._exception_callback(e)
+                return  # Stop processing messages

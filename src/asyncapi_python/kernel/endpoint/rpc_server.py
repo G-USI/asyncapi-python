@@ -3,9 +3,9 @@ from typing import Callable, Generic, overload
 from typing_extensions import Unpack
 
 from .abc import AbstractEndpoint, Receive, HandlerParams
-from .exceptions import HandlerError
 from .message import WireMessage
 from ..typing import T_Input, T_Output, Handler, IncomingMessage
+from ..exceptions import Reject
 from asyncapi_python.kernel.wire import Consumer, Producer
 
 
@@ -26,10 +26,13 @@ class RpcServer(
         self._handler_location: str | None = None
         self._consume_task: asyncio.Task[None] | None = None
 
-    async def start(self) -> None:
+    async def start(self, **params: Unpack[AbstractEndpoint.StartParams]) -> None:
         """Initialize the RPC server endpoint"""
         if self._consumer:
             return
+
+        # Get exception callback from parameters
+        self._exception_callback = params.get("exception_callback")
 
         # Validate that we have exactly one handler (if validation is enabled)
         if self._should_validate_handlers() and not self._handler:
@@ -184,8 +187,7 @@ class RpcServer(
                 # Validate RPC metadata
                 if not wire_message.correlation_id or not wire_message.reply_to:
                     # Not an RPC request, skip
-                    if hasattr(wire_message, "nack"):
-                        await wire_message.nack()
+                    await wire_message.nack()
                     continue
 
                 # Decode the request payload
@@ -194,14 +196,17 @@ class RpcServer(
                 # Call the user handler to get response
                 try:
                     response = await self._handler(decoded_payload)
-                except Exception as e:
-                    # Handler error - send error response if possible
-                    await self._send_error_response(
-                        wire_message.correlation_id, wire_message.reply_to, str(e)
-                    )
-                    if hasattr(wire_message, "ack"):
-                        await wire_message.ack()
+                except Reject as e:
+                    # Message rejected - reject and continue
+                    await wire_message.reject()
                     continue
+                except Exception as e:
+                    # Any other exception - nack and propagate to stop application
+                    await wire_message.nack()
+                    # Propagate to application level
+                    if self._exception_callback:
+                        self._exception_callback(e)
+                    return  # Stop processing messages
 
                 # Encode response
                 encoded_response = self._encode_reply(response)
@@ -214,45 +219,20 @@ class RpcServer(
                     _reply_to=None,  # No further reply expected
                 )
 
-                # Send reply to the reply_to address
-                # The wire implementation should handle routing to reply_to
-                await self._send_reply(reply_message, wire_message.reply_to)
+                # Send reply
+                await self._send_reply(reply_message)
 
                 # Acknowledge successful processing
-                if hasattr(wire_message, "ack"):
-                    await wire_message.ack()
+                await wire_message.ack()
 
             except Exception:
                 # Handle processing errors
-                if hasattr(wire_message, "nack"):
-                    await wire_message.nack()
+                await wire_message.nack()
 
-    async def _send_reply(self, reply_message: WireMessage, reply_to: str) -> None:
-        """Send reply message to the specified address"""
+    async def _send_reply(self, reply_message: WireMessage) -> None:
+        """Send reply message"""
         if not self._reply_producer:
             return
 
         # Send the reply
-        # The wire implementation should route this to the reply_to address
         await self._reply_producer.send_batch([reply_message])
-
-    async def _send_error_response(
-        self, correlation_id: str, reply_to: str, error_message: str
-    ) -> None:
-        """Send an error response for a failed request"""
-        if not self._reply_producer:
-            return
-
-        # Create error payload
-        # This is a simplified error response - could be enhanced
-        error_payload = f'{{"error": "{error_message}"}}'.encode()
-
-        # Create error reply message
-        error_reply = WireMessage(
-            _payload=error_payload,
-            _headers={"error": "true"},
-            _correlation_id=correlation_id,
-            _reply_to=None,
-        )
-
-        await self._send_reply(error_reply, reply_to)

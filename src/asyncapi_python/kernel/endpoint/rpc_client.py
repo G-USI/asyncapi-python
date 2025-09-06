@@ -27,10 +27,13 @@ class RpcClient(AbstractEndpoint, Send[T_Input, T_Output], Generic[T_Input, T_Ou
         # Instance-specific state
         self._producer: Producer[WireMessage] | None = None
 
-    async def start(self) -> None:
+    async def start(self, **params: Unpack[AbstractEndpoint.StartParams]) -> None:
         """Initialize the RPC client endpoint"""
         if self._producer:
             return
+
+        # Get exception callback from parameters
+        self._exception_callback = params.get("exception_callback")
 
         # Validate we have codecs for messages and replies
         if not self._codecs:

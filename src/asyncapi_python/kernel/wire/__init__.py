@@ -1,4 +1,5 @@
-from .typing import T_Recv, T_Send, Producer, Consumer
+from .typing import Producer, Consumer
+from ..typing import T_Recv, T_Send
 from typing import Generic, TypedDict
 from typing_extensions import Unpack
 from abc import abstractmethod, ABC

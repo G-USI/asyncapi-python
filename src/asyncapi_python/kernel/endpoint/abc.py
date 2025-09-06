@@ -24,10 +24,18 @@ class HandlerParams(TypedDict):
 
 class AbstractEndpoint(ABC):
     class Inputs(TypedDict):
+        """Constructor parameters"""
+
         operation: Required[Operation]
         wire_factory: Required[AbstractWireFactory]
         codec_factory: Required[CodecFactory]
         endpoint_params: NotRequired[EndpointParams]  # Optional endpoint configuration
+
+    class StartParams(TypedDict):
+        """Parameters for starting an endpoint"""
+
+        exception_callback: NotRequired[Callable[[Exception], None]]
+        """Callback to propagate exceptions"""
 
     def __init__(self, **kwargs: Unpack[Inputs]):
         self._operation = kwargs["operation"]
@@ -35,6 +43,7 @@ class AbstractEndpoint(ABC):
         codec_factory = kwargs["codec_factory"]
         # Endpoint sets its own defaults - empty dict if not provided
         self._endpoint_params = kwargs.get("endpoint_params", {})
+        self._exception_callback: Callable[[Exception], None] | None = None
 
         # Create codecs for operation messages
         self._codecs: list[Codec] = [
@@ -94,7 +103,7 @@ class AbstractEndpoint(ABC):
         )
 
     @abstractmethod
-    async def start(self) -> None: ...
+    async def start(self, **params: Unpack[StartParams]) -> None: ...
 
     @abstractmethod
     async def stop(self) -> None: ...
