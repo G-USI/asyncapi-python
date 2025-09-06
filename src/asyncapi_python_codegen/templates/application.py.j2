@@ -29,7 +29,7 @@ class Application(BaseApplication):
         current_module = sys.modules[self.__module__.rsplit('.', 1)[0]]
         codec_factory = CodecRegistry(current_module)
         
-        super().__init__(wire_factory, codec_factory)
+        super().__init__(wire_factory=wire_factory, codec_factory=codec_factory)
         
         # Initialize semantic routers with factories
         self.producer = ProducerRouter(wire_factory, codec_factory)
