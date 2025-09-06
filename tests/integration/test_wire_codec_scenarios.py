@@ -52,6 +52,7 @@ JSON_CODEC = JsonCodecFactory(test_app)
         many_to_many_microservices,
     ],
 )
+@pytest.mark.timeout(10)
 @pytest.mark.asyncio
 async def test_wire_codec_scenario(
     wire: AbstractWireFactory,
