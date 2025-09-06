@@ -44,23 +44,32 @@ class CodeGenerator:
 
         # Build router information using SRP
         routers = self.router_generator.build_routers(operations)
-        producer_routers, consumer_routers = self.router_generator.split_routers(routers)
+        producer_routers, consumer_routers = self.router_generator.split_routers(
+            routers
+        )
 
         # Generate message models using datamodel-code-generator
-        message_models_code = self.message_generator.generate_message_models(operations, spec_path)
-        
+        message_models_code = self.message_generator.generate_message_models(
+            operations, spec_path
+        )
+
         # Generate parameter TypedDicts for parameterized channels
         import yaml
+
         with spec_path.open() as f:
             spec = yaml.safe_load(f)
         parameter_models_code = self.parameter_generator.generate_parameter_models(spec)
-        
-        # Legacy compatibility - extract messages for router generation  
+
+        # Legacy compatibility - extract messages for router generation
         messages = self.message_generator.extract_messages(operations)
 
         # Generate nested classes using SRP
-        producer_nested_classes = self.router_generator.collect_nested_classes(producer_routers, router_type="Producer")
-        consumer_nested_classes = self.router_generator.collect_nested_classes(consumer_routers, router_type="Consumer")
+        producer_nested_classes = self.router_generator.collect_nested_classes(
+            producer_routers, router_type="Producer"
+        )
+        consumer_nested_classes = self.router_generator.collect_nested_classes(
+            consumer_routers, router_type="Consumer"
+        )
 
         # Prepare template context
         context = {
@@ -86,10 +95,14 @@ class CodeGenerator:
         output_dir.mkdir(parents=True, exist_ok=True)
 
         # Generate router.py
-        self.template_renderer.render_file("router.py.j2", output_dir / "router.py", context)
+        self.template_renderer.render_file(
+            "router.py.j2", output_dir / "router.py", context
+        )
 
         # Generate application.py
-        self.template_renderer.render_file("application.py.j2", output_dir / "application.py", context)
+        self.template_renderer.render_file(
+            "application.py.j2", output_dir / "application.py", context
+        )
 
         # Generate messages/json/__init__.py using datamodel-code-generator
         messages_json_dir = output_dir / "messages" / "json"
@@ -106,7 +119,9 @@ class CodeGenerator:
         )
 
         # Generate __init__.py
-        self.template_renderer.render_file("__init__.py.j2", output_dir / "__init__.py", context)
+        self.template_renderer.render_file(
+            "__init__.py.j2", output_dir / "__init__.py", context
+        )
 
         print(f"✅ Generated code in {output_dir}")
 

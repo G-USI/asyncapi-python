@@ -472,7 +472,8 @@ class SimpleCodecFactory(CodecFactory):
 
 # Integration tests for RPC endpoints with end-to-end message flow
 
-@pytest.mark.asyncio
+
+@pytest.mark.asyncio(loop_scope="function")
 async def test_complete_rpc_scenario(mock_operation, cleanup_rpc_client):
     """Test a complete RPC scenario with realistic message flow"""
     # Create a realistic wire factory that simulates message routing
@@ -535,7 +536,8 @@ async def test_complete_rpc_scenario(mock_operation, cleanup_rpc_client):
     await server.stop()
     await wire_factory.cleanup()
 
-@pytest.mark.asyncio
+
+@pytest.mark.asyncio(loop_scope="function")
 async def test_concurrent_rpc_calls(mock_operation, cleanup_rpc_client):
     """Test multiple concurrent RPC calls"""
     wire_factory = RealisticWireFactory()
@@ -605,7 +607,8 @@ async def test_concurrent_rpc_calls(mock_operation, cleanup_rpc_client):
     await server.stop()
     await wire_factory.cleanup()
 
-@pytest.mark.asyncio
+
+@pytest.mark.asyncio(loop_scope="function")
 async def test_rpc_error_handling(mock_operation, cleanup_rpc_client):
     """Test RPC error handling when server handler fails"""
     wire_factory = RealisticWireFactory()
@@ -665,7 +668,8 @@ async def test_rpc_error_handling(mock_operation, cleanup_rpc_client):
     await server.stop()
     await wire_factory.cleanup()
 
-@pytest.mark.asyncio
+
+@pytest.mark.asyncio(loop_scope="function")
 async def test_pubsub_fanout_scenario(cleanup_rpc_client):
     """Test pub-sub fanout scenario - one publisher, multiple subscribers"""
     wire_factory = RealisticWireFactory()
@@ -803,7 +807,8 @@ async def test_pubsub_fanout_scenario(cleanup_rpc_client):
         await subscriber.stop()
     await wire_factory.cleanup()
 
-@pytest.mark.asyncio
+
+@pytest.mark.asyncio(loop_scope="function")
 async def test_enhanced_rpc_scenario(cleanup_rpc_client):
     """Enhanced RPC scenario with detailed request-response validation"""
     wire_factory = RealisticWireFactory()

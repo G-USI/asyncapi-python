@@ -6,6 +6,7 @@ between application data, encoded data, and wire messages.
 
 from typing import Any, Generic, Protocol, TypeVar
 from typing_extensions import TypeAlias
+from types import CodeType
 
 
 # Base protocols for type bounds
@@ -96,3 +97,9 @@ class Handler(Protocol, Generic[T_Input, T_Output]):
     """A callback function, provided by user"""
 
     async def __call__(self, arg: T_Input, /) -> T_Output: ...
+
+    @property
+    def __name__(self) -> str: ...
+
+    @property
+    def __code__(self) -> CodeType: ...

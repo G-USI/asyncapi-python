@@ -11,6 +11,7 @@ from asyncapi_python.kernel.document import Operation, Channel, Message
 
 # Test basic parser functionality
 
+
 def test_load_document_info():
     """Test loading basic document information."""
     spec_path = Path("tests/codegen/specs/simple.yaml")
@@ -20,6 +21,7 @@ def test_load_document_info():
     assert info["title"] == "Simple Test Service"
     assert info["version"] == "1.0.0"
     assert info["description"] == "Basic AsyncAPI spec for testing"
+
 
 def test_extract_simple_operations():
     """Test extracting operations from simple spec."""
@@ -43,6 +45,7 @@ def test_extract_simple_operations():
     assert pong_op.action == "receive"
     assert pong_op.channel.address == "pong.queue"
     assert "pong" in pong_op.channel.messages
+
 
 def test_extract_rpc_operations():
     """Test extracting RPC operations with replies."""
@@ -79,6 +82,7 @@ def test_extract_rpc_operations():
 
 # Test message and payload extraction
 
+
 def test_message_payloads_preserved():
     """Test that message payloads are preserved as raw data."""
     spec_path = Path("tests/codegen/specs/simple.yaml")
@@ -95,6 +99,7 @@ def test_message_payloads_preserved():
     assert "message" in payload["properties"]
     assert payload["properties"]["message"]["const"] == "ping"
 
+
 def test_message_metadata():
     """Test that message metadata is extracted correctly."""
     spec_path = Path("tests/codegen/specs/simple.yaml")
@@ -107,6 +112,7 @@ def test_message_metadata():
 
 
 # Test that dataclasses can be stringified for templates
+
 
 def test_channel_repr_valid_python():
     """Test that Channel repr() produces valid Python code."""
@@ -123,6 +129,7 @@ def test_channel_repr_valid_python():
     # Should contain key data
     assert "address='ping.queue'" in channel_repr
     assert "title='Ping Channel'" in channel_repr
+
 
 def test_operation_repr_valid_python():
     """Test that Operation repr() produces valid Python code."""
@@ -143,6 +150,7 @@ def test_operation_repr_valid_python():
 
 # Test internal reference resolution
 
+
 def test_internal_channel_refs():
     """Test resolving internal channel references."""
     spec_path = Path("tests/codegen/specs/simple.yaml")
@@ -152,6 +160,7 @@ def test_internal_channel_refs():
     ping_op = operations["ping"]
     assert ping_op.channel.address == "ping.queue"
     assert "ping" in ping_op.channel.messages
+
 
 def test_internal_message_refs():
     """Test resolving internal message references."""
@@ -169,6 +178,7 @@ def test_internal_message_refs():
 
 
 # Test relative file reference resolution (A->B->C chain)
+
 
 def test_relative_ref_chain():
     """Test A->B->C reference chain resolution."""
@@ -198,6 +208,7 @@ def test_relative_ref_chain():
         "marketing",
     ]
 
+
 def test_different_relative_paths():
     """Test references from different directory structures."""
     spec_path = Path("tests/codegen/specs/relative_refs/main.yaml")
@@ -213,6 +224,7 @@ def test_different_relative_paths():
     assert notification_msg.title == "Notification Message"
     payload = notification_msg.payload
     assert payload["properties"]["source_file"]["const"] == "file_c_messages"
+
 
 def test_context_preservation():
     """Test that parsing context is properly maintained across files."""
@@ -230,10 +242,12 @@ def test_context_preservation():
 
 # Test error handling and validation
 
+
 def test_missing_file_error():
     """Test error when file doesn't exist."""
     with pytest.raises(RuntimeError, match="Failed to load YAML file"):
         extract_all_operations(Path("nonexistent.yaml"))
+
 
 def test_invalid_yaml_structure():
     """Test error with invalid YAML structure."""

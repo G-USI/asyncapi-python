@@ -16,7 +16,7 @@ class OrderProcessingApp(BaseApplication):
     """Order processing service with endpoints for testing scenarios"""
 
     def __init__(self, wire_factory: AbstractWireFactory, codec_factory: CodecFactory):
-        super().__init__(wire_factory, codec_factory)
+        super().__init__(wire_factory=wire_factory, codec_factory=codec_factory)
         self._setup_endpoints()
 
     def _setup_endpoints(self):
@@ -137,7 +137,7 @@ async def reply_channel_creation(
         def __init__(
             self, wire_factory: AbstractWireFactory, codec_factory: CodecFactory
         ):
-            super().__init__(wire_factory, codec_factory)
+            super().__init__(wire_factory=wire_factory, codec_factory=codec_factory)
             self._setup_endpoints()
 
         def _setup_endpoints(self):

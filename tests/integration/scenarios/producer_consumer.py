@@ -14,7 +14,12 @@ class UserManagementApp(BaseApplication):
     """User management service with endpoints for testing scenarios"""
 
     def __init__(self, wire_factory: AbstractWireFactory, codec_factory: CodecFactory):
-        super().__init__(wire_factory, codec_factory)
+        # Disable handler validation for integration tests
+        super().__init__(
+            wire_factory=wire_factory,
+            codec_factory=codec_factory,
+            endpoint_params={"disable_handler_validation": True},
+        )
         self._setup_endpoints()
 
     def _setup_endpoints(self):
@@ -125,7 +130,12 @@ class ConsumerApp(BaseApplication):
     """Consumer app to receive messages"""
 
     def __init__(self, wire_factory: AbstractWireFactory, codec_factory: CodecFactory):
-        super().__init__(wire_factory, codec_factory)
+        # Disable handler validation for integration tests
+        super().__init__(
+            wire_factory=wire_factory,
+            codec_factory=codec_factory,
+            endpoint_params={"disable_handler_validation": True},
+        )
         self._setup_endpoints()
 
     def _setup_endpoints(self):
@@ -264,7 +274,11 @@ async def producer_consumer_roundtrip(
             def __init__(
                 self, wire_factory: AbstractWireFactory, codec_factory: CodecFactory
             ):
-                super().__init__(wire_factory, codec_factory)
+                super().__init__(
+                    wire_factory=wire_factory,
+                    codec_factory=codec_factory,
+                    endpoint_params={"disable_handler_validation": True},
+                )
                 self._setup_endpoints()
 
             def _setup_endpoints(self):

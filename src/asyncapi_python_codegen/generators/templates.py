@@ -28,7 +28,7 @@ class TemplateRenderer:
         # Add custom functions for template
         self.env.globals.update(
             generate_nested_routers=self._generate_nested_routers,
-            is_router_info=lambda x: isinstance(x, RouterInfo)
+            is_router_info=lambda x: isinstance(x, RouterInfo),
         )
 
     def render_file(
@@ -44,11 +44,21 @@ class TemplateRenderer:
         output_path.write_text(formatted_content)
         print(f"  Generated: {output_path}")
 
-    def _generate_nested_routers(self, routers_dict: Dict[str, Any], indent: int = 2, router_type: str = "") -> str:
+    def _generate_nested_routers(
+        self, routers_dict: Dict[str, Any], indent: int = 2, router_type: str = ""
+    ) -> str:
         """Generate nested router initialization code for templates with full path context."""
-        return self._generate_nested_routers_with_prefix(routers_dict, indent, router_type, "")
-    
-    def _generate_nested_routers_with_prefix(self, routers_dict: Dict[str, Any], indent: int = 2, router_type: str = "", prefix: str = "") -> str:
+        return self._generate_nested_routers_with_prefix(
+            routers_dict, indent, router_type, ""
+        )
+
+    def _generate_nested_routers_with_prefix(
+        self,
+        routers_dict: Dict[str, Any],
+        indent: int = 2,
+        router_type: str = "",
+        prefix: str = "",
+    ) -> str:
         """Generate nested router initialization code with prefix tracking."""
         lines = []
         indent_str = " " * indent
@@ -56,14 +66,20 @@ class TemplateRenderer:
         for key, value in routers_dict.items():
             if isinstance(value, RouterInfo):
                 # This is a router endpoint
-                lines.append(f"{indent_str}self.{key} = {value.class_name}(wire_factory, codec_factory)")
+                lines.append(
+                    f"{indent_str}self.{key} = {value.class_name}(wire_factory, codec_factory)"
+                )
             else:
                 # This is a nested router level - create a sub-router class
                 full_prefix = f"{prefix}.{key}" if prefix else key
-                path_parts = full_prefix.split('.')
-                class_name_parts = [router_type] + [part.title() for part in path_parts] + ["Router"]
-                subclass_name = '__'.join(class_name_parts)
-                lines.append(f"{indent_str}self.{key} = {subclass_name}(wire_factory, codec_factory)")
+                path_parts = full_prefix.split(".")
+                class_name_parts = (
+                    [router_type] + [part.title() for part in path_parts] + ["Router"]
+                )
+                subclass_name = "__".join(class_name_parts)
+                lines.append(
+                    f"{indent_str}self.{key} = {subclass_name}(wire_factory, codec_factory)"
+                )
 
         return "\n".join(lines)
 
@@ -109,7 +125,7 @@ class TemplateRenderer:
     def _fix_common_syntax_issues(self, content: str) -> str:
         """Fix common syntax issues that prevent Black from formatting."""
         lines = content.split("\n")
-        fixed_lines = []
+        fixed_lines: list[str] = []
 
         for line in lines:
             # Fix missing newlines between fields

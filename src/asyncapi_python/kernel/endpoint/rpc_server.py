@@ -30,9 +30,9 @@ class RpcServer(
         """Initialize the RPC server endpoint"""
         if self._consumer:
             return
-        
-        # Validate that we have exactly one handler
-        if not self._handler:
+
+        # Validate that we have exactly one handler (if validation is enabled)
+        if self._should_validate_handlers() and not self._handler:
             raise RuntimeError(
                 f"RPC server endpoint '{self._operation.key}' requires exactly one handler. "
                 f"Use @{self._operation.key} decorator to register a handler function."
@@ -154,7 +154,7 @@ class RpcServer(
         self, handler: Handler[T_Input, T_Output], _params: HandlerParams
     ) -> None:
         """Register a handler and start consuming requests"""
-        if self._handler is not None:
+        if self._should_validate_handlers() and self._handler is not None:
             raise RuntimeError(
                 f"RPC server endpoint '{self._operation.key}' already has a handler registered.\n"
                 f"Existing handler: {self._handler.__name__} at {self._handler_location}\n"
@@ -163,7 +163,9 @@ class RpcServer(
             )
 
         self._handler = handler
-        self._handler_location = f"{handler.__code__.co_filename}:{handler.__code__.co_firstlineno}"
+        self._handler_location = (
+            f"{handler.__code__.co_filename}:{handler.__code__.co_firstlineno}"
+        )
         # Start background task to consume requests if consumer is ready
         if self._consumer and not self._consume_task:
             try:

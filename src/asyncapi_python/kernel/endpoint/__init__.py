@@ -11,11 +11,11 @@ from .rpc_server import RpcServer
 
 __all__ = [
     "AbstractEndpoint",
-    "Publisher", 
+    "Publisher",
     "Subscriber",
     "RpcClient",
     "RpcServer",
-    "EndpointFactory"
+    "EndpointFactory",
 ]
 
 

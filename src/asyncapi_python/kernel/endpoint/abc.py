@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Callable, Generic, TypedDict, overload
-from typing_extensions import Unpack
+from typing_extensions import Unpack, Required, NotRequired
 
 from ..typing import Handler, T_Input, T_Output
 from asyncapi_python.kernel.wire import AbstractWireFactory
@@ -8,7 +8,15 @@ from asyncapi_python.kernel.document import Operation
 from asyncapi_python.kernel.codec import Codec, CodecFactory
 
 
-class HandlerParams(TypedDict, total=False):
+class EndpointParams(TypedDict):
+    """Optional parameters for endpoint configuration"""
+
+    disable_handler_validation: NotRequired[
+        bool
+    ]  # Opt-out of handler enforcement for testing
+
+
+class HandlerParams(TypedDict):
     """Parameters for message handlers"""
 
     pass
@@ -16,14 +24,17 @@ class HandlerParams(TypedDict, total=False):
 
 class AbstractEndpoint(ABC):
     class Inputs(TypedDict):
-        operation: Operation
-        wire_factory: AbstractWireFactory
-        codec_factory: CodecFactory
+        operation: Required[Operation]
+        wire_factory: Required[AbstractWireFactory]
+        codec_factory: Required[CodecFactory]
+        endpoint_params: NotRequired[EndpointParams]  # Optional endpoint configuration
 
     def __init__(self, **kwargs: Unpack[Inputs]):
         self._operation = kwargs["operation"]
         self._wire = kwargs["wire_factory"]
         codec_factory = kwargs["codec_factory"]
+        # Endpoint sets its own defaults - empty dict if not provided
+        self._endpoint_params = kwargs.get("endpoint_params", {})
 
         # Create codecs for operation messages
         self._codecs: list[Codec] = [
@@ -57,6 +68,10 @@ class AbstractEndpoint(ABC):
             raise RuntimeError("No reply codecs - operation has no reply")
         return self._try_codecs(self._reply_codecs, "decode", payload)
 
+    def _should_validate_handlers(self) -> bool:
+        """Check if handler validation should be performed"""
+        return not self._endpoint_params.get("disable_handler_validation", False)
+
     def _try_codecs(self, codecs: list[Codec], operation: str, payload):
         """Try operation with each codec in sequence until one succeeds"""
         if not codecs:
@@ -88,8 +103,9 @@ class AbstractEndpoint(ABC):
 class Send(ABC, Generic[T_Input, T_Output]):
     """An interface that sending endpoint implements"""
 
-    class RouterInputs(TypedDict, total=False):
+    class RouterInputs(TypedDict):
         """Base inputs for send endpoints. Router subclasses can extend this with specific parameters."""
+
         pass  # Empty for now, extensible for future fields
 
     @abstractmethod

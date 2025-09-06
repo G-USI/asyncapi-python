@@ -92,6 +92,8 @@ def maybe_ref(func: Callable[[YamlDocument], T]) -> Callable[[YamlDocument], T]:
                 )
 
             ref_string = data.get("$ref")
+            if not ref_string or not isinstance(ref_string, str):
+                raise ValueError("Invalid or missing $ref value")
             target_context = current_context.resolve_reference(ref_string)
 
             # Load target file and navigate to JSON pointer

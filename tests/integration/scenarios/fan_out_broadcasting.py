@@ -21,7 +21,7 @@ class EventBroadcaster(BaseApplication):
     """Event broadcaster that publishes user action events to multiple consumers"""
 
     def __init__(self, wire_factory: AbstractWireFactory, codec_factory: CodecFactory):
-        super().__init__(wire_factory, codec_factory)
+        super().__init__(wire_factory=wire_factory, codec_factory=codec_factory)
         self._setup_endpoints()
 
     def _setup_endpoints(self):
@@ -109,7 +109,7 @@ class BaseConsumerService(BaseApplication):
         codec_factory: CodecFactory,
     ):
         self.service_name = service_name
-        super().__init__(wire_factory, codec_factory)
+        super().__init__(wire_factory=wire_factory, codec_factory=codec_factory)
         self._setup_endpoints()
 
     def _setup_endpoints(self):

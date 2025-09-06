@@ -27,7 +27,7 @@ class UserServiceApp(BaseApplication):
     """User service that publishes user creation events"""
 
     def __init__(self, wire_factory: AbstractWireFactory, codec_factory: CodecFactory):
-        super().__init__(wire_factory, codec_factory)
+        super().__init__(wire_factory=wire_factory, codec_factory=codec_factory)
         self._setup_endpoints()
 
     def _setup_endpoints(self):
@@ -88,7 +88,7 @@ class OrderServiceApp(BaseApplication):
     """Order service that consumes user events and publishes order events"""
 
     def __init__(self, wire_factory: AbstractWireFactory, codec_factory: CodecFactory):
-        super().__init__(wire_factory, codec_factory)
+        super().__init__(wire_factory=wire_factory, codec_factory=codec_factory)
         self._setup_endpoints()
 
     def _setup_endpoints(self):
@@ -247,7 +247,7 @@ class PaymentServiceApp(BaseApplication):
     """Payment service that consumes order events and publishes payment events"""
 
     def __init__(self, wire_factory: AbstractWireFactory, codec_factory: CodecFactory):
-        super().__init__(wire_factory, codec_factory)
+        super().__init__(wire_factory=wire_factory, codec_factory=codec_factory)
         self._setup_endpoints()
 
     def _setup_endpoints(self):
@@ -360,7 +360,7 @@ class InventoryServiceApp(BaseApplication):
     """Inventory service that consumes order events and publishes inventory events"""
 
     def __init__(self, wire_factory: AbstractWireFactory, codec_factory: CodecFactory):
-        super().__init__(wire_factory, codec_factory)
+        super().__init__(wire_factory=wire_factory, codec_factory=codec_factory)
         self._setup_endpoints()
 
     def _setup_endpoints(self):
@@ -473,7 +473,7 @@ class ShippingServiceApp(BaseApplication):
     """Shipping service that consumes payment and inventory events, publishes shipping events"""
 
     def __init__(self, wire_factory: AbstractWireFactory, codec_factory: CodecFactory):
-        super().__init__(wire_factory, codec_factory)
+        super().__init__(wire_factory=wire_factory, codec_factory=codec_factory)
         self._setup_endpoints()
 
     def _setup_endpoints(self):

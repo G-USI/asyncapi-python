@@ -70,9 +70,12 @@ def extract_channel_bindings(data: YamlDocument) -> ChannelBindings:
     amqp_binding = None
     if "amqp" in data and data["amqp"] is not None:
         amqp_data = data["amqp"]
-        from asyncapi_python.kernel.document.bindings import create_amqp_binding_from_dict
+        from asyncapi_python.kernel.document.bindings import (
+            create_amqp_binding_from_dict,
+        )
+
         amqp_binding = create_amqp_binding_from_dict(amqp_data)
-    
+
     return ChannelBindings(
         http=data.get("http"),
         amqp1=data.get("amqp1"),
@@ -325,6 +328,7 @@ def extract_operation_bindings(data: YamlDocument) -> OperationBindings:
         amqp_data = data["amqp"]
         if amqp_data:
             from asyncapi_python.kernel.document.bindings import AmqpOperationBinding
+
             # Create operation binding from dict data
             amqp_binding = AmqpOperationBinding(
                 expiration=amqp_data.get("expiration"),
@@ -337,7 +341,7 @@ def extract_operation_bindings(data: YamlDocument) -> OperationBindings:
                 timestamp=amqp_data.get("timestamp"),
                 ack=amqp_data.get("ack"),
             )
-    
+
     return OperationBindings(
         http=data.get("http"),
         amqp1=data.get("amqp1"),

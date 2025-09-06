@@ -1,6 +1,5 @@
 """Binding resolution with comprehensive pattern matching"""
 
-
 from asyncapi_python.kernel.wire import EndpointParams
 from asyncapi_python.kernel.document.channel import Channel
 from asyncapi_python.kernel.document.bindings import AmqpChannelBinding
@@ -50,7 +49,11 @@ def resolve_amqp_config(
                 exchange_name="",  # Default exchange for reply
                 routing_key=f"reply-{app_id}",  # Direct routing to the reply queue
                 binding_type=AmqpBindingType.REPLY,
-                queue_properties={"durable": False, "exclusive": True, "auto_delete": True},
+                queue_properties={
+                    "durable": False,
+                    "exclusive": True,
+                    "auto_delete": True,
+                },
             )
 
         # Reply channel with explicit address - shared channel with filtering
@@ -67,7 +70,9 @@ def resolve_amqp_config(
 
         # Reply channel with binding - defer to binding resolution
         case (True, binding, _, _) if binding and binding.type == "queue":
-            config = resolve_queue_binding(binding, param_values, channel, operation_name)
+            config = resolve_queue_binding(
+                binding, param_values, channel, operation_name
+            )
             # Override queue name with reply- prefix for reply queues
             config.queue_name = f"reply-{app_id}-{config.queue_name}"
             config.routing_key = config.queue_name
@@ -75,7 +80,9 @@ def resolve_amqp_config(
             return config
 
         case (True, binding, _, _) if binding and binding.type == "routingKey":
-            config = resolve_routing_key_binding(binding, param_values, channel, operation_name)
+            config = resolve_routing_key_binding(
+                binding, param_values, channel, operation_name
+            )
             # For reply with routing key binding, create a prefixed queue
             config.queue_name = f"reply-{app_id}"
             config.binding_type = AmqpBindingType.REPLY
@@ -127,7 +134,10 @@ def resolve_amqp_config(
 
 
 def resolve_queue_binding(
-    binding: AmqpChannelBinding, param_values: dict[str, str], channel: Channel, operation_name: str
+    binding: AmqpChannelBinding,
+    param_values: dict[str, str],
+    channel: Channel,
+    operation_name: str,
 ) -> AmqpConfig:
     """Resolve AMQP queue binding configuration"""
 
@@ -165,7 +175,10 @@ def resolve_queue_binding(
 
 
 def resolve_routing_key_binding(
-    binding: AmqpChannelBinding, param_values: dict[str, str], channel: Channel, operation_name: str
+    binding: AmqpChannelBinding,
+    param_values: dict[str, str],
+    channel: Channel,
+    operation_name: str,
 ) -> AmqpConfig:
     """Resolve AMQP routing key binding configuration for pub/sub patterns"""
 

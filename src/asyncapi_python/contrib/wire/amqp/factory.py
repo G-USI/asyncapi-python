@@ -2,7 +2,7 @@
 
 import asyncio
 import secrets
-from typing import Optional, Callable, Any
+from typing import Optional, Callable, Any, cast
 from typing_extensions import Unpack
 
 try:
@@ -24,7 +24,7 @@ from .resolver import resolve_amqp_config
 
 class AmqpWire(AbstractWireFactory[AmqpWireMessage, AmqpIncomingMessage]):
     """AMQP wire factory implementation with configurable connection robustness.
-    
+
     By default, connections fail fast (for Kubernetes environments).
     Set robust=True to enable automatic reconnection with exponential backoff.
     """
@@ -43,7 +43,7 @@ class AmqpWire(AbstractWireFactory[AmqpWireMessage, AmqpIncomingMessage]):
     ):
         """
         Initialize AMQP wire factory.
-        
+
         Args:
             connection_url: AMQP connection URL
             service_name: Service name prefix for app_id
@@ -93,26 +93,34 @@ class AmqpWire(AbstractWireFactory[AmqpWireMessage, AmqpIncomingMessage]):
                         heartbeat=self._heartbeat,
                         timeout=self._connection_timeout,
                     )
-                    
+
                     # Set up connection lost handler for non-robust mode
                     if self._on_connection_lost:
-                        self._connection.close_callbacks.add(self._handle_connection_lost)
-                        
+                        self._connection.close_callbacks.add(
+                            cast(Any, self._handle_connection_lost)
+                        )
+
                 except Exception as e:
                     # In non-robust mode, let connection failures propagate
                     # This allows Kubernetes to restart the pod
-                    raise ConnectionError(f"Failed to connect to AMQP broker: {e}") from e
-                    
+                    raise ConnectionError(
+                        f"Failed to connect to AMQP broker: {e}"
+                    ) from e
+
         return self._connection
-    
-    def _handle_connection_lost(self, connection: AbstractConnection, exception: Optional[Exception] = None) -> None:
+
+    def _handle_connection_lost(
+        self, connection: AbstractConnection, exception: Optional[BaseException] = None
+    ) -> None:
         """Handle connection lost event in non-robust mode"""
-        if self._on_connection_lost and exception:
+        if self._on_connection_lost and exception and isinstance(exception, Exception):
             self._on_connection_lost(exception)
         else:
             # Default behavior: let the process die for Kubernetes restart
             if exception:
-                raise ConnectionError(f"AMQP connection lost: {exception}") from exception
+                raise ConnectionError(
+                    f"AMQP connection lost: {exception}"
+                ) from exception
             else:
                 raise ConnectionError("AMQP connection lost unexpectedly")
 

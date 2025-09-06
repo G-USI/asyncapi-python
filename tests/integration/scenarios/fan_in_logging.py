@@ -28,7 +28,7 @@ class BaseLoggingService(BaseApplication):
         codec_factory: CodecFactory,
     ):
         self.service_name = service_name
-        super().__init__(wire_factory, codec_factory)
+        super().__init__(wire_factory=wire_factory, codec_factory=codec_factory)
         self._setup_endpoints()
 
     def _setup_endpoints(self):
@@ -139,7 +139,7 @@ class LogAggregatorService(BaseApplication):
     """Log aggregator service that receives logs from all services"""
 
     def __init__(self, wire_factory: AbstractWireFactory, codec_factory: CodecFactory):
-        super().__init__(wire_factory, codec_factory)
+        super().__init__(wire_factory=wire_factory, codec_factory=codec_factory)
         self._setup_endpoints()
 
     def _setup_endpoints(self):

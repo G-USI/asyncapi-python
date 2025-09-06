@@ -23,38 +23,66 @@ class RouterInfo:
     def channel_repr(self) -> str:
         """Get string representation of channel for template with spec prefix."""
         channel_str = repr(self.channel)
-        
+
         # Replace all document struct references with spec. prefix
         document_classes = [
-            'Channel', 'Operation', 'Message', 'ChannelBindings', 'OperationReply',
-            'AddressParameter', 'ExternalDocs', 'Server', 'Tag',
-            'CorrelationId', 'MessageBindings', 'MessageExample', 'MessageTrait',
-            'OperationBindings', 'OperationReplyAddress', 'OperationTrait', 'SecurityScheme'
+            "Channel",
+            "Operation",
+            "Message",
+            "ChannelBindings",
+            "OperationReply",
+            "AddressParameter",
+            "ExternalDocs",
+            "Server",
+            "Tag",
+            "CorrelationId",
+            "MessageBindings",
+            "MessageExample",
+            "MessageTrait",
+            "OperationBindings",
+            "OperationReplyAddress",
+            "OperationTrait",
+            "SecurityScheme",
         ]
-        
+
         for class_name in document_classes:
             # Replace standalone class calls like Tag( with spec.Tag(
-            channel_str = channel_str.replace(f'{class_name}(', f'spec.{class_name}(')
-        
+            channel_str = channel_str.replace(f"{class_name}(", f"spec.{class_name}(")
+
         return channel_str
 
     @property
     def operation_repr(self) -> str:
         """Get string representation of operation for template with spec prefix."""
         operation_str = repr(self.operation)
-        
+
         # Replace all document struct references with spec. prefix
         document_classes = [
-            'Channel', 'Operation', 'Message', 'ChannelBindings', 'OperationReply',
-            'AddressParameter', 'ExternalDocs', 'Server', 'Tag',
-            'CorrelationId', 'MessageBindings', 'MessageExample', 'MessageTrait',
-            'OperationBindings', 'OperationReplyAddress', 'OperationTrait', 'SecurityScheme'
+            "Channel",
+            "Operation",
+            "Message",
+            "ChannelBindings",
+            "OperationReply",
+            "AddressParameter",
+            "ExternalDocs",
+            "Server",
+            "Tag",
+            "CorrelationId",
+            "MessageBindings",
+            "MessageExample",
+            "MessageTrait",
+            "OperationBindings",
+            "OperationReplyAddress",
+            "OperationTrait",
+            "SecurityScheme",
         ]
-        
+
         for class_name in document_classes:
             # Replace standalone class calls like Tag( with spec.Tag(
-            operation_str = operation_str.replace(f'{class_name}(', f'spec.{class_name}(')
-        
+            operation_str = operation_str.replace(
+                f"{class_name}(", f"spec.{class_name}("
+            )
+
         return operation_str
 
 
@@ -95,13 +123,21 @@ class RouterGenerator:
                 desc = operation.description
 
             # Check if channel has parameters (indicated by {} in address)
-            has_parameters = (operation.channel.address is not None and 
-                            "{" in operation.channel.address and "}" in operation.channel.address)
+            has_parameters = (
+                operation.channel.address is not None
+                and "{" in operation.channel.address
+                and "}" in operation.channel.address
+            )
             parameter_type_name = ""
-            
+
             if has_parameters:
                 # Generate parameter TypedDict name from channel address
-                parameter_type_name = self._channel_to_param_type_name(operation.channel.address)
+                if operation.channel.address:
+                    parameter_type_name = self._channel_to_param_type_name(
+                        operation.channel.address
+                    )
+                else:
+                    parameter_type_name = "DefaultParams"
 
             router = RouterInfo(
                 class_name=class_name,
@@ -120,40 +156,48 @@ class RouterGenerator:
 
     def _channel_to_param_type_name(self, channel_address: str) -> str:
         """Convert channel address to parameter TypedDict name.
-        
+
         Example: 'market.data.{exchange}.{symbol}' -> 'MarketDataExchangeSymbolParams'
         """
         import re
-        
+
         # Extract parameter names and include them in the TypedDict name
-        params = re.findall(r'\{([^}]+)\}', channel_address)
-        
+        params = re.findall(r"\{([^}]+)\}", channel_address)
+
         # Remove all parameter placeholders to get the base name
-        clean_name = re.sub(r'\{[^}]+\}', '', channel_address)
-        
+        clean_name = re.sub(r"\{[^}]+\}", "", channel_address)
+
         # Remove trailing/leading dots and convert to PascalCase
-        parts = [p for p in clean_name.strip('.').split('.') if p]
-        base_name = ''.join(part.title().replace('-', '').replace('_', '') for part in parts)
-        
+        parts = [p for p in clean_name.strip(".").split(".") if p]
+        base_name = "".join(
+            part.title().replace("-", "").replace("_", "") for part in parts
+        )
+
         # Add parameter names in PascalCase
-        param_suffix = ''.join(p.title().replace('_', '') for p in params)
-        
+        param_suffix = "".join(p.title().replace("_", "") for p in params)
+
         return f"{base_name}{param_suffix}Params"
 
     def split_routers(
         self, routers: List[RouterInfo]
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Split routers into producer and consumer groups with nested structure."""
-        producer_routers = {}
-        consumer_routers = {}
+        producer_routers: Dict[str, Any] = {}
+        consumer_routers: Dict[str, Any] = {}
 
         for router in routers:
-            target = producer_routers if router.operation.action == "send" else consumer_routers
+            target = (
+                producer_routers
+                if router.operation.action == "send"
+                else consumer_routers
+            )
             self._insert_nested_router(target, router.path, router)
 
         return producer_routers, consumer_routers
 
-    def _insert_nested_router(self, tree: Dict[str, Any], path: Tuple[str, ...], router: RouterInfo) -> None:
+    def _insert_nested_router(
+        self, tree: Dict[str, Any], path: Tuple[str, ...], router: RouterInfo
+    ) -> None:
         """Insert a router into a nested tree structure."""
         current = tree
 
@@ -168,7 +212,13 @@ class RouterGenerator:
         final_segment = path[-1].lower()
         current[final_segment] = router
 
-    def generate_nested_routers_code(self, routers_dict: Dict[str, Any], indent: int = 2, router_type: str = "", prefix: str = "") -> str:
+    def generate_nested_routers_code(
+        self,
+        routers_dict: Dict[str, Any],
+        indent: int = 2,
+        router_type: str = "",
+        prefix: str = "",
+    ) -> str:
         """Generate nested router initialization code."""
         lines = []
         indent_str = " " * indent
@@ -176,18 +226,26 @@ class RouterGenerator:
         for key, value in routers_dict.items():
             if isinstance(value, RouterInfo):
                 # This is a router endpoint
-                lines.append(f"{indent_str}self.{key} = {value.class_name}(wire_factory, codec_factory)")
+                lines.append(
+                    f"{indent_str}self.{key} = {value.class_name}(wire_factory, codec_factory)"
+                )
             else:
                 # This is a nested router level - create a sub-router class
                 full_prefix = f"{prefix}.{key}" if prefix else key
-                path_parts = full_prefix.split('.')
-                class_name_parts = [router_type] + [part.title() for part in path_parts] + ["Router"]
-                subclass_name = '__'.join(class_name_parts)
-                lines.append(f"{indent_str}self.{key} = {subclass_name}(wire_factory, codec_factory)")
+                path_parts = full_prefix.split(".")
+                class_name_parts = (
+                    [router_type] + [part.title() for part in path_parts] + ["Router"]
+                )
+                subclass_name = "__".join(class_name_parts)
+                lines.append(
+                    f"{indent_str}self.{key} = {subclass_name}(wire_factory, codec_factory)"
+                )
 
         return "\n".join(lines)
 
-    def collect_nested_classes(self, routers_dict: Dict[str, Any], prefix: str = "", router_type: str = "") -> List[str]:
+    def collect_nested_classes(
+        self, routers_dict: Dict[str, Any], prefix: str = "", router_type: str = ""
+    ) -> List[str]:
         """Collect all nested router class definitions."""
         classes = []
 
@@ -196,20 +254,32 @@ class RouterGenerator:
                 # This is a nested level - generate a sub-router class
                 full_prefix = f"{prefix}.{key}" if prefix else key
                 # Make class name unique by including the full path to avoid conflicts
-                path_parts = full_prefix.split('.')
-                class_name_parts = [router_type] + [part.title() for part in path_parts] + ["Router"]
-                class_name = '__'.join(class_name_parts)
+                path_parts = full_prefix.split(".")
+                class_name_parts = (
+                    [router_type] + [part.title() for part in path_parts] + ["Router"]
+                )
+                class_name = "__".join(class_name_parts)
 
                 # Generate class definition
-                class_def = self._generate_nested_class(class_name, value, router_type, full_prefix)
+                class_def = self._generate_nested_class(
+                    class_name, value, router_type, full_prefix
+                )
                 classes.append(class_def)
 
                 # Recursively collect nested classes
-                classes.extend(self.collect_nested_classes(value, full_prefix, router_type))
+                classes.extend(
+                    self.collect_nested_classes(value, full_prefix, router_type)
+                )
 
         return classes
 
-    def _generate_nested_class(self, class_name: str, routers_dict: Dict[str, Any], router_type: str = "", prefix: str = "") -> str:
+    def _generate_nested_class(
+        self,
+        class_name: str,
+        routers_dict: Dict[str, Any],
+        router_type: str = "",
+        prefix: str = "",
+    ) -> str:
         """Generate a nested router class definition."""
         lines = [
             f"class {class_name}:",
@@ -220,13 +290,19 @@ class RouterGenerator:
 
         for key, value in routers_dict.items():
             if isinstance(value, RouterInfo):
-                lines.append(f"        self.{key} = {value.class_name}(wire_factory, codec_factory)")
+                lines.append(
+                    f"        self.{key} = {value.class_name}(wire_factory, codec_factory)"
+                )
             else:
                 full_prefix = f"{prefix}.{key}" if prefix else key
-                path_parts = full_prefix.split('.')
-                class_name_parts = [router_type] + [part.title() for part in path_parts] + ["Router"]
-                subclass_name = '__'.join(class_name_parts)
-                lines.append(f"        self.{key} = {subclass_name}(wire_factory, codec_factory)")
+                path_parts = full_prefix.split(".")
+                class_name_parts = (
+                    [router_type] + [part.title() for part in path_parts] + ["Router"]
+                )
+                subclass_name = "__".join(class_name_parts)
+                lines.append(
+                    f"        self.{key} = {subclass_name}(wire_factory, codec_factory)"
+                )
 
         return "\n".join(lines)
 
@@ -236,7 +312,7 @@ class RouterGenerator:
             # Handle multiple messages from channel with union types
             if operation.channel.messages:
                 message_types = [
-                    self._to_pascal_case(msg_name) 
+                    self._to_pascal_case(msg_name)
                     for msg_name in operation.channel.messages.keys()
                 ]
                 if len(message_types) == 1:
@@ -248,7 +324,7 @@ class RouterGenerator:
             # Handle multiple messages from reply channel with union types
             if operation.reply and operation.reply.channel.messages:
                 message_types = [
-                    self._to_pascal_case(msg_name) 
+                    self._to_pascal_case(msg_name)
                     for msg_name in operation.reply.channel.messages.keys()
                 ]
                 if len(message_types) == 1:
@@ -267,9 +343,10 @@ class RouterGenerator:
             if any(c.isupper() for c in name[1:]):
                 # Split on capital letters for camelCase
                 import re
-                words = re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?=[A-Z][a-z]|\b)', name)
+
+                words = re.findall(r"[A-Z]?[a-z]+|[A-Z]+(?=[A-Z][a-z]|\b)", name)
                 return "".join(word.capitalize() for word in words)
-        
+
         # Handle underscore/hyphen/dot separated names (existing logic)
         return "".join(
             word.capitalize()
