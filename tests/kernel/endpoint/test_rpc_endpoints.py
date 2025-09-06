@@ -470,496 +470,495 @@ class SimpleCodecFactory(CodecFactory):
         return SimpleCodec()
 
 
-class TestRpcEndpoints:
-    """Integration tests for RPC endpoints with end-to-end message flow"""
+# Integration tests for RPC endpoints with end-to-end message flow
 
-    @pytest.mark.asyncio
-    async def test_complete_rpc_scenario(self, mock_operation, cleanup_rpc_client):
-        """Test a complete RPC scenario with realistic message flow"""
-        # Create a realistic wire factory that simulates message routing
-        wire_factory = RealisticWireFactory()
+@pytest.mark.asyncio
+async def test_complete_rpc_scenario(mock_operation, cleanup_rpc_client):
+    """Test a complete RPC scenario with realistic message flow"""
+    # Create a realistic wire factory that simulates message routing
+    wire_factory = RealisticWireFactory()
 
-        # Create simple codecs that work with our test messages
-        codec_factory = SimpleCodecFactory()
+    # Create simple codecs that work with our test messages
+    codec_factory = SimpleCodecFactory()
 
-        # Create client and server with proper operations
-        client = RpcClient(
-            operation=mock_operation,
+    # Create client and server with proper operations
+    client = RpcClient(
+        operation=mock_operation,
+        wire_factory=wire_factory,
+        codec_factory=codec_factory,
+    )
+
+    server_operation = Operation(
+        action="receive",
+        channel=mock_operation.channel,
+        messages=mock_operation.messages,
+        reply=mock_operation.reply,
+        title=None,
+        summary=None,
+        description=None,
+        tags=[],
+        external_docs=None,
+        traits=[],
+        bindings=None,
+        key="test-key",
+        security=None,
+    )
+
+    server = RpcServer(
+        operation=server_operation,
+        wire_factory=wire_factory,
+        codec_factory=codec_factory,
+    )
+
+    # Register server handler
+    @server
+    async def handle_request(request: RequestMessage) -> ResponseMessage:
+        return ResponseMessage(f"Echo: {request.data}")
+
+    # Set up wire factory to use the server handler for automatic replies
+    wire_factory.set_server_handler(handle_request)
+
+    # Start both endpoints
+    await client.start()
+    await server.start()
+
+    # Make RPC call
+    request = RequestMessage("Hello World")
+    response = await client(request)
+
+    # Verify response
+    assert isinstance(response, ResponseMessage)
+    assert response.result == "Echo: Hello World"
+
+    # Cleanup
+    await client.stop()
+    await server.stop()
+    await wire_factory.cleanup()
+
+@pytest.mark.asyncio
+async def test_concurrent_rpc_calls(mock_operation, cleanup_rpc_client):
+    """Test multiple concurrent RPC calls"""
+    wire_factory = RealisticWireFactory()
+    codec_factory = SimpleCodecFactory()
+
+    # Create client
+    client = RpcClient(
+        operation=mock_operation,
+        wire_factory=wire_factory,
+        codec_factory=codec_factory,
+    )
+
+    # Create server
+    server_operation = Operation(
+        action="receive",
+        channel=mock_operation.channel,
+        messages=mock_operation.messages,
+        reply=mock_operation.reply,
+        title=None,
+        summary=None,
+        description=None,
+        tags=[],
+        external_docs=None,
+        traits=[],
+        bindings=None,
+        key="test-key",
+        security=None,
+    )
+
+    server = RpcServer(
+        operation=server_operation,
+        wire_factory=wire_factory,
+        codec_factory=codec_factory,
+    )
+
+    # Server handler with delay to test concurrency
+    @server
+    async def handle_request(request: RequestMessage) -> ResponseMessage:
+        await asyncio.sleep(0.1)  # Simulate processing time
+        return ResponseMessage(f"Processed-{request.data}")
+
+    # Set up wire factory for automatic replies
+    wire_factory.set_server_handler(handle_request)
+
+    # Start endpoints
+    await client.start()
+    await server.start()
+
+    # Make multiple concurrent calls
+    tasks = []
+    for i in range(5):
+        request = RequestMessage(f"Request-{i}")
+        task = asyncio.create_task(client(request))
+        tasks.append(task)
+
+    # Wait for all responses
+    responses = await asyncio.gather(*tasks)
+
+    # Verify all responses are correct and unique
+    assert len(responses) == 5
+    results = {r.result for r in responses}
+    expected = {f"Processed-Request-{i}" for i in range(5)}
+    assert results == expected
+
+    # Cleanup
+    await client.stop()
+    await server.stop()
+    await wire_factory.cleanup()
+
+@pytest.mark.asyncio
+async def test_rpc_error_handling(mock_operation, cleanup_rpc_client):
+    """Test RPC error handling when server handler fails"""
+    wire_factory = RealisticWireFactory()
+    codec_factory = SimpleCodecFactory()
+
+    client = RpcClient(
+        operation=mock_operation,
+        wire_factory=wire_factory,
+        codec_factory=codec_factory,
+    )
+
+    server_operation = Operation(
+        action="receive",
+        channel=mock_operation.channel,
+        messages=mock_operation.messages,
+        reply=mock_operation.reply,
+        title=None,
+        summary=None,
+        description=None,
+        tags=[],
+        external_docs=None,
+        traits=[],
+        bindings=None,
+        key="test-key",
+        security=None,
+    )
+
+    server = RpcServer(
+        operation=server_operation,
+        wire_factory=wire_factory,
+        codec_factory=codec_factory,
+    )
+
+    # Handler that raises an error
+    @server
+    async def handle_request(request: RequestMessage) -> ResponseMessage:
+        if request.data == "error":
+            raise ValueError("Simulated server error")
+        return ResponseMessage(f"OK: {request.data}")
+
+    # Set up wire factory for automatic replies
+    wire_factory.set_server_handler(handle_request)
+
+    await client.start()
+    await server.start()
+
+    # Test normal request
+    response = await client(RequestMessage("normal"))
+    assert response.result == "OK: normal"
+
+    # Test error request - should receive error response
+    error_response = await client(RequestMessage("error"))
+    # The server sends an error response, which should be a JSON string
+    assert "error" in error_response.result.lower()
+
+    await client.stop()
+    await server.stop()
+    await wire_factory.cleanup()
+
+@pytest.mark.asyncio
+async def test_pubsub_fanout_scenario(cleanup_rpc_client):
+    """Test pub-sub fanout scenario - one publisher, multiple subscribers"""
+    wire_factory = RealisticWireFactory()
+    codec_factory = SimpleCodecFactory()
+
+    # Create pub-sub channel
+    pubsub_channel = Channel(
+        address="events.pubsub",  # Special address for pub-sub detection
+        title="Event Channel",
+        summary=None,
+        description=None,
+        servers=[],
+        messages={},
+        parameters={},
+        tags=[],
+        external_docs=None,
+        bindings=None,
+        key="test-key",
+    )
+
+    # Create message for events
+    event_message = Message(
+        name="EventMessage",
+        title=None,
+        summary=None,
+        description=None,
+        tags=[],
+        externalDocs=None,
+        traits=[],
+        payload={"type": "object"},
+        headers=None,
+        bindings=None,
+        key="test-key",
+        correlation_id=None,
+        content_type=None,
+        deprecated=None,
+    )
+
+    # Create publisher operation
+    pub_operation = Operation(
+        action="send",
+        channel=pubsub_channel,
+        messages=[event_message],
+        reply=None,
+        title=None,
+        summary=None,
+        description=None,
+        tags=[],
+        external_docs=None,
+        traits=[],
+        bindings=None,
+        key="test-key",
+        security=None,
+    )
+
+    # Create subscriber operation
+    sub_operation = Operation(
+        action="receive",
+        channel=pubsub_channel,
+        messages=[event_message],
+        reply=None,
+        title=None,
+        summary=None,
+        description=None,
+        tags=[],
+        external_docs=None,
+        traits=[],
+        bindings=None,
+        key="test-key",
+        security=None,
+    )
+
+    # Create publisher
+    publisher = Publisher(
+        operation=pub_operation,
+        wire_factory=wire_factory,
+        codec_factory=codec_factory,
+    )
+
+    # Create multiple subscribers
+    subscribers = []
+    received_messages = []
+
+    for i in range(3):
+        subscriber = Subscriber(
+            operation=sub_operation,
             wire_factory=wire_factory,
             codec_factory=codec_factory,
         )
 
-        server_operation = Operation(
-            action="receive",
-            channel=mock_operation.channel,
-            messages=mock_operation.messages,
-            reply=mock_operation.reply,
-            title=None,
-            summary=None,
-            description=None,
-            tags=[],
-            external_docs=None,
-            traits=[],
-            bindings=None,
-            key="test-key",
-            security=None,
-        )
+        # Track received messages
+        subscriber_messages = []
+        received_messages.append(subscriber_messages)
 
-        server = RpcServer(
-            operation=server_operation,
-            wire_factory=wire_factory,
-            codec_factory=codec_factory,
-        )
+        @subscriber
+        async def handle_event(event: RequestMessage, msg_list=subscriber_messages):
+            msg_list.append(event.data)
 
-        # Register server handler
-        @server
-        async def handle_request(request: RequestMessage) -> ResponseMessage:
-            return ResponseMessage(f"Echo: {request.data}")
+        subscribers.append(subscriber)
 
-        # Set up wire factory to use the server handler for automatic replies
-        wire_factory.set_server_handler(handle_request)
+    # Start all endpoints
+    await publisher.start()
+    for subscriber in subscribers:
+        await subscriber.start()
 
-        # Start both endpoints
-        await client.start()
-        await server.start()
+    # Give subscribers time to start consuming
+    await asyncio.sleep(0.05)
 
-        # Make RPC call
-        request = RequestMessage("Hello World")
+    # Publish an event
+    event = RequestMessage("Important Event")
+    await publisher(event)
+
+    # Give time for fanout delivery
+    await asyncio.sleep(0.1)
+
+    # Verify all subscribers received the message
+    assert len(received_messages) == 3
+    for subscriber_msgs in received_messages:
+        assert len(subscriber_msgs) == 1
+        assert subscriber_msgs[0] == "Important Event"
+
+    # Publish another event
+    await publisher(RequestMessage("Second Event"))
+    await asyncio.sleep(0.1)
+
+    # Verify all subscribers received both events
+    for subscriber_msgs in received_messages:
+        assert len(subscriber_msgs) == 2
+        assert "Important Event" in subscriber_msgs
+        assert "Second Event" in subscriber_msgs
+
+    # Cleanup
+    await publisher.stop()
+    for subscriber in subscribers:
+        await subscriber.stop()
+    await wire_factory.cleanup()
+
+@pytest.mark.asyncio
+async def test_enhanced_rpc_scenario(cleanup_rpc_client):
+    """Enhanced RPC scenario with detailed request-response validation"""
+    wire_factory = RealisticWireFactory()
+    codec_factory = SimpleCodecFactory()
+
+    # Create RPC operation
+    rpc_channel = Channel(
+        address="math.rpc",
+        title="Math RPC Channel",
+        summary=None,
+        description=None,
+        servers=[],
+        messages={},
+        parameters={},
+        tags=[],
+        external_docs=None,
+        bindings=None,
+        key="test-key",
+    )
+
+    request_message = Message(
+        name="MathRequest",
+        title=None,
+        summary=None,
+        description=None,
+        tags=[],
+        externalDocs=None,
+        traits=[],
+        payload={"type": "object"},
+        headers=None,
+        bindings=None,
+        key="test-key",
+        correlation_id=None,
+        content_type=None,
+        deprecated=None,
+    )
+
+    response_message = Message(
+        name="MathResponse",
+        title=None,
+        summary=None,
+        description=None,
+        tags=[],
+        externalDocs=None,
+        traits=[],
+        payload={"type": "object"},
+        headers=None,
+        bindings=None,
+        key="test-key",
+        correlation_id=None,
+        content_type=None,
+        deprecated=None,
+    )
+
+    reply = OperationReply(
+        channel=rpc_channel,
+        address=None,
+        messages=[response_message],
+    )
+
+    client_operation = Operation(
+        action="send",
+        channel=rpc_channel,
+        messages=[request_message],
+        reply=reply,
+        title=None,
+        summary=None,
+        description=None,
+        tags=[],
+        external_docs=None,
+        traits=[],
+        bindings=None,
+        key="test-key",
+        security=None,
+    )
+
+    server_operation = Operation(
+        action="receive",
+        channel=rpc_channel,
+        messages=[request_message],
+        reply=reply,
+        title=None,
+        summary=None,
+        description=None,
+        tags=[],
+        external_docs=None,
+        traits=[],
+        bindings=None,
+        key="test-key",
+        security=None,
+    )
+
+    # Create client and server
+    client = RpcClient(
+        operation=client_operation,
+        wire_factory=wire_factory,
+        codec_factory=codec_factory,
+    )
+
+    server = RpcServer(
+        operation=server_operation,
+        wire_factory=wire_factory,
+        codec_factory=codec_factory,
+    )
+
+    # Register enhanced server handler
+    @server
+    async def math_service(request: RequestMessage) -> ResponseMessage:
+        operation, *number_strs = request.data.split()
+        numbers = [float(n) for n in number_strs]
+
+        if operation == "add":
+            result = sum(numbers)
+        elif operation == "multiply":
+            result = 1.0
+            for n in numbers:
+                result *= n
+        elif operation == "divide":
+            result = numbers[0] / numbers[1] if len(numbers) >= 2 else 0.0
+        else:
+            raise ValueError(f"Unknown operation: {operation}")
+
+        return ResponseMessage(f"{result}")
+
+    # Set up wire factory for automatic replies
+    wire_factory.set_server_handler(math_service)
+
+    # Start both endpoints
+    await client.start()
+    await server.start()
+
+    # Test various RPC calls
+    test_cases = [
+        ("add 10 20 30", "60.0"),
+        ("multiply 5 4 2", "40.0"),
+        ("divide 100 4", "25.0"),
+    ]
+
+    for request_data, expected in test_cases:
+        request = RequestMessage(request_data)
         response = await client(request)
+        assert (
+            response.result == expected
+        ), f"Failed for {request_data}: got {response.result}, expected {expected}"
 
-        # Verify response
-        assert isinstance(response, ResponseMessage)
-        assert response.result == "Echo: Hello World"
-
-        # Cleanup
-        await client.stop()
-        await server.stop()
-        await wire_factory.cleanup()
-
-    @pytest.mark.asyncio
-    async def test_concurrent_rpc_calls(self, mock_operation, cleanup_rpc_client):
-        """Test multiple concurrent RPC calls"""
-        wire_factory = RealisticWireFactory()
-        codec_factory = SimpleCodecFactory()
-
-        # Create client
-        client = RpcClient(
-            operation=mock_operation,
-            wire_factory=wire_factory,
-            codec_factory=codec_factory,
-        )
-
-        # Create server
-        server_operation = Operation(
-            action="receive",
-            channel=mock_operation.channel,
-            messages=mock_operation.messages,
-            reply=mock_operation.reply,
-            title=None,
-            summary=None,
-            description=None,
-            tags=[],
-            external_docs=None,
-            traits=[],
-            bindings=None,
-            key="test-key",
-            security=None,
-        )
-
-        server = RpcServer(
-            operation=server_operation,
-            wire_factory=wire_factory,
-            codec_factory=codec_factory,
-        )
-
-        # Server handler with delay to test concurrency
-        @server
-        async def handle_request(request: RequestMessage) -> ResponseMessage:
-            await asyncio.sleep(0.1)  # Simulate processing time
-            return ResponseMessage(f"Processed-{request.data}")
-
-        # Set up wire factory for automatic replies
-        wire_factory.set_server_handler(handle_request)
-
-        # Start endpoints
-        await client.start()
-        await server.start()
-
-        # Make multiple concurrent calls
-        tasks = []
-        for i in range(5):
-            request = RequestMessage(f"Request-{i}")
-            task = asyncio.create_task(client(request))
-            tasks.append(task)
-
-        # Wait for all responses
-        responses = await asyncio.gather(*tasks)
-
-        # Verify all responses are correct and unique
-        assert len(responses) == 5
-        results = {r.result for r in responses}
-        expected = {f"Processed-Request-{i}" for i in range(5)}
-        assert results == expected
-
-        # Cleanup
-        await client.stop()
-        await server.stop()
-        await wire_factory.cleanup()
-
-    @pytest.mark.asyncio
-    async def test_rpc_error_handling(self, mock_operation, cleanup_rpc_client):
-        """Test RPC error handling when server handler fails"""
-        wire_factory = RealisticWireFactory()
-        codec_factory = SimpleCodecFactory()
-
-        client = RpcClient(
-            operation=mock_operation,
-            wire_factory=wire_factory,
-            codec_factory=codec_factory,
-        )
-
-        server_operation = Operation(
-            action="receive",
-            channel=mock_operation.channel,
-            messages=mock_operation.messages,
-            reply=mock_operation.reply,
-            title=None,
-            summary=None,
-            description=None,
-            tags=[],
-            external_docs=None,
-            traits=[],
-            bindings=None,
-            key="test-key",
-            security=None,
-        )
-
-        server = RpcServer(
-            operation=server_operation,
-            wire_factory=wire_factory,
-            codec_factory=codec_factory,
-        )
-
-        # Handler that raises an error
-        @server
-        async def handle_request(request: RequestMessage) -> ResponseMessage:
-            if request.data == "error":
-                raise ValueError("Simulated server error")
-            return ResponseMessage(f"OK: {request.data}")
-
-        # Set up wire factory for automatic replies
-        wire_factory.set_server_handler(handle_request)
-
-        await client.start()
-        await server.start()
-
-        # Test normal request
-        response = await client(RequestMessage("normal"))
-        assert response.result == "OK: normal"
-
-        # Test error request - should receive error response
-        error_response = await client(RequestMessage("error"))
-        # The server sends an error response, which should be a JSON string
+    # Test error handling
+    try:
+        error_response = await client(RequestMessage("unknown 1 2"))
+        # Should receive error response, not throw exception
         assert "error" in error_response.result.lower()
+    except Exception:
+        # Error handling worked
+        pass
 
-        await client.stop()
-        await server.stop()
-        await wire_factory.cleanup()
-
-    @pytest.mark.asyncio
-    async def test_pubsub_fanout_scenario(self, cleanup_rpc_client):
-        """Test pub-sub fanout scenario - one publisher, multiple subscribers"""
-        wire_factory = RealisticWireFactory()
-        codec_factory = SimpleCodecFactory()
-
-        # Create pub-sub channel
-        pubsub_channel = Channel(
-            address="events.pubsub",  # Special address for pub-sub detection
-            title="Event Channel",
-            summary=None,
-            description=None,
-            servers=[],
-            messages={},
-            parameters={},
-            tags=[],
-            external_docs=None,
-            bindings=None,
-            key="test-key",
-        )
-
-        # Create message for events
-        event_message = Message(
-            name="EventMessage",
-            title=None,
-            summary=None,
-            description=None,
-            tags=[],
-            externalDocs=None,
-            traits=[],
-            payload={"type": "object"},
-            headers=None,
-            bindings=None,
-            key="test-key",
-            correlation_id=None,
-            content_type=None,
-            deprecated=None,
-        )
-
-        # Create publisher operation
-        pub_operation = Operation(
-            action="send",
-            channel=pubsub_channel,
-            messages=[event_message],
-            reply=None,
-            title=None,
-            summary=None,
-            description=None,
-            tags=[],
-            external_docs=None,
-            traits=[],
-            bindings=None,
-            key="test-key",
-            security=None,
-        )
-
-        # Create subscriber operation
-        sub_operation = Operation(
-            action="receive",
-            channel=pubsub_channel,
-            messages=[event_message],
-            reply=None,
-            title=None,
-            summary=None,
-            description=None,
-            tags=[],
-            external_docs=None,
-            traits=[],
-            bindings=None,
-            key="test-key",
-            security=None,
-        )
-
-        # Create publisher
-        publisher = Publisher(
-            operation=pub_operation,
-            wire_factory=wire_factory,
-            codec_factory=codec_factory,
-        )
-
-        # Create multiple subscribers
-        subscribers = []
-        received_messages = []
-
-        for i in range(3):
-            subscriber = Subscriber(
-                operation=sub_operation,
-                wire_factory=wire_factory,
-                codec_factory=codec_factory,
-            )
-
-            # Track received messages
-            subscriber_messages = []
-            received_messages.append(subscriber_messages)
-
-            @subscriber
-            async def handle_event(event: RequestMessage, msg_list=subscriber_messages):
-                msg_list.append(event.data)
-
-            subscribers.append(subscriber)
-
-        # Start all endpoints
-        await publisher.start()
-        for subscriber in subscribers:
-            await subscriber.start()
-
-        # Give subscribers time to start consuming
-        await asyncio.sleep(0.05)
-
-        # Publish an event
-        event = RequestMessage("Important Event")
-        await publisher(event)
-
-        # Give time for fanout delivery
-        await asyncio.sleep(0.1)
-
-        # Verify all subscribers received the message
-        assert len(received_messages) == 3
-        for subscriber_msgs in received_messages:
-            assert len(subscriber_msgs) == 1
-            assert subscriber_msgs[0] == "Important Event"
-
-        # Publish another event
-        await publisher(RequestMessage("Second Event"))
-        await asyncio.sleep(0.1)
-
-        # Verify all subscribers received both events
-        for subscriber_msgs in received_messages:
-            assert len(subscriber_msgs) == 2
-            assert "Important Event" in subscriber_msgs
-            assert "Second Event" in subscriber_msgs
-
-        # Cleanup
-        await publisher.stop()
-        for subscriber in subscribers:
-            await subscriber.stop()
-        await wire_factory.cleanup()
-
-    @pytest.mark.asyncio
-    async def test_enhanced_rpc_scenario(self, cleanup_rpc_client):
-        """Enhanced RPC scenario with detailed request-response validation"""
-        wire_factory = RealisticWireFactory()
-        codec_factory = SimpleCodecFactory()
-
-        # Create RPC operation
-        rpc_channel = Channel(
-            address="math.rpc",
-            title="Math RPC Channel",
-            summary=None,
-            description=None,
-            servers=[],
-            messages={},
-            parameters={},
-            tags=[],
-            external_docs=None,
-            bindings=None,
-            key="test-key",
-        )
-
-        request_message = Message(
-            name="MathRequest",
-            title=None,
-            summary=None,
-            description=None,
-            tags=[],
-            externalDocs=None,
-            traits=[],
-            payload={"type": "object"},
-            headers=None,
-            bindings=None,
-            key="test-key",
-            correlation_id=None,
-            content_type=None,
-            deprecated=None,
-        )
-
-        response_message = Message(
-            name="MathResponse",
-            title=None,
-            summary=None,
-            description=None,
-            tags=[],
-            externalDocs=None,
-            traits=[],
-            payload={"type": "object"},
-            headers=None,
-            bindings=None,
-            key="test-key",
-            correlation_id=None,
-            content_type=None,
-            deprecated=None,
-        )
-
-        reply = OperationReply(
-            channel=rpc_channel,
-            address=None,
-            messages=[response_message],
-        )
-
-        client_operation = Operation(
-            action="send",
-            channel=rpc_channel,
-            messages=[request_message],
-            reply=reply,
-            title=None,
-            summary=None,
-            description=None,
-            tags=[],
-            external_docs=None,
-            traits=[],
-            bindings=None,
-            key="test-key",
-            security=None,
-        )
-
-        server_operation = Operation(
-            action="receive",
-            channel=rpc_channel,
-            messages=[request_message],
-            reply=reply,
-            title=None,
-            summary=None,
-            description=None,
-            tags=[],
-            external_docs=None,
-            traits=[],
-            bindings=None,
-            key="test-key",
-            security=None,
-        )
-
-        # Create client and server
-        client = RpcClient(
-            operation=client_operation,
-            wire_factory=wire_factory,
-            codec_factory=codec_factory,
-        )
-
-        server = RpcServer(
-            operation=server_operation,
-            wire_factory=wire_factory,
-            codec_factory=codec_factory,
-        )
-
-        # Register enhanced server handler
-        @server
-        async def math_service(request: RequestMessage) -> ResponseMessage:
-            operation, *number_strs = request.data.split()
-            numbers = [float(n) for n in number_strs]
-
-            if operation == "add":
-                result = sum(numbers)
-            elif operation == "multiply":
-                result = 1.0
-                for n in numbers:
-                    result *= n
-            elif operation == "divide":
-                result = numbers[0] / numbers[1] if len(numbers) >= 2 else 0.0
-            else:
-                raise ValueError(f"Unknown operation: {operation}")
-
-            return ResponseMessage(f"{result}")
-
-        # Set up wire factory for automatic replies
-        wire_factory.set_server_handler(math_service)
-
-        # Start both endpoints
-        await client.start()
-        await server.start()
-
-        # Test various RPC calls
-        test_cases = [
-            ("add 10 20 30", "60.0"),
-            ("multiply 5 4 2", "40.0"),
-            ("divide 100 4", "25.0"),
-        ]
-
-        for request_data, expected in test_cases:
-            request = RequestMessage(request_data)
-            response = await client(request)
-            assert (
-                response.result == expected
-            ), f"Failed for {request_data}: got {response.result}, expected {expected}"
-
-        # Test error handling
-        try:
-            error_response = await client(RequestMessage("unknown 1 2"))
-            # Should receive error response, not throw exception
-            assert "error" in error_response.result.lower()
-        except Exception:
-            # Error handling worked
-            pass
-
-        # Cleanup
-        await client.stop()
-        await server.stop()
-        await wire_factory.cleanup()
+    # Cleanup
+    await client.stop()
+    await server.stop()
+    await wire_factory.cleanup()
