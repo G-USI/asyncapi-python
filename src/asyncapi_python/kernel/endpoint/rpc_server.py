@@ -23,12 +23,20 @@ class RpcServer(
         self._consumer: Consumer[IncomingMessage] | None = None
         self._reply_producer: Producer[WireMessage] | None = None
         self._handler: Handler[T_Input, T_Output] | None = None
+        self._handler_location: str | None = None
         self._consume_task: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
         """Initialize the RPC server endpoint"""
         if self._consumer:
             return
+        
+        # Validate that we have exactly one handler
+        if not self._handler:
+            raise RuntimeError(
+                f"RPC server endpoint '{self._operation.key}' requires exactly one handler. "
+                f"Use @{self._operation.key} decorator to register a handler function."
+            )
 
         # Validate we have reply codecs
         if not self._reply_codecs:
@@ -146,10 +154,16 @@ class RpcServer(
         self, handler: Handler[T_Input, T_Output], _params: HandlerParams
     ) -> None:
         """Register a handler and start consuming requests"""
-        if self._handler:
-            raise ValueError("RPC server already has a handler registered")
+        if self._handler is not None:
+            raise RuntimeError(
+                f"RPC server endpoint '{self._operation.key}' already has a handler registered.\n"
+                f"Existing handler: {self._handler.__name__} at {self._handler_location}\n"
+                f"New handler: {handler.__name__} at {handler.__code__.co_filename}:{handler.__code__.co_firstlineno}\n"
+                f"Each RPC server endpoint must have exactly one handler."
+            )
 
         self._handler = handler
+        self._handler_location = f"{handler.__code__.co_filename}:{handler.__code__.co_firstlineno}"
         # Start background task to consume requests if consumer is ready
         if self._consumer and not self._consume_task:
             try:
