@@ -1,13 +1,13 @@
 """AMQP producer implementation"""
 
-from typing import Any, cast
+from typing import Any
 
 try:
     from aio_pika import Message as AmqpMessage, ExchangeType  # type: ignore[import-not-found]
     from aio_pika.abc import (  # type: ignore[import-not-found]
-        AbstractRobustConnection,
-        AbstractRobustChannel,
-        AbstractRobustExchange,
+        AbstractConnection,
+        AbstractChannel,
+        AbstractExchange,
     )
 except ImportError as e:
     raise ImportError(
@@ -24,7 +24,7 @@ class AmqpProducer(Producer[AmqpWireMessage]):
 
     def __init__(
         self,
-        connection: AbstractRobustConnection,
+        connection: AbstractConnection,
         queue_name: str,
         exchange_name: str = "",
         exchange_type: str = "direct",
@@ -37,8 +37,8 @@ class AmqpProducer(Producer[AmqpWireMessage]):
         self._exchange_type = exchange_type
         self._routing_key = routing_key
         self._queue_properties = queue_properties or {}
-        self._channel: AbstractRobustChannel | None = None
-        self._target_exchange: AbstractRobustExchange | None = None
+        self._channel: AbstractChannel | None = None
+        self._target_exchange: AbstractExchange | None = None
         self._started = False
 
     async def start(self) -> None:
@@ -46,15 +46,13 @@ class AmqpProducer(Producer[AmqpWireMessage]):
         if self._started:
             return
 
-        self._channel = cast(AbstractRobustChannel, await self._connection.channel())
+        self._channel = await self._connection.channel()
 
         # Pattern matching for exchange setup based on type
         match (self._exchange_name, self._exchange_type):
             # Default exchange pattern (queue-based routing)
             case ("", _):
-                self._target_exchange = cast(
-                    AbstractRobustExchange, self._channel.default_exchange
-                )
+                self._target_exchange = self._channel.default_exchange
                 # Declare queue for default exchange routing
                 if self._queue_name:
                     await self._channel.declare_queue(
