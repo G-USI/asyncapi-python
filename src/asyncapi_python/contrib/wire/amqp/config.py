@@ -23,8 +23,8 @@ class AmqpConfig:
     exchange_type: str = "direct"
     routing_key: str = ""
     binding_type: AmqpBindingType = AmqpBindingType.QUEUE
-    queue_properties: dict[str, Any] = field(default_factory=dict)
-    binding_arguments: dict[str, Any] = field(default_factory=dict)
+    queue_properties: dict[str, Any] = field(default_factory=lambda: {})
+    binding_arguments: dict[str, Any] = field(default_factory=lambda: {})
 
     def to_producer_args(self) -> dict[str, Any]:
         """Convert to AmqpProducer constructor arguments"""

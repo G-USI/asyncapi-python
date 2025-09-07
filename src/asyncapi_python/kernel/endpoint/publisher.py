@@ -47,7 +47,7 @@ class Publisher(AbstractEndpoint, Send[T_Input, None], Generic[T_Input]):
         await self._producer.stop()
         self._producer = None
 
-    async def __call__(self, payload: T_Input) -> None:
+    async def __call__(self, payload: T_Input, /, **kwargs: Unpack[Send.RouterInputs]) -> None:
         """Send a message without expecting a reply
 
         Args:

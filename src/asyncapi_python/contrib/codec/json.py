@@ -1,5 +1,6 @@
 import json
-from typing import Type, cast, ClassVar
+from typing import Type, ClassVar
+from types import ModuleType
 
 from pydantic import BaseModel, ValidationError
 
@@ -50,7 +51,7 @@ class JsonCodecFactory(CodecFactory[BaseModel, bytes]):
 
     _codec_registry: ClassVar[dict[str, JsonCodec]] = {}
 
-    def __init__(self, module):
+    def __init__(self, module: ModuleType) -> None:
         super().__init__(module)
 
     def create(self, message: Message) -> JsonCodec:
@@ -87,7 +88,7 @@ class JsonCodecFactory(CodecFactory[BaseModel, bytes]):
             model_class = getattr(messages_json_module, class_name)
             if not issubclass(model_class, BaseModel):
                 raise ValueError(f"Class {class_name} is not a Pydantic BaseModel")
-            return cast(Type[BaseModel], model_class)
+            return model_class
         except AttributeError as e:
             raise ValueError(
                 f"Model class {class_name} not found in {self._module}.messages.json: {e}"

@@ -1,5 +1,6 @@
 """Binding resolution with comprehensive pattern matching"""
 
+from typing import Any
 from asyncapi_python.kernel.wire import EndpointParams
 from asyncapi_python.kernel.document.channel import Channel
 from asyncapi_python.kernel.document.bindings import AmqpChannelBinding
@@ -261,9 +262,9 @@ def resolve_exchange_binding(
         exchange_type = exchange_config.type
 
     # Extract binding arguments for headers exchange from dataclass
-    binding_args = {}
-    if hasattr(binding, "bindingKeys") and binding.bindingKeys:
-        binding_args = binding.bindingKeys
+    binding_args: dict[str, Any] = {}
+    # Note: bindingKeys is not part of AmqpChannelBinding spec
+    # This would be handled by operation-level bindings if needed
 
     return AmqpConfig(
         queue_name="",  # Auto-generated exclusive queue

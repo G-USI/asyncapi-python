@@ -16,7 +16,7 @@ class AmqpWireMessage:
     """AMQP wire message implementation"""
 
     _payload: bytes
-    _headers: dict[str, Any] = field(default_factory=dict)
+    _headers: dict[str, Any] = field(default_factory=lambda: {})
     _correlation_id: str | None = None
     _reply_to: str | None = None
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, Literal, Optional, Union
+from typing import Any, Dict, Literal, Optional
 from enum import Enum
 
 
@@ -30,7 +30,7 @@ class AmqpExchange:
     def __repr__(self) -> str:
         """Custom repr to handle enum properly for code generation."""
         from asyncapi_python.kernel.document.bindings import AmqpExchangeType
-
+        _ = AmqpExchangeType  # Explicitly reference the import
         return f"spec.AmqpExchange(name={self.name!r}, type=spec.AmqpExchangeType.{self.type.name}, durable={self.durable!r}, auto_delete={self.auto_delete!r}, vhost={self.vhost!r})"
 
 
@@ -64,7 +64,7 @@ class AmqpChannelBinding:
     binding_version: str = "0.3.0"
 
     # Extension fields
-    extensions: Dict[str, Any] = field(default_factory=dict)
+    extensions: Dict[str, Any] = field(default_factory=lambda: {})
 
     def __post_init__(self):
         """Validate binding configuration after initialization."""
@@ -99,7 +99,7 @@ class AmqpOperationBinding:
     binding_version: str = "0.3.0"
 
     # Extension fields
-    extensions: Dict[str, Any] = field(default_factory=dict)
+    extensions: Dict[str, Any] = field(default_factory=lambda: {})
 
     def __repr__(self) -> str:
         """Custom repr for code generation."""
@@ -118,7 +118,7 @@ class AmqpMessageBinding:
     binding_version: str = "0.3.0"
 
     # Extension fields
-    extensions: Dict[str, Any] = field(default_factory=dict)
+    extensions: Dict[str, Any] = field(default_factory=lambda: {})
 
 
 def create_amqp_binding_from_dict(binding_dict: Dict[str, Any]) -> AmqpChannelBinding:
@@ -131,9 +131,9 @@ def create_amqp_binding_from_dict(binding_dict: Dict[str, Any]) -> AmqpChannelBi
         raise ValueError("Invalid AMQP binding: binding data is empty")
 
     # Derive binding type from presence of fields
-    has_exchange = binding_dict is not None and "exchange" in binding_dict
-    has_routing_key = binding_dict is not None and "routingKey" in binding_dict
-    has_queue = binding_dict is not None and "queue" in binding_dict
+    has_exchange = "exchange" in binding_dict
+    has_routing_key = "routingKey" in binding_dict
+    has_queue = "queue" in binding_dict
 
     if has_exchange and has_routing_key:
         raise ValueError(

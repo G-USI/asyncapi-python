@@ -19,3 +19,6 @@ class Producer(EndpointLifecycle, Protocol, Generic[T_Send]):
 class Consumer(EndpointLifecycle, Protocol, Generic[T_Recv]):
     def recv(self) -> AsyncGenerator[T_Recv, None]:
         """Starts streaming incoming messages"""
+        # This is a protocol method - implementation must provide async generator
+        # Using NotImplemented because protocols cannot have implementations
+        raise NotImplementedError("Protocol method must be implemented by concrete class")

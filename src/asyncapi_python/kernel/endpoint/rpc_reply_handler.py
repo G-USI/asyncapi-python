@@ -4,6 +4,7 @@ import asyncio
 import secrets
 
 from ..typing import IncomingMessage
+from typing import Any
 from asyncapi_python.kernel.wire import Consumer, AbstractWireFactory
 from asyncapi_python.kernel.document import Channel, Operation
 
@@ -18,13 +19,13 @@ class GlobalRpcReplyHandler:
 
     def __init__(self) -> None:
         self._futures: dict[str, asyncio.Future[IncomingMessage]] = {}
-        self._reply_consumer: Consumer[IncomingMessage] | None = None
+        self._reply_consumer: Consumer[Any] | None = None
         self._consume_task: asyncio.Task[None] | None = None
         self._reply_queue_name: str | None = None
         self._instance_count: int = 0
 
     async def ensure_reply_handler(
-        self, wire_factory: AbstractWireFactory, operation: Operation
+        self, wire_factory: AbstractWireFactory[Any, Any], operation: Operation
     ) -> None:
         """Ensure reply consumer and task are running"""
         if self._reply_consumer is None:

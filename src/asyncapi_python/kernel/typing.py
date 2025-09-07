@@ -4,7 +4,7 @@ This module defines all TypeVars used across the kernel with clear relationships
 between application data, encoded data, and wire messages.
 """
 
-from typing import Any, Generic, Protocol, TypeVar, TypedDict
+from typing import Any, Protocol, TypeVar, TypedDict
 from typing_extensions import TypeAlias, Required
 from types import CodeType
 
@@ -27,10 +27,12 @@ class Message(Protocol):
     @property
     def payload(self) -> bytes:
         """Payload of the message"""
+        return b""
 
     @property
     def headers(self) -> dict[str, Any]:
         """Message headers"""
+        return {}
 
     @property
     def correlation_id(self) -> str | None:

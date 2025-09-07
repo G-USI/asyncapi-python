@@ -1,5 +1,5 @@
 import asyncio
-from typing import Callable, Generic, overload
+from typing import Callable, Generic, overload, Union
 from typing_extensions import Unpack
 
 from .abc import AbstractEndpoint, Receive, HandlerParams
@@ -128,6 +128,7 @@ class RpcServer(
             self._reply_producer = None
 
     @overload
+    @overload
     def __call__(
         self, fn: Handler[T_Input, T_Output]
     ) -> Handler[T_Input, T_Output]: ...
@@ -142,22 +143,23 @@ class RpcServer(
     ) -> Callable[[BatchHandler[T_Input, T_Output]], BatchHandler[T_Input, T_Output]]: ...
 
     @overload
+    @overload
     def __call__(
         self, fn: None = None, **kwargs: Unpack[HandlerParams]
     ) -> Callable[[Handler[T_Input, T_Output]], Handler[T_Input, T_Output]]: ...
 
-    def __call__(
+    def __call__(  # type: ignore[override]
         self,
         fn: Handler[T_Input, T_Output] | BatchHandler[T_Input, T_Output] | None = None,
         *,
         batch: BatchConfig | None = None,
         **kwargs: Unpack[HandlerParams],
-    ) -> (
-        Handler[T_Input, T_Output]
-        | BatchHandler[T_Input, T_Output]
-        | Callable[[Handler[T_Input, T_Output]], Handler[T_Input, T_Output]]
-        | Callable[[BatchHandler[T_Input, T_Output]], BatchHandler[T_Input, T_Output]]
-    ):
+    ) -> Union[
+        Handler[T_Input, T_Output],
+        BatchHandler[T_Input, T_Output],
+        Callable[[Handler[T_Input, T_Output]], Handler[T_Input, T_Output]],
+        Callable[[BatchHandler[T_Input, T_Output]], BatchHandler[T_Input, T_Output]]
+    ]:
         """Register a handler for incoming RPC requests
 
         Can be used as a decorator:
@@ -312,7 +314,9 @@ class RpcServer(
             wire_messages = [item[1] for item in batch]
 
             try:
-                # Call the batch handler to get responses
+                # Call the batch handler to get responses  
+                if self._batch_handler is None:
+                    raise RuntimeError("No batch handler configured")
                 responses = await self._batch_handler(decoded_requests)
 
                 # Validate response count matches request count (as specified in requirements)
@@ -324,8 +328,8 @@ class RpcServer(
                     )
 
                 # Send replies for each request-response pair
-                for i, (wire_message, response) in enumerate(
-                    zip(wire_messages, responses)
+                for wire_message, response in zip(
+                    wire_messages, responses
                 ):
                     try:
                         # Encode response
@@ -410,12 +414,12 @@ class RpcServer(
                                 batch.clear()
                                 batch_start_time = None
 
-                except Exception as e:
+                except Exception:
                     # Individual message decode error - nack and continue
                     await wire_message.nack()
                     continue
 
-        except Exception as e:
+        except Exception:
             # Final exception handling - nack any remaining messages
             exception_occurred = True
             for _, wire_message in batch:

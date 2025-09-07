@@ -1,5 +1,5 @@
 import asyncio
-from typing import TypedDict
+from typing import TypedDict, Any
 from typing_extensions import Unpack, Required, NotRequired
 
 from asyncapi_python.kernel.document.operation import Operation
@@ -11,17 +11,17 @@ from .codec import CodecFactory
 
 class BaseApplication:
     class Inputs(TypedDict):
-        wire_factory: Required[AbstractWireFactory]
-        codec_factory: Required[CodecFactory]
+        wire_factory: Required[AbstractWireFactory[Any, Any]]
+        codec_factory: Required[CodecFactory[Any, Any]]
         endpoint_params: NotRequired[EndpointParams]
 
     def __init__(self, **kwargs: Unpack[Inputs]) -> None:
         self.__endpoints: set[AbstractEndpoint] = set()
-        self.__wire_factory: AbstractWireFactory = kwargs["wire_factory"]
-        self.__codec_factory: CodecFactory = kwargs["codec_factory"]
+        self.__wire_factory: AbstractWireFactory[Any, Any] = kwargs["wire_factory"]
+        self.__codec_factory: CodecFactory[Any, Any] = kwargs["codec_factory"]
         self.__endpoint_params: EndpointParams = kwargs.get("endpoint_params", {})
         self._stop_event: asyncio.Event | None = None
-        self._monitor_task: asyncio.Task | None = None
+        self._monitor_task: asyncio.Task[None] | None = None
         self._exception_future: asyncio.Future[Exception] | None = None
 
     def _register_endpoint(self, op: Operation) -> AbstractEndpoint:
@@ -56,7 +56,14 @@ class BaseApplication:
             try:
                 # Create tasks for both conditions
                 stop_task = asyncio.create_task(self._stop_event.wait())
-                exception_task = asyncio.create_task(self._exception_future)
+                # Convert Future to awaitable
+                async def _wait_for_exception():
+                    if self._exception_future is None:
+                        # Create a never-completing future if no exception future exists
+                        await asyncio.Event().wait()
+                        return  # This line will never be reached
+                    return await asyncio.wrap_future(self._exception_future)
+                exception_task = asyncio.create_task(_wait_for_exception())
 
                 # Wait for either stop event or exception
                 _, pending = await asyncio.wait(
@@ -69,8 +76,9 @@ class BaseApplication:
                 # Check if an exception was raised
                 if exception_task.done() and not exception_task.cancelled():
                     exc = exception_task.result()
-                    await self.stop()
-                    raise exc
+                    if exc is not None:
+                        await self.stop()
+                        raise exc
 
             except asyncio.CancelledError:
                 # Handle graceful shutdown on cancellation

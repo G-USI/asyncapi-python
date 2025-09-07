@@ -1,6 +1,5 @@
 """AMQP wire factory implementation"""
 
-import asyncio
 import secrets
 from typing import Optional, Callable, Any, cast
 from typing_extensions import Unpack

@@ -19,14 +19,14 @@ class Subscriber(AbstractEndpoint, Receive[T_Input, None], Generic[T_Input]):
 
     def __init__(self, **kwargs: Unpack[AbstractEndpoint.Inputs]):
         super().__init__(**kwargs)
-        self._consumer: Consumer | None = None
+        self._consumer: Consumer[Any] | None = None
         self._handler: Handler[T_Input, None] | None = None
         self._batch_handler: BatchConsumer[Any] | None = (
             None  # Any because batch type is determined at runtime
         )
         self._handler_location: str | None = None
         self._batch_config: BatchConfig | None = None
-        self._consume_task: asyncio.Task | None = None
+        self._consume_task: asyncio.Task[None] | None = None
 
     async def start(self, **params: Unpack[AbstractEndpoint.StartParams]) -> None:
         """Initialize the subscriber endpoint"""
@@ -86,6 +86,7 @@ class Subscriber(AbstractEndpoint, Receive[T_Input, None], Generic[T_Input]):
         self._consumer = None
 
     @overload
+    @overload
     def __call__(self, fn: Handler[T_Input, None]) -> Handler[T_Input, None]: ...
 
     @overload
@@ -98,11 +99,12 @@ class Subscriber(AbstractEndpoint, Receive[T_Input, None], Generic[T_Input]):
     ) -> Callable[[BatchConsumer[T_Input]], BatchConsumer[T_Input]]: ...
 
     @overload
+    @overload
     def __call__(
         self, fn: None = None, **kwargs: Unpack[HandlerParams]
     ) -> Callable[[Handler[T_Input, None]], Handler[T_Input, None]]: ...
 
-    def __call__(
+    def __call__(  # type: ignore[override]
         self,
         fn: Handler[T_Input, None] | BatchConsumer[T_Input] | None = None,
         *,
@@ -241,6 +243,8 @@ class Subscriber(AbstractEndpoint, Receive[T_Input, None], Generic[T_Input]):
 
             try:
                 # Call the batch handler
+                if self._batch_handler is None:
+                    raise RuntimeError("No batch handler configured")
                 await self._batch_handler(decoded_messages)
 
                 # Acknowledge all messages in the batch
@@ -302,12 +306,12 @@ class Subscriber(AbstractEndpoint, Receive[T_Input, None], Generic[T_Input]):
                                 batch.clear()
                                 batch_start_time = None
 
-                except Exception as e:
+                except Exception:
                     # Individual message decode error - nack and continue
                     await wire_message.nack()
                     continue
 
-        except Exception as e:
+        except Exception:
             # Final exception handling - nack any remaining messages
             exception_occurred = True
             for _, wire_message in batch:

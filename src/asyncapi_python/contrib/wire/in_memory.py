@@ -15,7 +15,7 @@ class InMemoryMessage:
     """In-memory implementation of Message protocol"""
 
     _payload: bytes
-    _headers: dict[str, Any] = field(default_factory=dict)
+    _headers: dict[str, Any] = field(default_factory=lambda: {})
     _correlation_id: str | None = None
     _reply_to: str | None = None
 
@@ -98,7 +98,7 @@ class InMemoryBus:
 
             # Notify all consumers on this channel
             for consumer in self._consumers[channel_name]:
-                consumer._notify_new_message()
+                consumer._notify_new_message()  # type: ignore[reportPrivateUsage]
 
     async def subscribe(self, channel_name: str, consumer: "InMemoryConsumer") -> None:
         """Subscribe a consumer to a channel"""

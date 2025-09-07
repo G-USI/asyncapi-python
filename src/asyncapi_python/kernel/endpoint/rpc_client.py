@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, Generic
+from typing import Generic
 from typing_extensions import Unpack
 from uuid import uuid4
 
@@ -7,8 +7,7 @@ from .abc import AbstractEndpoint, Send
 from .exceptions import UninitializedError, TimeoutError
 from .message import WireMessage
 from ..typing import T_Input, T_Output, IncomingMessage
-from asyncapi_python.kernel.wire import Producer, Consumer, AbstractWireFactory
-from asyncapi_python.kernel.document import Channel, Operation
+from asyncapi_python.kernel.wire import Producer
 
 
 from .rpc_reply_handler import global_reply_handler
@@ -71,7 +70,7 @@ class RpcClient(AbstractEndpoint, Send[T_Input, T_Output], Generic[T_Input, T_Ou
         if remaining_count == 0:
             await global_reply_handler.cleanup_if_last_instance()
 
-    async def __call__(self, payload: T_Input, timeout: float = 30.0) -> T_Output:
+    async def __call__(self, payload: T_Input, /, timeout: float = 30.0, **kwargs: Unpack[Send.RouterInputs]) -> T_Output:
         """Send an RPC request and wait for response using global reply handling
 
         Args:

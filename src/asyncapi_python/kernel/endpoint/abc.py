@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Generic, TypedDict, overload
+from typing import Any, Callable, Generic, TypedDict, overload, Union
 from typing_extensions import Unpack, Required, NotRequired
 
 from ..typing import Handler, T_Input, T_Output, BatchConfig
@@ -57,21 +57,21 @@ class AbstractEndpoint(ABC):
             else []
         )
 
-    def _encode_message(self, payload):
+    def _encode_message(self, payload: Any) -> Any:
         """Encode using main message codecs"""
         return self._try_codecs(self._codecs, "encode", payload)
 
-    def _decode_message(self, payload):
+    def _decode_message(self, payload: Any) -> Any:
         """Decode using main message codecs"""
         return self._try_codecs(self._codecs, "decode", payload)
 
-    def _encode_reply(self, payload):
+    def _encode_reply(self, payload: Any) -> Any:
         """Encode using reply codecs"""
         if not self._reply_codecs:
             raise RuntimeError("No reply codecs - operation has no reply")
         return self._try_codecs(self._reply_codecs, "encode", payload)
 
-    def _decode_reply(self, payload):
+    def _decode_reply(self, payload: Any) -> Any:
         """Decode using reply codecs"""
         if not self._reply_codecs:
             raise RuntimeError("No reply codecs - operation has no reply")
@@ -81,7 +81,7 @@ class AbstractEndpoint(ABC):
         """Check if handler validation should be performed"""
         return not self._endpoint_params.get("disable_handler_validation", False)
 
-    def _try_codecs(self, codecs: list[Codec], operation: str, payload):
+    def _try_codecs(self, codecs: list[Codec[Any, Any]], operation: str, payload: Any) -> Any:
         """Try operation with each codec in sequence until one succeeds"""
         if not codecs:
             raise RuntimeError("No codecs available")
@@ -137,12 +137,12 @@ class Receive(ABC, Generic[T_Input, T_Output]):
         *,
         batch: BatchConfig,
         **kwargs: Unpack[HandlerParams],
-    ) -> Callable: ...
+    ) -> Callable[[Handler[T_Input, T_Output]], Handler[T_Input, T_Output]]: ...
 
     @overload
     def __call__(
         self, fn: None = None, **kwargs: Unpack[HandlerParams]
-    ) -> Callable: ...
+    ) -> Callable[[Handler[T_Input, T_Output]], Handler[T_Input, T_Output]]: ...
 
     @abstractmethod
     def __call__(
@@ -151,4 +151,4 @@ class Receive(ABC, Generic[T_Input, T_Output]):
         *,
         batch: BatchConfig | None = None,
         **kwargs: Unpack[HandlerParams],
-    ) -> Handler[T_Input, T_Output] | Callable: ...
+    ) -> Union[Handler[T_Input, T_Output], Callable[[Handler[T_Input, T_Output]], Handler[T_Input, T_Output]]]: ...
