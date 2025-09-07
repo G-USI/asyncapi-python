@@ -3,6 +3,7 @@
 from typing import Any
 from dataclasses import dataclass
 from asyncapi_python.kernel.document import Channel, Operation
+from asyncapi_python.utils import snake_case
 
 
 @dataclass
@@ -203,13 +204,13 @@ class RouterGenerator:
 
         # Navigate to the parent level
         for segment in path[:-1]:
-            segment_lower = segment.lower()
-            if segment_lower not in current:
-                current[segment_lower] = {}
-            current = current[segment_lower]
+            segment_snake = snake_case(segment)
+            if segment_snake not in current:
+                current[segment_snake] = {}
+            current = current[segment_snake]
 
         # Insert the router at the final level
-        final_segment = path[-1].lower()
+        final_segment = snake_case(path[-1])
         current[final_segment] = router
 
     def generate_nested_routers_code(
