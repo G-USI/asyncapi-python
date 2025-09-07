@@ -88,7 +88,6 @@ dev = [
     { name = "black" },
     { name = "isort" },
     { name = "mypy" },
-    { name = "pex" },
     { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -115,7 +114,6 @@ dev = [
     { name = "black" },
     { name = "isort" },
     { name = "mypy" },
-    { name = "pex" },
     { name = "pyright", specifier = ">=1.1.405" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -605,15 +603,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ca/bc/f35b8446f4531a7cb215605d100cd88b7ac6f44ab3fc94870c120ab3adbf/pathspec-0.12.1.tar.gz", hash = "sha256:a482d51503a1ab33b1c67a6c3813a26953dbdc71c31dacaef9a838c4e29f5712", size = 51043, upload-time = "2023-12-10T22:30:45Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cc/20/ff623b09d963f88bfde16306a54e12ee5ea43e9b597108672ff3a408aad6/pathspec-0.12.1-py3-none-any.whl", hash = "sha256:a0d503e138a4c123b27490a4f7beda6a01c6f288df0e4a8b79c7eb0dc7b4cc08", size = 31191, upload-time = "2023-12-10T22:30:43.14Z" },
-]
-
-[[package]]
-name = "pex"
-version = "2.53.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/34/8a/6eb654f0bccf6f5f0228eed9a59d84606f108422e845594a551058d0d4cc/pex-2.53.0.tar.gz", hash = "sha256:4d4e5eeff6b6c3503c844ee6a32874f1304ae7b48549877c01fae62c3c9ec16a", size = 5036655, upload-time = "2025-08-19T21:03:09.531Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ea/ba/dcab84f01654b738b5e5c75c9ed485c9552fc9cacd6b38295c6da432fb55/pex-2.53.0-py2.py3-none-any.whl", hash = "sha256:d2578d2ed5fbcacd774151a35b13fe2f2aa2a7da158d07856b0c5869326ea520", size = 3845451, upload-time = "2025-08-19T21:03:06.672Z" },
 ]
 
 [[package]]
