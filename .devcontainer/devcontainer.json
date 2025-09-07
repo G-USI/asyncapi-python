@@ -14,6 +14,7 @@
 		"vscode": {
 			"extensions": [
 				"ms-python.python",
+				"ms-pyright.pyright",
 				"njpwerner.autodocstring",
 				"tamasfe.even-better-toml",
 				"ms-python.mypy-type-checker",
@@ -27,6 +28,21 @@
 			],
 			"settings": {
 				"python.defaultInterpreterPath": "/workspaces/${localWorkspaceFolderBasename}/.venv/bin/python",
+				"python.analysis.typeCheckingMode": "strict",
+				"python.analysis.autoImportCompletions": true,
+				"python.analysis.diagnosticMode": "workspace",
+				"python.analysis.autoSearchPaths": true,
+				"python.analysis.extraPaths": [
+					"./src"
+				],
+				"python.analysis.include": [
+					"src/**",
+					"*.py"
+				],
+				"python.analysis.stubPath": "./src",
+				"python.linting.enabled": true,
+				"python.linting.pylintEnabled": false,
+				"python.linting.mypyEnabled": false,
 				"yaml.schemas": {
 					"https://asyncapi.com/schema-store/3.0.0-without-$id.json": [
 						"file:///workspaces/asyncapi-python/examples/*.yaml"
