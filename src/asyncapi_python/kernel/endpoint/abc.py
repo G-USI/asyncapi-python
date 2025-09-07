@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Generic, TypedDict, overload
+from typing import Any, Callable, Generic, TypedDict, overload
 from typing_extensions import Unpack, Required, NotRequired
 
-from ..typing import Handler, T_Input, T_Output
+from ..typing import Handler, T_Input, T_Output, BatchConfig
 from asyncapi_python.kernel.wire import AbstractWireFactory
 from asyncapi_python.kernel.document import Operation
 from asyncapi_python.kernel.codec import Codec, CodecFactory
@@ -19,7 +19,7 @@ class EndpointParams(TypedDict):
 class HandlerParams(TypedDict):
     """Parameters for message handlers"""
 
-    pass
+    pass  # Currently empty, but extensible for future parameters like queue, routing_key, etc.
 
 
 class AbstractEndpoint(ABC):
@@ -27,8 +27,8 @@ class AbstractEndpoint(ABC):
         """Constructor parameters"""
 
         operation: Required[Operation]
-        wire_factory: Required[AbstractWireFactory]
-        codec_factory: Required[CodecFactory]
+        wire_factory: Required[AbstractWireFactory[Any, Any]]
+        codec_factory: Required[CodecFactory[Any, Any]]
         endpoint_params: NotRequired[EndpointParams]  # Optional endpoint configuration
 
     class StartParams(TypedDict):
@@ -46,12 +46,12 @@ class AbstractEndpoint(ABC):
         self._exception_callback: Callable[[Exception], None] | None = None
 
         # Create codecs for operation messages
-        self._codecs: list[Codec] = [
+        self._codecs: list[Codec[Any, Any]] = [
             codec_factory.create(msg) for msg in self._operation.messages
         ]
 
         # Create codecs for reply messages if reply exists
-        self._reply_codecs: list[Codec] = (
+        self._reply_codecs: list[Codec[Any, Any]] = (
             [codec_factory.create(msg) for msg in self._operation.reply.messages]
             if self._operation.reply
             else []
@@ -132,15 +132,23 @@ class Receive(ABC, Generic[T_Input, T_Output]):
 
     @overload
     def __call__(
+        self,
+        fn: None = None,
+        *,
+        batch: BatchConfig,
+        **kwargs: Unpack[HandlerParams],
+    ) -> Callable: ...
+
+    @overload
+    def __call__(
         self, fn: None = None, **kwargs: Unpack[HandlerParams]
-    ) -> Callable[[Handler[T_Input, T_Output]], Handler[T_Input, T_Output]]: ...
+    ) -> Callable: ...
 
     @abstractmethod
     def __call__(
         self,
         fn: Handler[T_Input, T_Output] | None = None,
+        *,
+        batch: BatchConfig | None = None,
         **kwargs: Unpack[HandlerParams],
-    ) -> (
-        Handler[T_Input, T_Output]
-        | Callable[[Handler[T_Input, T_Output]], Handler[T_Input, T_Output]]
-    ): ...
+    ) -> Handler[T_Input, T_Output] | Callable: ...
