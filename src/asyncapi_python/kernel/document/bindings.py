@@ -30,6 +30,7 @@ class AmqpExchange:
     def __repr__(self) -> str:
         """Custom repr to handle enum properly for code generation."""
         from asyncapi_python.kernel.document.bindings import AmqpExchangeType
+
         _ = AmqpExchangeType  # Explicitly reference the import
         return f"spec.AmqpExchange(name={self.name!r}, type=spec.AmqpExchangeType.{self.type.name}, durable={self.durable!r}, auto_delete={self.auto_delete!r}, vhost={self.vhost!r})"
 

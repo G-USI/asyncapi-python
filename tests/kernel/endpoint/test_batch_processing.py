@@ -425,7 +425,7 @@ async def test_rpc_server_batch_processing(
 
     await rpc_server.start()
     await asyncio.sleep(0.3)
-    
+
     # Check reply producer calls before stopping
     reply_producer = rpc_server._reply_producer
     await rpc_server.stop()

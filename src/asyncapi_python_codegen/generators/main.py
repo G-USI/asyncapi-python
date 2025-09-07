@@ -1,6 +1,7 @@
 """Main code generator orchestrating all sub-generators."""
 
 from pathlib import Path
+
 # Type annotations removed - this module deals with dynamic YAML/JSON parsing
 
 from ..parser import extract_all_operations, load_document_info

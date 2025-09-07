@@ -18,6 +18,7 @@ from .generators import CodeGenerator
 # Use try-catch to determine if typer is available
 try:
     import typer  # noqa: F401 - imported for availability check
+
     _has_typer = True
 except ImportError:
     _has_typer = False

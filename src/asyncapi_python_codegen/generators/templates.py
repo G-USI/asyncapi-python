@@ -26,10 +26,12 @@ class TemplateRenderer:
         self.env.filters["json_prefix"] = self._json_prefix_filter
 
         # Add custom functions for template
-        self.env.globals.update({  # type: ignore[arg-type]
-            "generate_nested_routers": self._generate_nested_routers,
-            "is_router_info": lambda x: isinstance(x, RouterInfo),  # type: ignore[misc]
-        })
+        self.env.globals.update(
+            {  # type: ignore[arg-type]
+                "generate_nested_routers": self._generate_nested_routers,
+                "is_router_info": lambda x: isinstance(x, RouterInfo),  # type: ignore[misc]
+            }
+        )
 
     def render_file(
         self, template_name: str, output_path: Path, context: dict[str, Any]

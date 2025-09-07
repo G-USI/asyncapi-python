@@ -140,7 +140,9 @@ class RpcServer(
         *,
         batch: BatchConfig,
         **kwargs: Unpack[HandlerParams],
-    ) -> Callable[[BatchHandler[T_Input, T_Output]], BatchHandler[T_Input, T_Output]]: ...
+    ) -> Callable[
+        [BatchHandler[T_Input, T_Output]], BatchHandler[T_Input, T_Output]
+    ]: ...
 
     @overload
     @overload
@@ -158,7 +160,7 @@ class RpcServer(
         Handler[T_Input, T_Output],
         BatchHandler[T_Input, T_Output],
         Callable[[Handler[T_Input, T_Output]], Handler[T_Input, T_Output]],
-        Callable[[BatchHandler[T_Input, T_Output]], BatchHandler[T_Input, T_Output]]
+        Callable[[BatchHandler[T_Input, T_Output]], BatchHandler[T_Input, T_Output]],
     ]:
         """Register a handler for incoming RPC requests
 
@@ -314,7 +316,7 @@ class RpcServer(
             wire_messages = [item[1] for item in batch]
 
             try:
-                # Call the batch handler to get responses  
+                # Call the batch handler to get responses
                 if self._batch_handler is None:
                     raise RuntimeError("No batch handler configured")
                 responses = await self._batch_handler(decoded_requests)
@@ -328,9 +330,7 @@ class RpcServer(
                     )
 
                 # Send replies for each request-response pair
-                for wire_message, response in zip(
-                    wire_messages, responses
-                ):
+                for wire_message, response in zip(wire_messages, responses):
                     try:
                         # Encode response
                         encoded_response = self._encode_reply(response)

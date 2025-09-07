@@ -21,4 +21,6 @@ class Consumer(EndpointLifecycle, Protocol, Generic[T_Recv]):
         """Starts streaming incoming messages"""
         # This is a protocol method - implementation must provide async generator
         # Using NotImplemented because protocols cannot have implementations
-        raise NotImplementedError("Protocol method must be implemented by concrete class")
+        raise NotImplementedError(
+            "Protocol method must be implemented by concrete class"
+        )

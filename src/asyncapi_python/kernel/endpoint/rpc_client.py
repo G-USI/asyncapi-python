@@ -70,7 +70,13 @@ class RpcClient(AbstractEndpoint, Send[T_Input, T_Output], Generic[T_Input, T_Ou
         if remaining_count == 0:
             await global_reply_handler.cleanup_if_last_instance()
 
-    async def __call__(self, payload: T_Input, /, timeout: float = 30.0, **kwargs: Unpack[Send.RouterInputs]) -> T_Output:
+    async def __call__(
+        self,
+        payload: T_Input,
+        /,
+        timeout: float = 30.0,
+        **kwargs: Unpack[Send.RouterInputs],
+    ) -> T_Output:
         """Send an RPC request and wait for response using global reply handling
 
         Args:

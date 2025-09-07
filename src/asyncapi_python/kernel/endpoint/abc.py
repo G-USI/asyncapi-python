@@ -81,7 +81,9 @@ class AbstractEndpoint(ABC):
         """Check if handler validation should be performed"""
         return not self._endpoint_params.get("disable_handler_validation", False)
 
-    def _try_codecs(self, codecs: list[Codec[Any, Any]], operation: str, payload: Any) -> Any:
+    def _try_codecs(
+        self, codecs: list[Codec[Any, Any]], operation: str, payload: Any
+    ) -> Any:
         """Try operation with each codec in sequence until one succeeds"""
         if not codecs:
             raise RuntimeError("No codecs available")
@@ -151,4 +153,7 @@ class Receive(ABC, Generic[T_Input, T_Output]):
         *,
         batch: BatchConfig | None = None,
         **kwargs: Unpack[HandlerParams],
-    ) -> Union[Handler[T_Input, T_Output], Callable[[Handler[T_Input, T_Output]], Handler[T_Input, T_Output]]]: ...
+    ) -> Union[
+        Handler[T_Input, T_Output],
+        Callable[[Handler[T_Input, T_Output]], Handler[T_Input, T_Output]],
+    ]: ...

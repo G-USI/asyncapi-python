@@ -56,6 +56,7 @@ class BaseApplication:
             try:
                 # Create tasks for both conditions
                 stop_task = asyncio.create_task(self._stop_event.wait())
+
                 # Convert Future to awaitable
                 async def _wait_for_exception():
                     if self._exception_future is None:
@@ -63,6 +64,7 @@ class BaseApplication:
                         await asyncio.Event().wait()
                         return  # This line will never be reached
                     return await asyncio.wrap_future(self._exception_future)
+
                 exception_task = asyncio.create_task(_wait_for_exception())
 
                 # Wait for either stop event or exception

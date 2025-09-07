@@ -81,7 +81,7 @@ def maybe_ref(func: Callable[[YamlDocument], T]) -> Callable[[YamlDocument], T]:
     @wraps(func)
     def wrapper(data: YamlDocument) -> T:
         if is_reference(data):
-        
+
             # Get current context and resolve reference
             current_context = get_current_context()
             if not current_context:
