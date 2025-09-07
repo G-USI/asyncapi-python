@@ -112,9 +112,10 @@ class JsonCodecFactory(CodecFactory[BaseModel, bytes]):
         if not any(c in message_name for c in "._-"):
             # Split camelCase on uppercase letters
             import re
-            parts = re.findall(r'[A-Z][a-z]*|[a-z]+', message_name)
+
+            parts = re.findall(r"[A-Z][a-z]*|[a-z]+", message_name)
         else:
             # Split on separators for snake_case, kebab-case, dot.case
             parts = message_name.replace("-", "_").replace(".", "_").split("_")
-        
+
         return "".join(part.capitalize() for part in parts if part)
