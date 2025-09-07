@@ -353,6 +353,43 @@ operations:
     summary: Process regulatory reports
     description: Process incoming regulatory reports and forward to authorities
 
+  # Analytics RPC operations
+  analytics.request:
+    action: send
+    channel:
+      address: analytics.requests
+      description: Analytics request processing queue
+      messages:
+        analyticsRequest:
+          $ref: '#/components/messages/AnalyticsRequest'
+    summary: Request analytics processing
+    description: Send analytics processing requests
+    reply:
+      address: analytics.responses.{correlation_id}
+      channel:
+        description: Analytics response channel
+        messages:
+          analyticsResponse:
+            $ref: '#/components/messages/AnalyticsResponse'
+
+  analytics.process:
+    action: receive
+    channel:
+      address: analytics.requests
+      description: Analytics request processing queue
+      messages:
+        analyticsRequest:
+          $ref: '#/components/messages/AnalyticsRequest'
+    summary: Process analytics requests
+    description: Process incoming analytics requests and return results
+    reply:
+      address: analytics.responses.{correlation_id}
+      channel:
+        description: Analytics response channel
+        messages:
+          analyticsResponse:
+            $ref: '#/components/messages/AnalyticsResponse'
+
 components:
   messages:
     MarketTick:
@@ -463,6 +500,18 @@ components:
       summary: Regulatory compliance report
       payload:
         $ref: '#/components/schemas/RegulatoryReport'
+
+    AnalyticsRequest:
+      title: AnalyticsRequest
+      summary: Analytics processing request
+      payload:
+        $ref: '#/components/schemas/AnalyticsRequest'
+
+    AnalyticsResponse:
+      title: AnalyticsResponse
+      summary: Analytics processing response
+      payload:
+        $ref: '#/components/schemas/AnalyticsResponse'
 
   schemas:
     MarketTick:
@@ -1264,3 +1313,55 @@ components:
         region:
           type: string
           enum: [us-east-1, us-west-2, eu-west-1, ap-southeast-1]
+
+    AnalyticsRequest:
+      type: object
+      required: [requestId, analysisType, parameters]
+      properties:
+        requestId:
+          type: string
+          format: uuid
+          description: Unique request identifier
+        analysisType:
+          type: string
+          enum: [PERFORMANCE, RISK, ATTRIBUTION, VAR_CALCULATION]
+          description: Type of analysis to perform
+        portfolioId:
+          type: string
+          pattern: '^[A-Z0-9]{8}$'
+          description: Portfolio identifier
+        dateRange:
+          $ref: '#/components/schemas/DateRange'
+        parameters:
+          type: object
+          additionalProperties: true
+          description: Analysis-specific parameters
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
+
+    AnalyticsResponse:
+      type: object
+      required: [requestId, status]
+      properties:
+        requestId:
+          type: string
+          format: uuid
+          description: Original request identifier
+        status:
+          type: string
+          enum: [SUCCESS, FAILED, PARTIAL]
+          description: Processing status
+        result:
+          type: object
+          additionalProperties: true
+          description: Analysis results
+        error:
+          type: string
+          description: Error message if processing failed
+        processingTime:
+          type: number
+          format: double
+          minimum: 0
+          description: Processing time in seconds
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
