@@ -3,18 +3,26 @@
 
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-try:
+if TYPE_CHECKING:
     import typer
-
-    has_typer = True
-except ImportError:
-    has_typer = False
+else:
+    try:
+        import typer
+    except ImportError:
+        typer = None  # type: ignore[assignment]
 
 from .generators import CodeGenerator
 
+# Use try-catch to determine if typer is available
+try:
+    import typer  # noqa: F401 - imported for availability check
+    _has_typer = True
+except ImportError:
+    _has_typer = False
 
-if has_typer:
+if _has_typer:
     app = typer.Typer(help="AsyncAPI Python Code Generator")
 
     @app.command()

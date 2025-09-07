@@ -3,17 +3,17 @@
 import json
 import tempfile
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from datamodel_code_generator.__main__ import main as datamodel_codegen
 
 
 class ParameterGenerator:
     """Generates TypedDict classes for channel parameters."""
 
-    def generate_parameter_models(self, spec: Dict[str, Any]) -> str:
+    def generate_parameter_models(self, spec: dict[str, Any]) -> str:
         """Generate TypedDict models for all channel parameters."""
         channels = spec.get("channels", {})
-        parameter_schemas = {}
+        parameter_schemas: dict[str, Any] = {}
 
         # Collect all parameter definitions from channels
         for channel_name, channel_def in channels.items():
@@ -22,8 +22,8 @@ class ParameterGenerator:
                 dict_name = self._channel_to_dict_name(channel_name)
 
                 # Build schema for this channel's parameters
-                properties = {}
-                required = []
+                properties: dict[str, Any] = {}
+                required: list[str] = []
 
                 for param_name, param_def in channel_def["parameters"].items():
                     # Skip parameters that have a 'location' field
@@ -31,7 +31,7 @@ class ParameterGenerator:
                         continue
 
                     # Convert parameter definition to JSON Schema property
-                    properties[param_name] = self._param_to_schema(param_def)
+                    properties[param_name] = self._param_to_schema(param_def)  # type: ignore[arg-type]
                     # All channel parameters are required
                     required.append(param_name)
 
@@ -81,9 +81,9 @@ class ParameterGenerator:
 
         return f"{base_name}{param_suffix}Params"
 
-    def _param_to_schema(self, param_def: Dict[str, Any]) -> Dict[str, Any]:
+    def _param_to_schema(self, param_def: dict[str, Any] | Any) -> dict[str, Any]:
         """Convert AsyncAPI parameter definition to JSON Schema."""
-        schema = {"type": "string"}  # Default to string
+        schema: dict[str, Any] = {"type": "string"}  # Default to string
 
         if isinstance(param_def, dict):
             # Extract description
@@ -92,7 +92,7 @@ class ParameterGenerator:
 
             # Extract schema if provided
             if "schema" in param_def:
-                schema.update(param_def["schema"])
+                schema.update(param_def["schema"])  # type: ignore[arg-type]
 
             # Handle enum values
             if "enum" in param_def:
@@ -104,7 +104,7 @@ class ParameterGenerator:
 
         return schema
 
-    def _generate_with_datamodel_codegen(self, schema: Dict[str, Any]) -> str:
+    def _generate_with_datamodel_codegen(self, schema: dict[str, Any]) -> str:
         """Generate TypedDict models using datamodel-code-generator."""
         with tempfile.TemporaryDirectory() as temp_dir:
             schema_path = Path(temp_dir) / "schema.json"

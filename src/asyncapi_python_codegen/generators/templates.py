@@ -3,7 +3,7 @@
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from black import FileMode, format_str
 from jinja2 import Environment, FileSystemLoader
@@ -26,13 +26,13 @@ class TemplateRenderer:
         self.env.filters["json_prefix"] = self._json_prefix_filter
 
         # Add custom functions for template
-        self.env.globals.update(
-            generate_nested_routers=self._generate_nested_routers,
-            is_router_info=lambda x: isinstance(x, RouterInfo),
-        )
+        self.env.globals.update({  # type: ignore[arg-type]
+            "generate_nested_routers": self._generate_nested_routers,
+            "is_router_info": lambda x: isinstance(x, RouterInfo),  # type: ignore[misc]
+        })
 
     def render_file(
-        self, template_name: str, output_path: Path, context: Dict[str, Any]
+        self, template_name: str, output_path: Path, context: dict[str, Any]
     ) -> None:
         """Generate a file from template."""
         template = self.env.get_template(template_name)
@@ -45,7 +45,7 @@ class TemplateRenderer:
         print(f"  Generated: {output_path}")
 
     def _generate_nested_routers(
-        self, routers_dict: Dict[str, Any], indent: int = 2, router_type: str = ""
+        self, routers_dict: dict[str, Any], indent: int = 2, router_type: str = ""
     ) -> str:
         """Generate nested router initialization code for templates with full path context."""
         return self._generate_nested_routers_with_prefix(
@@ -54,13 +54,13 @@ class TemplateRenderer:
 
     def _generate_nested_routers_with_prefix(
         self,
-        routers_dict: Dict[str, Any],
+        routers_dict: dict[str, Any],
         indent: int = 2,
         router_type: str = "",
         prefix: str = "",
     ) -> str:
         """Generate nested router initialization code with prefix tracking."""
-        lines = []
+        lines: list[str] = []
         indent_str = " " * indent
 
         for key, value in routers_dict.items():

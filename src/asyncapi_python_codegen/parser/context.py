@@ -13,8 +13,8 @@ _context_storage = threading.local()
 def _get_context_stack() -> list[ParseContext]:
     """Get current thread's context stack."""
     if not hasattr(_context_storage, "stack"):
-        _context_storage.stack = []
-    return _context_storage.stack
+        _context_storage.stack = []  # type: ignore[misc]
+    return _context_storage.stack  # type: ignore[return-value]
 
 
 def get_current_context() -> Optional[ParseContext]:

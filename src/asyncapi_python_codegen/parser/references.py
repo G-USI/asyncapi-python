@@ -3,14 +3,14 @@
 import yaml
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, Dict, TypeVar, cast
+from typing import Any, Callable, TypeVar
 from .types import YamlDocument, navigate_json_pointer
-from .context import get_current_context, parsing_context
+from .context import get_current_context, push_context, pop_context
 
 T = TypeVar("T")
 
 # Cache for loaded YAML files to avoid re-reading
-_file_cache: Dict[Path, YamlDocument] = {}
+_file_cache: dict[Path, YamlDocument] = {}
 
 
 def load_yaml_file(filepath: Path) -> YamlDocument:
@@ -28,14 +28,13 @@ def load_yaml_file(filepath: Path) -> YamlDocument:
                     f"Expected YAML document to be a dictionary, got {type(data)}"
                 )
             _file_cache[abs_path] = data
-            return data
+            return data  # type: ignore[return-value]
     except Exception as e:
         raise RuntimeError(f"Failed to load YAML file {abs_path}: {e}") from e
 
 
 def resolve_reference(ref_data: YamlDocument) -> YamlDocument:
     """Resolve $ref in data to actual content."""
-    from .context import push_context, pop_context
 
     current_context = get_current_context()
     if not current_context:
@@ -64,7 +63,7 @@ def resolve_reference(ref_data: YamlDocument) -> YamlDocument:
             f"Reference {ref_string} resolved to non-dictionary: {type(resolved_data)}"
         )
 
-    return resolved_data
+    return resolved_data  # type: ignore[return-value]
 
 
 def is_reference(data: Any) -> bool:
@@ -82,8 +81,7 @@ def maybe_ref(func: Callable[[YamlDocument], T]) -> Callable[[YamlDocument], T]:
     @wraps(func)
     def wrapper(data: YamlDocument) -> T:
         if is_reference(data):
-            from .context import push_context, pop_context
-
+        
             # Get current context and resolve reference
             current_context = get_current_context()
             if not current_context:

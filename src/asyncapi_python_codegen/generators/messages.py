@@ -5,7 +5,7 @@ import re
 import tempfile
 import yaml
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 from asyncapi_python.kernel.document import Operation
 
 from datamodel_code_generator.__main__ import main as datamodel_codegen
@@ -15,7 +15,7 @@ class MessageGenerator:
     """Generates Pydantic message models using datamodel-code-generator."""
 
     def generate_message_models(
-        self, operations: Dict[str, Operation], spec_path: Path | None = None
+        self, operations: dict[str, Operation], spec_path: Path | None = None
     ) -> str:
         """Generate complete Pydantic models code using datamodel-code-generator."""
         # Collect all message schemas from operations
@@ -44,8 +44,8 @@ class MessageGenerator:
         return self._generate_with_datamodel_codegen(unified_schema)
 
     def _collect_message_schemas(
-        self, operations: Dict[str, Operation]
-    ) -> Dict[str, Any]:
+        self, operations: dict[str, Operation]
+    ) -> dict[str, Any]:
         """Collect all message schemas from operations."""
         schemas = {}
 
@@ -63,9 +63,9 @@ class MessageGenerator:
                     if schema_name not in schemas:
                         schemas[schema_name] = self._extract_message_schema(message)
 
-        return schemas
+        return schemas  # type: ignore[return-value]
 
-    def _load_component_schemas(self, spec_path: Path) -> Dict[str, Any]:
+    def _load_component_schemas(self, spec_path: Path) -> dict[str, Any]:
         """Load component schemas from the AsyncAPI specification file."""
         try:
             with spec_path.open("r") as f:
@@ -90,19 +90,19 @@ class MessageGenerator:
                     if schema_name not in all_schemas:
                         all_schemas[schema_name] = msg_def["payload"]
 
-            return all_schemas
+            return all_schemas  # type: ignore[return-value]
 
         except Exception as e:
             print(f"Warning: Could not load component schemas from {spec_path}: {e}")
             return {}
 
-    def _resolve_references(self, schemas: Dict[str, Any]) -> Dict[str, Any]:
+    def _resolve_references(self, schemas: dict[str, Any]) -> dict[str, Any]:
         """Recursively resolve $ref references to use #/$defs/... instead of #/components/schemas/..."""
 
-        def resolve_in_object(obj):
+        def resolve_in_object(obj: Any) -> Any:
             if isinstance(obj, dict):
-                resolved_obj = {}
-                for key, value in obj.items():
+                resolved_obj: dict[str, Any] = {}
+                for key, value in obj.items():  # type: ignore[misc]
                     if key == "$ref" and isinstance(value, str):
                         # Transform references from #/components/schemas/... to #/$defs/...
                         if value.startswith("#/components/schemas/"):
@@ -119,21 +119,21 @@ class MessageGenerator:
                         resolved_obj[key] = resolve_in_object(value)
                 return resolved_obj
             elif isinstance(obj, list):
-                return [resolve_in_object(item) for item in obj]
+                return [resolve_in_object(item) for item in obj]  # type: ignore[misc]
             else:
                 return obj
 
         return {name: resolve_in_object(schema) for name, schema in schemas.items()}
 
-    def _extract_message_schema(self, message) -> Dict[str, Any]:
+    def _extract_message_schema(self, message: Any) -> dict[str, Any]:
         """Extract JSON Schema from a message object."""
         if hasattr(message, "payload") and isinstance(message.payload, dict):
-            return message.payload
+            return message.payload  # type: ignore[return-value]
         else:
             # Fallback to a basic object schema
             return {"type": "object", "properties": {}}
 
-    def _generate_with_datamodel_codegen(self, schema: Dict[str, Any]) -> str:
+    def _generate_with_datamodel_codegen(self, schema: dict[str, Any]) -> str:
         """Generate Pydantic models using datamodel-code-generator."""
         with tempfile.TemporaryDirectory() as temp_dir:
             schema_path = Path(temp_dir) / "schema.json"
@@ -191,7 +191,7 @@ class MessageGenerator:
 
 from __future__ import annotations
 
-from typing import Any, Optional, List, Dict
+from typing import Any
 from pydantic import BaseModel, Field
 
 # No message schemas found in the specification
@@ -216,6 +216,6 @@ from pydantic import BaseModel, Field
         )
 
     # Legacy method for backward compatibility - now returns empty dict since we generate complete code
-    def extract_messages(self, operations: Dict[str, Operation]) -> Dict[str, Any]:
+    def extract_messages(self, operations: dict[str, Operation]) -> dict[str, Any]:
         """Extract message definitions from operations (legacy compatibility)."""
         return {}

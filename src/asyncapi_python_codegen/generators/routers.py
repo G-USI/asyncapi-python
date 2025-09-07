@@ -1,6 +1,6 @@
 """Router generation with nested path support."""
 
-from typing import Any, Dict, List, Tuple
+from typing import Any
 from dataclasses import dataclass
 from asyncapi_python.kernel.document import Channel, Operation
 
@@ -12,7 +12,7 @@ class RouterInfo:
     class_name: str
     operation: Operation
     channel: Channel
-    path: Tuple[str, ...]
+    path: tuple[str, ...]
     input_type: str
     output_type: str
     description: str
@@ -89,9 +89,9 @@ class RouterInfo:
 class RouterGenerator:
     """Generates nested router structures from operations."""
 
-    def build_routers(self, operations: Dict[str, Operation]) -> List[RouterInfo]:
+    def build_routers(self, operations: dict[str, Operation]) -> list[RouterInfo]:
         """Build router information from operations."""
-        routers = []
+        routers: list[RouterInfo] = []
 
         for op_id, operation in operations.items():
             # Parse operation path - clean up leading/trailing slashes and split on both . and /
@@ -179,11 +179,11 @@ class RouterGenerator:
         return f"{base_name}{param_suffix}Params"
 
     def split_routers(
-        self, routers: List[RouterInfo]
-    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        self, routers: list[RouterInfo]
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
         """Split routers into producer and consumer groups with nested structure."""
-        producer_routers: Dict[str, Any] = {}
-        consumer_routers: Dict[str, Any] = {}
+        producer_routers: dict[str, Any] = {}
+        consumer_routers: dict[str, Any] = {}
 
         for router in routers:
             target = (
@@ -196,7 +196,7 @@ class RouterGenerator:
         return producer_routers, consumer_routers
 
     def _insert_nested_router(
-        self, tree: Dict[str, Any], path: Tuple[str, ...], router: RouterInfo
+        self, tree: dict[str, Any], path: tuple[str, ...], router: RouterInfo
     ) -> None:
         """Insert a router into a nested tree structure."""
         current = tree
@@ -214,13 +214,13 @@ class RouterGenerator:
 
     def generate_nested_routers_code(
         self,
-        routers_dict: Dict[str, Any],
+        routers_dict: dict[str, Any],
         indent: int = 2,
         router_type: str = "",
         prefix: str = "",
     ) -> str:
         """Generate nested router initialization code."""
-        lines = []
+        lines: list[str] = []
         indent_str = " " * indent
 
         for key, value in routers_dict.items():
@@ -244,10 +244,10 @@ class RouterGenerator:
         return "\n".join(lines)
 
     def collect_nested_classes(
-        self, routers_dict: Dict[str, Any], prefix: str = "", router_type: str = ""
-    ) -> List[str]:
+        self, routers_dict: dict[str, Any], prefix: str = "", router_type: str = ""
+    ) -> list[str]:
         """Collect all nested router class definitions."""
-        classes = []
+        classes: list[str] = []
 
         for key, value in routers_dict.items():
             if not isinstance(value, RouterInfo):
@@ -276,12 +276,12 @@ class RouterGenerator:
     def _generate_nested_class(
         self,
         class_name: str,
-        routers_dict: Dict[str, Any],
+        routers_dict: dict[str, Any],
         router_type: str = "",
         prefix: str = "",
     ) -> str:
         """Generate a nested router class definition."""
-        lines = [
+        lines: list[str] = [
             f"class {class_name}:",
             f'    """Nested router for {class_name.lower().replace("router", "").replace(router_type.lower(), "")} operations."""',
             "",

@@ -1,10 +1,10 @@
 """Type aliases and basic types for AsyncAPI parsing."""
 
-from typing import Any, Dict, List, Union
+from typing import Any
 from pathlib import Path
 
 # Type alias for raw YAML document data
-YamlDocument = Dict[str, Any]
+YamlDocument = dict[str, Any]
 
 
 # Context for tracking current parsing location
@@ -56,7 +56,7 @@ def unescape_json_pointer(pointer_segment: str) -> str:
     return pointer_segment.replace("~1", "/").replace("~0", "~")
 
 
-def parse_json_pointer(pointer: str) -> List[str]:
+def parse_json_pointer(pointer: str) -> list[str]:
     """Parse JSON pointer into list of unescaped segments."""
     if not pointer.startswith("/"):
         return []
@@ -77,11 +77,11 @@ def navigate_json_pointer(data: YamlDocument, pointer: str) -> Any:
         if isinstance(current, dict):
             if segment not in current:
                 raise KeyError(f"JSON pointer segment '{segment}' not found")
-            current = current[segment]
+            current = current[segment]  # type: ignore[assignment]
         elif isinstance(current, list):
             try:
                 index = int(segment)
-                current = current[index]
+                current = current[index]  # type: ignore[assignment]
             except (ValueError, IndexError) as e:
                 raise KeyError(
                     f"Invalid array index in JSON pointer: '{segment}'"
@@ -89,4 +89,4 @@ def navigate_json_pointer(data: YamlDocument, pointer: str) -> Any:
         else:
             raise KeyError(f"Cannot navigate into non-dict/list: {type(current)}")
 
-    return current
+    return current  # type: ignore[return-value]

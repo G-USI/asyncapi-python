@@ -1,6 +1,6 @@
 """Functions to extract dataclasses from YAML data."""
 
-from typing import Any, Dict, List, Optional
+# Type imports for extraction functions
 from asyncapi_python.kernel.document import (
     Channel,
     ChannelBindings,
@@ -144,7 +144,7 @@ def extract_message_bindings(data: YamlDocument) -> MessageBindings:
 def extract_message_trait(data: YamlDocument) -> MessageTrait:
     """Extract MessageTrait from YAML data."""
     # Extract examples
-    examples = []
+    examples: list[MessageExample] = []
     if "examples" in data:
         for example_data in data["examples"]:
             examples.append(extract_message_example(example_data))
@@ -155,7 +155,7 @@ def extract_message_trait(data: YamlDocument) -> MessageTrait:
         correlation_id = extract_correlation_id(data["correlationId"])
 
     # Extract tags
-    tags = []
+    tags: list[Tag] = []
     if "tags" in data:
         for tag_data in data["tags"]:
             tags.append(extract_tag(tag_data))
@@ -195,7 +195,7 @@ def extract_message(data: YamlDocument) -> Message:
         correlation_id = extract_correlation_id(data["correlationId"])
 
     # Extract tags
-    tags = []
+    tags: list[Tag] = []
     if "tags" in data:
         for tag_data in data["tags"]:
             tags.append(extract_tag(tag_data))
@@ -211,7 +211,7 @@ def extract_message(data: YamlDocument) -> Message:
         bindings = extract_message_bindings(data["bindings"])
 
     # Extract traits
-    traits = []
+    traits: list[MessageTrait] = []
     if "traits" in data:
         for trait_data in data["traits"]:
             traits.append(extract_message_trait(trait_data))
@@ -238,13 +238,13 @@ def extract_message(data: YamlDocument) -> Message:
 def extract_channel(data: YamlDocument) -> Channel:
     """Extract Channel from YAML data."""
     # Extract servers
-    servers = []
+    servers: list[Server] = []
     if "servers" in data:
         for server_data in data["servers"]:
             servers.append(extract_server(server_data))
 
     # Extract messages
-    messages = {}
+    messages: dict[str, Message] = {}
     if "messages" in data:
         for message_name, message_data in data["messages"].items():
             message = extract_message(message_data)
@@ -269,7 +269,7 @@ def extract_channel(data: YamlDocument) -> Channel:
             messages[message_name] = message
 
     # Extract parameters
-    parameters = {}
+    parameters: dict[str, AddressParameter] = {}
     if "parameters" in data:
         for param_name, param_data in data["parameters"].items():
             param = extract_address_parameter(param_data)
@@ -280,7 +280,7 @@ def extract_channel(data: YamlDocument) -> Channel:
             parameters[param_name] = param_with_key
 
     # Extract tags
-    tags = []
+    tags: list[Tag] = []
     if "tags" in data:
         for tag_data in data["tags"]:
             tags.append(extract_tag(tag_data))
@@ -371,13 +371,13 @@ def extract_operation_trait(data: YamlDocument) -> OperationTrait:
     channel = extract_channel(channel_data)
 
     # Extract security
-    security = []
+    security: list[SecurityScheme] = []
     if "security" in data:
         for security_data in data["security"]:
             security.append(extract_security_scheme(security_data))
 
     # Extract tags
-    tags = []
+    tags: list[Tag] = []
     if "tags" in data:
         for tag_data in data["tags"]:
             tags.append(extract_tag(tag_data))
@@ -433,19 +433,19 @@ def extract_operation(data: YamlDocument) -> Operation:
         reply = extract_operation_reply(data["reply"])
 
     # Extract traits
-    traits = []
+    traits: list[OperationTrait] = []
     if "traits" in data:
         for trait_data in data["traits"]:
             traits.append(extract_operation_trait(trait_data))
 
     # Extract security
-    security = []
+    security: list[SecurityScheme] = []
     if "security" in data:
         for security_data in data["security"]:
             security.append(extract_security_scheme(security_data))
 
     # Extract tags
-    tags = []
+    tags: list[Tag] = []
     if "tags" in data:
         for tag_data in data["tags"]:
             tags.append(extract_tag(tag_data))
