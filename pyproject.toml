@@ -54,7 +54,7 @@ timeout = 30
 
 [tool.pyright]
 include = ["src", "*.py"]
-exclude = ["**/__pycache__"]
+exclude = ["**/__pycache__", "src/asyncapi_python_pants"]
 pythonVersion = "3.10"
 pythonPlatform = "Linux"
 typeCheckingMode = "strict"
