@@ -9,17 +9,67 @@ on:
   workflow_call:
 
 jobs:
+  black:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Check code formatting with Black
+        run: uv run black --check --diff --color src/ tests/
+
+  pyright:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run PyRight type checking
+        run: |
+          uv run pyright src/asyncapi_python
+          uv run pyright src/asyncapi_python_codegen
+
   test:
     runs-on: ubuntu-latest
 
     strategy:
         matrix:
-          python_version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+          python_version: ["3.10", "3.11", "3.12", "3.13"]
     
     services:
       rabbitmq:
         image: rabbitmq:3.13.6
-        ports: ["5672"]
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
           
     steps:
       - uses: actions/checkout@v4
@@ -37,7 +87,12 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras
 
+      - name: Wait for RabbitMQ to be ready
+        run: |
+          timeout 60s bash -c 'until nc -z localhost 5672; do sleep 1; done'
+          sleep 5  # Additional wait to ensure RabbitMQ is fully initialized
+
       - name: Run tests
         env:
-          AMQP_URI: amqp://localhost:${{ job.services.rabbitmq.ports[5672] }}
+          PYTEST_AMQP_URI: amqp://guest:guest@localhost:5672/
         run: uv run pytest

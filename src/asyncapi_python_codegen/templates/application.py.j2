@@ -1,0 +1,58 @@
+"""Generated AsyncAPI application."""
+from __future__ import annotations
+
+from typing import Any
+from asyncapi_python.kernel.application import BaseApplication
+from asyncapi_python.kernel.wire import AbstractWireFactory
+from asyncapi_python.kernel.codec import CodecFactory
+from asyncapi_python.contrib.codec.registry import CodecRegistry
+from asyncapi_python.kernel.endpoint import AbstractEndpoint
+
+from .router import ProducerRouter, ConsumerRouter
+import sys
+
+
+class Application(BaseApplication):
+    """{{ app_title }} - {{ app_description }}
+    
+    AsyncAPI Version: {{ asyncapi_version }}
+    Application Version: {{ app_version }}
+    """
+    
+    def __init__(self, wire_factory: AbstractWireFactory[Any, Any]):
+        """Initialize the AsyncAPI application.
+        
+        Args:
+            wire_factory: Wire protocol factory for message transport
+        """
+        # Use CodecRegistry with current module for message serialization
+        current_module = sys.modules[self.__module__.rsplit('.', 1)[0]]
+        codec_factory = CodecRegistry(current_module)
+        
+        super().__init__(wire_factory=wire_factory, codec_factory=codec_factory)
+        
+        # Initialize semantic routers with factories
+        self.producer = ProducerRouter(wire_factory, codec_factory)
+        self.consumer = ConsumerRouter(wire_factory, codec_factory)
+        
+        # Register all endpoints from routers
+        self._register_router_endpoints(self.producer)
+        self._register_router_endpoints(self.consumer)
+    
+    def _register_router_endpoints(self, router: object) -> None:
+        """Recursively register all endpoints from router tree.
+        
+        Args:
+            router: Router object to scan for endpoints
+        """
+        if isinstance(router, AbstractEndpoint):
+            # This router is an endpoint - register it directly
+            self._add_endpoint(router)
+        elif hasattr(router, '__dict__'):
+            # This router aggregates others - recurse through attributes
+            for attr_name in dir(router):
+                if not attr_name.startswith('_'):
+                    attr = getattr(router, attr_name, None)
+                    # Check if it's a router-like object (has __dict__ or is an endpoint)
+                    if attr is not None and (isinstance(attr, AbstractEndpoint) or hasattr(attr, '__dict__')):
+                        self._register_router_endpoints(attr)

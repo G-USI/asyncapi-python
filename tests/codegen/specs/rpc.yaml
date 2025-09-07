@@ -1,0 +1,118 @@
+asyncapi: "3.0.0"
+info:
+  title: RPC Test Service
+  version: 1.0.0
+
+operations:
+  # RPC Client (send with reply)
+  user.create:
+    action: send
+    title: Create User
+    description: Create a new user
+    channel:
+      $ref: "#/channels/user_requests"
+    reply:
+      channel:
+        $ref: "#/channels/user_responses"
+        
+  # RPC Server (receive with reply)
+  user.process:
+    action: receive
+    channel:
+      $ref: "#/channels/user_requests"
+    reply:
+      channel:
+        $ref: "#/channels/user_responses"
+        
+  # Publisher (send without reply)
+  notification.send:
+    action: send
+    channel:
+      $ref: "#/channels/notifications"
+      
+  # Subscriber (receive without reply)
+  log.write:
+    action: receive
+    channel:
+      $ref: "#/channels/logs"
+      
+channels:
+  user_requests:
+    address: user.requests
+    title: User Request Channel
+    messages:
+      create_user:
+        $ref: "#/components/messages/create_user_request"
+        
+  user_responses:
+    title: User Response Channel
+    messages:
+      user_created:
+        $ref: "#/components/messages/user_created_response"
+        
+  notifications:
+    address: notifications.fanout
+    messages:
+      notification:
+        $ref: "#/components/messages/notification"
+        
+  logs:
+    address: logs.topic
+    messages:
+      log_entry:
+        $ref: "#/components/messages/log_entry"
+        
+components:
+  messages:
+    create_user_request:
+      title: Create User Request
+      payload:
+        type: object
+        properties:
+          name:
+            type: string
+          email:
+            type: string
+            format: email
+        required:
+          - name
+          - email
+          
+    user_created_response:
+      title: User Created Response
+      payload:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+          name:
+            type: string
+          email:
+            type: string
+          created_at:
+            type: string
+            format: date-time
+            
+    notification:
+      payload:
+        type: object
+        properties:
+          type:
+            type: string
+            enum: [info, warning, error]
+          message:
+            type: string
+            
+    log_entry:
+      payload:
+        type: object
+        properties:
+          level:
+            type: string
+            enum: [debug, info, warning, error]
+          message:
+            type: string
+          timestamp:
+            type: string
+            format: date-time

@@ -1,0 +1,53 @@
+asyncapi: "3.0.0"
+info:
+  title: Simple Test Service
+  version: 1.0.0
+  description: Basic AsyncAPI spec for testing
+
+operations:
+  ping:
+    action: send
+    channel:
+      $ref: "#/channels/ping"
+      
+  pong:
+    action: receive
+    channel:
+      $ref: "#/channels/pong"
+      
+channels:
+  ping:
+    address: ping.queue
+    title: Ping Channel
+    description: Channel for ping messages
+    messages:
+      ping:
+        $ref: "#/components/messages/ping"
+        
+  pong:
+    address: pong.queue
+    messages:
+      pong:
+        $ref: "#/components/messages/pong"
+        
+components:
+  messages:
+    ping:
+      title: Ping Message
+      payload:
+        type: object
+        properties:
+          message:
+            type: string
+            const: ping
+          timestamp:
+            type: integer
+            
+    pong:
+      payload:
+        type: object
+        properties:
+          message:
+            type: string
+          received_at:
+            type: string

@@ -1,15 +1,12 @@
 [project]
 name = "asyncapi-python"
-version = "0.2.5"
-license = {text = "Apache-2.0"}
+version = "0.3.0rc1"
+license = { text = "Apache-2.0" }
 description = "Easily generate type-safe and async Python applications from AsyncAPI 3 specifications."
-authors = [{name = "Yaroslav Petrov", email = "yaroslav.v.petrov@gmail.com"}]
+authors = [{ name = "Yaroslav Petrov", email = "yaroslav.v.petrov@gmail.com" }]
 readme = "README.md"
-requires-python = ">=3.9,<3.14"
-dependencies = [
-    "pydantic>=2",
-    "pytz",
-]
+requires-python = ">=3.10,<3.14"
+dependencies = ["pydantic>=2", "pytz"]
 
 [project.optional-dependencies]
 codegen = [
@@ -33,7 +30,9 @@ dev-dependencies = [
     "pytest",
     "types-pytz",
     "pytest-asyncio",
+    "pytest-timeout",
     "pex",
+    "pyright>=1.1.405",
 ]
 
 [build-system]
@@ -51,3 +50,13 @@ packages = [
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
+timeout = 30
+
+[tool.pyright]
+include = ["src", "*.py"]
+exclude = ["**/__pycache__", "src/asyncapi_python_pants"]
+pythonVersion = "3.10"
+pythonPlatform = "Linux"
+typeCheckingMode = "strict"
+venvPath = "."
+venv = ".venv"

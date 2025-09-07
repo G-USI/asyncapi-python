@@ -41,7 +41,7 @@ async def generate_python_from_asyncapi(
             requirements=PexRequirements(
                 [f"asyncapi-python[codegen]=={version('asyncapi-python')}"]
             ),
-            interpreter_constraints=InterpreterConstraints([">=3.9"]),
+            interpreter_constraints=InterpreterConstraints([">=3.10"]),
             main=ConsoleScript("asyncapi-python-codegen"),
         ),
     )

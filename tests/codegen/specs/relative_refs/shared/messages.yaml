@@ -1,0 +1,69 @@
+# File C: Shared messages referenced from multiple places
+user_create_request:
+  title: User Create Request from File C
+  description: Message defined in shared/messages.yaml
+  payload:
+    type: object
+    properties:
+      name:
+        type: string
+        minLength: 1
+      email:
+        type: string
+        format: email
+      department:
+        type: string
+        enum: [engineering, sales, marketing]
+    required:
+      - name
+      - email
+      
+user_create_response:
+  title: User Create Response
+  payload:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      name:
+        type: string
+      email:
+        type: string
+      created_at:
+        type: string
+        format: date-time
+      from_file_c:
+        type: string
+        const: shared_messages
+        
+notification_message:
+  title: Notification Message
+  payload:
+    type: object
+    properties:
+      type:
+        type: string
+        enum: [info, warning, error, success]
+      message:
+        type: string
+      priority:
+        type: integer
+        minimum: 1
+        maximum: 5
+      source_file:
+        type: string
+        const: file_c_messages
+        
+alert_message:
+  payload:
+    type: object
+    properties:
+      severity:
+        type: string
+        enum: [low, medium, high, critical]
+      description:
+        type: string
+      triggered_at:
+        type: string
+        format: date-time

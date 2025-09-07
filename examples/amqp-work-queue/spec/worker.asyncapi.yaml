@@ -1,0 +1,12 @@
+asyncapi: "3.0.0"
+info:
+  title: Task Worker for Work Queue
+  version: 1.0.0
+  description: Processes tasks from the work queue
+
+operations:
+  /task/process:
+    action: receive
+    channel: { $ref: "./common.asyncapi.yaml#/channels/~1task~1queue" }
+    messages:
+      - { $ref: "./common.asyncapi.yaml#/channels/~1task~1queue/messages/Task" }

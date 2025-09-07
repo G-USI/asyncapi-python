@@ -1,0 +1,1367 @@
+asyncapi: 3.0.0
+info:
+  title: Extreme Financial Trading System
+  version: 2.1.0
+  description: |
+    Ultra-complex financial trading system with real-time market data, 
+    algorithmic trading, risk management, and multi-asset portfolio management.
+    Tests every edge case of AsyncAPI code generation.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  contact:
+    name: Trading Platform Team
+    email: trading@example.com
+    url: https://example.com/trading
+
+defaultContentType: application/json
+
+servers:
+  production:
+    host: trading.example.com
+    protocol: amqp
+    description: Production AMQP cluster
+    variables:
+      environment:
+        enum: [prod, staging, dev]
+        default: prod
+    bindings:
+      amqp:
+        heartbeat: 60
+        frameMax: 131072
+
+  kafka-stream:
+    host: kafka.trading.com:9092
+    protocol: kafka
+    description: High-throughput market data stream
+    
+  websocket-feed:
+    host: ws.trading.com
+    protocol: ws
+    description: Real-time WebSocket data feed
+
+channels:
+  # Complex parameterized channels with multiple variables
+  market.data.{exchange}.{symbol}.{timeframe}:
+    address: market.data.{exchange}.{symbol}.{timeframe}
+    description: Real-time market data feed for specific instruments
+    parameters:
+      exchange:
+        description: Exchange identifier
+        enum: [NYSE, NASDAQ, LSE, TSE, HKEX]
+        examples:
+          - NYSE
+          - NASDAQ
+      symbol:
+        description: Trading symbol
+        pattern: '^[A-Z]{1,5}$'
+        examples:
+          - AAPL
+          - GOOGL  
+      timeframe:
+        description: Data timeframe
+        enum: [1m, 5m, 15m, 1h, 4h, 1d]
+        default: 1m
+    messages:
+      marketTick:
+        $ref: '#/components/messages/MarketTick'
+      marketDepth:
+        $ref: '#/components/messages/MarketDepth'
+      tradeExecution:
+        $ref: '#/components/messages/TradeExecution'
+    bindings:
+      amqp:
+        type: routingKey
+        exchange:
+          name: market_data
+          type: topic
+          durable: true
+          autoDelete: false
+          vhost: /trading
+
+  # Queue-based order processing
+  orders.processing.{region}:
+    address: orders.processing.{region}
+    description: Regional order processing queues
+    parameters:
+      region:
+        description: Trading region
+        enum: [US, EU, ASIA, LATAM]
+        examples:
+          - US
+          - EU
+    messages:
+      orderSubmitted:
+        $ref: '#/components/messages/OrderSubmitted'
+      orderFilled:
+        $ref: '#/components/messages/OrderFilled'
+      orderRejected:
+        $ref: '#/components/messages/OrderRejected'
+    bindings:
+      amqp:
+        type: queue
+        queue:
+          name: order_processing_{region}
+          durable: true
+          exclusive: false
+          autoDelete: false
+          arguments:
+            x-max-priority: 10
+            x-message-ttl: 300000
+
+  # Risk management alerts
+  risk.alerts.{severity}.{portfolio}:
+    address: risk.alerts.{severity}.{portfolio}
+    description: Risk management alerts by severity and portfolio
+    parameters:
+      severity:
+        description: Alert severity level
+        enum: [LOW, MEDIUM, HIGH, CRITICAL]
+        default: MEDIUM
+      portfolio:
+        description: Portfolio identifier
+        pattern: '^[A-Z0-9]{8}$'
+        examples:
+          - TECH0001
+          - BOND0042
+    messages:
+      riskAlert:
+        $ref: '#/components/messages/RiskAlert'
+      marginCall:
+        $ref: '#/components/messages/MarginCall'
+      positionLimit:
+        $ref: '#/components/messages/PositionLimit'
+    bindings:
+      amqp:
+        type: routingKey
+        exchange:
+          name: risk_management
+          type: direct
+          durable: true
+          vhost: /risk
+
+  # High-frequency trading data
+  hft.signals.{strategy}.{asset_class}:
+    address: hft.signals.{strategy}.{asset_class}
+    description: High-frequency trading signals
+    parameters:
+      strategy:
+        description: Trading strategy identifier
+        enum: [momentum, arbitrage, mean_reversion, pairs_trading, market_making]
+      asset_class:
+        description: Asset class
+        enum: [equity, fixed_income, fx, commodity, crypto]
+    messages:
+      buySignal:
+        $ref: '#/components/messages/BuySignal'
+      sellSignal:
+        $ref: '#/components/messages/SellSignal'
+      hedgeSignal:
+        $ref: '#/components/messages/HedgeSignal'
+    bindings:
+      amqp:
+        type: routingKey
+        exchange:
+          name: hft_signals
+          type: topic
+          durable: false
+          autoDelete: true
+          arguments:
+            x-max-length: 100000
+
+  # Portfolio analytics
+  portfolio.analytics.{client_id}:
+    address: portfolio.analytics.{client_id}
+    description: Client-specific portfolio analytics
+    parameters:
+      client_id:
+        description: Client identifier
+        pattern: '^CLIENT_[0-9]{8}$'
+        examples:
+          - CLIENT_12345678
+    messages:
+      portfolioValuation:
+        $ref: '#/components/messages/PortfolioValuation'
+      performanceReport:
+        $ref: '#/components/messages/PerformanceReport'
+      riskMetrics:
+        $ref: '#/components/messages/RiskMetrics'
+    bindings:
+      amqp:
+        type: queue
+        queue:
+          name: analytics_{client_id}
+          durable: true
+          exclusive: true
+          autoDelete: true
+
+  # Regulatory reporting
+  regulatory.reports.{jurisdiction}.{report_type}:
+    address: regulatory.reports.{jurisdiction}.{report_type}
+    description: Regulatory reporting by jurisdiction and type
+    parameters:
+      jurisdiction:
+        description: Regulatory jurisdiction
+        enum: [SEC, FINRA, FCA, ESMA, JFSA, ASIC]
+      report_type:
+        description: Type of regulatory report
+        enum: [trade_report, position_report, risk_report, client_report]
+    messages:
+      regulatoryReport:
+        $ref: '#/components/messages/RegulatoryReport'
+    bindings:
+      amqp:
+        type: queue
+        queue:
+          name: regulatory_{jurisdiction}_{report_type}
+          durable: true
+          exclusive: false
+          autoDelete: false
+          arguments:
+            x-dead-letter-exchange: dlx_regulatory
+            x-max-retries: 3
+
+operations:
+  # Market data operations
+  market.data.subscribe:
+    action: receive
+    channel:
+      $ref: '#/channels/market.data.{exchange}.{symbol}.{timeframe}'
+    summary: Subscribe to real-time market data
+    description: Receive real-time market data including ticks, depth, and trade executions
+    tags:
+      - name: market-data
+      - name: real-time
+    bindings:
+      amqp:
+        ack: true
+        deliveryMode: 1  # Non-persistent for real-time data
+        priority: 5
+
+  market.data.publish:
+    action: send
+    channel:
+      $ref: '#/channels/market.data.{exchange}.{symbol}.{timeframe}'
+    summary: Publish market data updates
+    description: Publish real-time market data to subscribers
+    tags:
+      - name: market-data
+      - name: publishing
+
+  # Order management operations
+  orders.submit:
+    action: send
+    channel:
+      $ref: '#/channels/orders.processing.{region}'
+    summary: Submit trading order
+    description: Submit a new trading order to the processing queue
+    reply:
+      address: orders.responses.{correlation_id}
+      channel:
+        description: Order processing response
+        messages:
+          orderAck:
+            $ref: '#/components/messages/OrderAcknowledgment'
+          orderReject:
+            $ref: '#/components/messages/OrderRejection'
+    tags:
+      - name: orders
+      - name: trading
+
+  orders.process:
+    action: receive
+    channel:
+      $ref: '#/channels/orders.processing.{region}'
+    summary: Process incoming orders
+    description: Process orders from the regional queues
+    bindings:
+      amqp:
+        ack: true
+        deliveryMode: 2  # Persistent for orders
+        priority: 8
+
+  # Risk management operations
+  risk.monitor:
+    action: receive
+    channel:
+      $ref: '#/channels/risk.alerts.{severity}.{portfolio}'
+    summary: Monitor risk alerts
+    description: Monitor and respond to risk management alerts
+    tags:
+      - name: risk-management
+      - name: monitoring
+
+  risk.alert.send:
+    action: send
+    channel:
+      $ref: '#/channels/risk.alerts.{severity}.{portfolio}'
+    summary: Send risk alert
+    description: Send risk management alerts to monitoring systems
+
+  # High-frequency trading operations
+  hft.signals.receive:
+    action: receive
+    channel:
+      $ref: '#/channels/hft.signals.{strategy}.{asset_class}'
+    summary: Receive HFT signals
+    description: Receive high-frequency trading signals for automated execution
+    bindings:
+      amqp:
+        ack: false  # No ack for ultra-low latency
+        deliveryMode: 1
+
+  hft.signals.generate:
+    action: send
+    channel:
+      $ref: '#/channels/hft.signals.{strategy}.{asset_class}'
+    summary: Generate HFT signals
+    description: Generate and broadcast high-frequency trading signals
+
+  # Portfolio analytics operations
+  portfolio.analyze:
+    action: receive
+    channel:
+      $ref: '#/channels/portfolio.analytics.{client_id}'
+    summary: Analyze client portfolios
+    description: Perform comprehensive portfolio analysis for clients
+
+  portfolio.report.generate:
+    action: send
+    channel:
+      $ref: '#/channels/portfolio.analytics.{client_id}'
+    summary: Generate portfolio reports
+    description: Generate and send portfolio analysis reports
+
+  # Regulatory reporting operations
+  regulatory.report.submit:
+    action: send
+    channel:
+      $ref: '#/channels/regulatory.reports.{jurisdiction}.{report_type}'
+    summary: Submit regulatory report
+    description: Submit regulatory reports to appropriate authorities
+    bindings:
+      amqp:
+        ack: true
+        deliveryMode: 2  # Must be persistent for regulatory data
+        mandatory: true
+        priority: 10
+
+  regulatory.report.process:
+    action: receive
+    channel:
+      $ref: '#/channels/regulatory.reports.{jurisdiction}.{report_type}'
+    summary: Process regulatory reports
+    description: Process incoming regulatory reports and forward to authorities
+
+  # Analytics RPC operations
+  analytics.request:
+    action: send
+    channel:
+      address: analytics.requests
+      description: Analytics request processing queue
+      messages:
+        analyticsRequest:
+          $ref: '#/components/messages/AnalyticsRequest'
+    summary: Request analytics processing
+    description: Send analytics processing requests
+    reply:
+      address: analytics.responses.{correlation_id}
+      channel:
+        description: Analytics response channel
+        messages:
+          analyticsResponse:
+            $ref: '#/components/messages/AnalyticsResponse'
+
+  analytics.process:
+    action: receive
+    channel:
+      address: analytics.requests
+      description: Analytics request processing queue
+      messages:
+        analyticsRequest:
+          $ref: '#/components/messages/AnalyticsRequest'
+    summary: Process analytics requests
+    description: Process incoming analytics requests and return results
+    reply:
+      address: analytics.responses.{correlation_id}
+      channel:
+        description: Analytics response channel
+        messages:
+          analyticsResponse:
+            $ref: '#/components/messages/AnalyticsResponse'
+
+components:
+  messages:
+    MarketTick:
+      title: MarketTick
+      summary: Real-time market tick data
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/MarketTick'
+
+    MarketDepth:
+      title: MarketDepth
+      summary: Market depth/order book data
+      payload:
+        $ref: '#/components/schemas/MarketDepth'
+
+    TradeExecution:
+      title: TradeExecution
+      summary: Trade execution notification
+      payload:
+        $ref: '#/components/schemas/TradeExecution'
+
+    OrderSubmitted:
+      title: OrderSubmitted
+      summary: Order submission confirmation
+      payload:
+        $ref: '#/components/schemas/OrderSubmitted'
+
+    OrderFilled:
+      title: OrderFilled
+      summary: Order fill notification
+      payload:
+        $ref: '#/components/schemas/OrderFilled'
+
+    OrderRejected:
+      title: OrderRejected
+      summary: Order rejection notification
+      payload:
+        $ref: '#/components/schemas/OrderRejected'
+
+    OrderAcknowledgment:
+      title: OrderAcknowledgment
+      summary: Order acknowledgment response
+      payload:
+        $ref: '#/components/schemas/OrderAcknowledgment'
+
+    OrderRejection:
+      title: OrderRejection
+      summary: Order rejection response
+      payload:
+        $ref: '#/components/schemas/OrderRejection'
+
+    RiskAlert:
+      title: RiskAlert
+      summary: Risk management alert
+      payload:
+        $ref: '#/components/schemas/RiskAlert'
+
+    MarginCall:
+      title: MarginCall
+      summary: Margin call notification
+      payload:
+        $ref: '#/components/schemas/MarginCall'
+
+    PositionLimit:
+      title: PositionLimit
+      summary: Position limit breach alert
+      payload:
+        $ref: '#/components/schemas/PositionLimit'
+
+    BuySignal:
+      title: BuySignal
+      summary: Buy signal from HFT algorithm
+      payload:
+        $ref: '#/components/schemas/TradingSignal'
+
+    SellSignal:
+      title: SellSignal
+      summary: Sell signal from HFT algorithm
+      payload:
+        $ref: '#/components/schemas/TradingSignal'
+
+    HedgeSignal:
+      title: HedgeSignal
+      summary: Hedge signal from risk management
+      payload:
+        $ref: '#/components/schemas/TradingSignal'
+
+    PortfolioValuation:
+      title: PortfolioValuation
+      summary: Portfolio valuation report
+      payload:
+        $ref: '#/components/schemas/PortfolioValuation'
+
+    PerformanceReport:
+      title: PerformanceReport
+      summary: Portfolio performance analysis
+      payload:
+        $ref: '#/components/schemas/PerformanceReport'
+
+    RiskMetrics:
+      title: RiskMetrics
+      summary: Portfolio risk metrics
+      payload:
+        $ref: '#/components/schemas/RiskMetrics'
+
+    RegulatoryReport:
+      title: RegulatoryReport
+      summary: Regulatory compliance report
+      payload:
+        $ref: '#/components/schemas/RegulatoryReport'
+
+    AnalyticsRequest:
+      title: AnalyticsRequest
+      summary: Analytics processing request
+      payload:
+        $ref: '#/components/schemas/AnalyticsRequest'
+
+    AnalyticsResponse:
+      title: AnalyticsResponse
+      summary: Analytics processing response
+      payload:
+        $ref: '#/components/schemas/AnalyticsResponse'
+
+  schemas:
+    MarketTick:
+      type: object
+      required: [symbol, exchange, timestamp, price, volume, bid, ask]
+      properties:
+        symbol:
+          type: string
+          pattern: '^[A-Z]{1,5}$'
+          description: Trading symbol
+        exchange:
+          type: string
+          enum: [NYSE, NASDAQ, LSE, TSE, HKEX]
+          description: Exchange identifier
+        timestamp:
+          type: string
+          format: date-time
+          description: Tick timestamp in ISO 8601
+        price:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+          multipleOf: 0.01
+          description: Last trade price
+        volume:
+          type: integer
+          minimum: 0
+          description: Trade volume
+        bid:
+          $ref: '#/components/schemas/PriceLevel'
+        ask:
+          $ref: '#/components/schemas/PriceLevel'
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
+
+    MarketDepth:
+      type: object
+      required: [symbol, exchange, timestamp, bids, asks]
+      properties:
+        symbol:
+          type: string
+          pattern: '^[A-Z]{1,5}$'
+        exchange:
+          type: string
+          enum: [NYSE, NASDAQ, LSE, TSE, HKEX]
+        timestamp:
+          type: string
+          format: date-time
+        bids:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceLevel'
+          maxItems: 20
+          description: Top 20 bid levels
+        asks:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceLevel'
+          maxItems: 20
+          description: Top 20 ask levels
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
+
+    TradeExecution:
+      type: object
+      required: [tradeId, orderId, symbol, side, quantity, price, timestamp]
+      properties:
+        tradeId:
+          type: string
+          format: uuid
+          description: Unique trade identifier
+        orderId:
+          type: string
+          format: uuid
+          description: Related order identifier
+        symbol:
+          type: string
+          pattern: '^[A-Z]{1,5}$'
+        side:
+          type: string
+          enum: [BUY, SELL]
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+        price:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+          multipleOf: 0.01
+        timestamp:
+          type: string
+          format: date-time
+        fees:
+          $ref: '#/components/schemas/TradingFees'
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
+
+    OrderSubmitted:
+      type: object
+      required: [orderId, clientOrderId, symbol, side, orderType, quantity, timeInForce]
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        clientOrderId:
+          type: string
+          maxLength: 50
+          description: Client-provided order identifier
+        symbol:
+          type: string
+          pattern: '^[A-Z]{1,5}$'
+        side:
+          type: string
+          enum: [BUY, SELL]
+        orderType:
+          type: string
+          enum: [MARKET, LIMIT, STOP, STOP_LIMIT, TRAILING_STOP]
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+        price:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+          multipleOf: 0.01
+          description: Limit price (required for limit orders)
+        stopPrice:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+          multipleOf: 0.01
+          description: Stop price (required for stop orders)
+        timeInForce:
+          type: string
+          enum: [DAY, GTC, IOC, FOK]
+          description: Order time in force
+        account:
+          type: string
+          pattern: '^ACC_[0-9]{8}$'
+          description: Trading account identifier
+        portfolio:
+          type: string
+          pattern: '^[A-Z0-9]{8}$'
+          description: Portfolio identifier
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
+
+    OrderFilled:
+      type: object
+      required: [orderId, fillId, quantity, price, timestamp, remainingQuantity]
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        fillId:
+          type: string
+          format: uuid
+          description: Unique fill identifier
+        quantity:
+          type: integer
+          minimum: 1
+        price:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+          multipleOf: 0.01
+        timestamp:
+          type: string
+          format: date-time
+        remainingQuantity:
+          type: integer
+          minimum: 0
+          description: Remaining unfilled quantity
+        fees:
+          $ref: '#/components/schemas/TradingFees'
+        liquidity:
+          type: string
+          enum: [MAKER, TAKER]
+          description: Liquidity provision type
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
+
+    OrderRejected:
+      type: object
+      required: [orderId, rejectionCode, rejectionReason, timestamp]
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        rejectionCode:
+          type: string
+          enum: [INSUFFICIENT_FUNDS, INVALID_SYMBOL, MARKET_CLOSED, POSITION_LIMIT, RISK_CHECK_FAILED]
+        rejectionReason:
+          type: string
+          maxLength: 255
+          description: Human-readable rejection reason
+        timestamp:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
+
+    OrderAcknowledgment:
+      type: object
+      required: [orderId, status, timestamp]
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [ACKNOWLEDGED, PENDING, WORKING]
+        timestamp:
+          type: string
+          format: date-time
+        estimatedFillTime:
+          type: string
+          format: date-time
+          description: Estimated time to fill
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
+
+    OrderRejection:
+      type: object
+      required: [orderId, rejectionCode, rejectionReason]
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        rejectionCode:
+          type: string
+          enum: [DUPLICATE_ORDER, INVALID_PARAMETERS, SYSTEM_ERROR, COMPLIANCE_VIOLATION]
+        rejectionReason:
+          type: string
+          maxLength: 255
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
+
+    RiskAlert:
+      type: object
+      required: [alertId, alertType, severity, portfolio, threshold, currentValue]
+      properties:
+        alertId:
+          type: string
+          format: uuid
+        alertType:
+          type: string
+          enum: [VAR_BREACH, CONCENTRATION_RISK, LIQUIDITY_RISK, CREDIT_RISK, OPERATIONAL_RISK]
+        severity:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+        portfolio:
+          type: string
+          pattern: '^[A-Z0-9]{8}$'
+        threshold:
+          type: number
+          format: double
+          description: Risk threshold value
+        currentValue:
+          type: number
+          format: double
+          description: Current risk value
+        timestamp:
+          type: string
+          format: date-time
+        description:
+          type: string
+          maxLength: 500
+        recommendedActions:
+          type: array
+          items:
+            type: string
+            maxLength: 200
+          maxItems: 10
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
+
+    MarginCall:
+      type: object
+      required: [callId, account, requiredMargin, currentMargin, deficiency, dueDate]
+      properties:
+        callId:
+          type: string
+          format: uuid
+        account:
+          type: string
+          pattern: '^ACC_[0-9]{8}$'
+        requiredMargin:
+          type: number
+          format: double
+          minimum: 0
+          description: Required margin amount
+        currentMargin:
+          type: number
+          format: double
+          minimum: 0
+          description: Current margin amount
+        deficiency:
+          type: number
+          format: double
+          minimum: 0
+          description: Margin deficiency amount
+        dueDate:
+          type: string
+          format: date-time
+          description: Margin call due date
+        timestamp:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
+
+    PositionLimit:
+      type: object
+      required: [limitId, portfolio, instrument, limitType, limit, currentPosition]
+      properties:
+        limitId:
+          type: string
+          format: uuid
+        portfolio:
+          type: string
+          pattern: '^[A-Z0-9]{8}$'
+        instrument:
+          type: string
+          description: Financial instrument identifier
+        limitType:
+          type: string
+          enum: [GROSS_EXPOSURE, NET_EXPOSURE, CONCENTRATION, SECTOR_LIMIT]
+        limit:
+          type: number
+          format: double
+          description: Position limit value
+        currentPosition:
+          type: number
+          format: double
+          description: Current position value
+        utilizationPercent:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 200
+          description: Limit utilization percentage
+        timestamp:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
+
+    TradingSignal:
+      type: object
+      required: [signalId, strategy, symbol, action, confidence, timestamp]
+      properties:
+        signalId:
+          type: string
+          format: uuid
+        strategy:
+          type: string
+          enum: [momentum, arbitrage, mean_reversion, pairs_trading, market_making]
+        symbol:
+          type: string
+          pattern: '^[A-Z]{1,5}$'
+        action:
+          type: string
+          enum: [BUY, SELL, HOLD, HEDGE]
+        confidence:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: Signal confidence score (0-1)
+        targetPrice:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+          multipleOf: 0.01
+        stopLoss:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+          multipleOf: 0.01
+        takeProfit:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+          multipleOf: 0.01
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+        urgency:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, IMMEDIATE]
+        timeToLive:
+          type: integer
+          minimum: 1
+          maximum: 3600
+          description: Signal TTL in seconds
+        timestamp:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
+
+    PortfolioValuation:
+      type: object
+      required: [portfolioId, valuationDate, totalValue, currency]
+      properties:
+        portfolioId:
+          type: string
+          pattern: '^[A-Z0-9]{8}$'
+        clientId:
+          type: string
+          pattern: '^CLIENT_[0-9]{8}$'
+        valuationDate:
+          type: string
+          format: date
+        totalValue:
+          type: number
+          format: double
+          minimum: 0
+          description: Total portfolio value
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          description: Base currency
+        positions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Position'
+          maxItems: 10000
+        pnl:
+          $ref: '#/components/schemas/PnLBreakdown'
+        riskMetrics:
+          $ref: '#/components/schemas/PortfolioRiskMetrics'
+        benchmark:
+          $ref: '#/components/schemas/BenchmarkComparison'
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
+
+    PerformanceReport:
+      type: object
+      required: [portfolioId, reportPeriod, returns, metrics]
+      properties:
+        portfolioId:
+          type: string
+          pattern: '^[A-Z0-9]{8}$'
+        clientId:
+          type: string
+          pattern: '^CLIENT_[0-9]{8}$'
+        reportPeriod:
+          $ref: '#/components/schemas/DateRange'
+        returns:
+          $ref: '#/components/schemas/ReturnsAnalysis'
+        metrics:
+          $ref: '#/components/schemas/PerformanceMetrics'
+        attribution:
+          $ref: '#/components/schemas/AttributionAnalysis'
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
+
+    RiskMetrics:
+      type: object
+      required: [portfolioId, calculationDate, var, expectedShortfall]
+      properties:
+        portfolioId:
+          type: string
+          pattern: '^[A-Z0-9]{8}$'
+        calculationDate:
+          type: string
+          format: date
+        var:
+          $ref: '#/components/schemas/VaRCalculation'
+        expectedShortfall:
+          type: number
+          format: double
+          description: Expected Shortfall (CVaR)
+        beta:
+          type: number
+          format: double
+          description: Portfolio beta
+        sharpeRatio:
+          type: number
+          format: double
+          description: Sharpe ratio
+        maxDrawdown:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: Maximum drawdown percentage
+        trackingError:
+          type: number
+          format: double
+          minimum: 0
+          description: Tracking error vs benchmark
+        informationRatio:
+          type: number
+          format: double
+          description: Information ratio
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
+
+    RegulatoryReport:
+      type: object
+      required: [reportId, jurisdiction, reportType, reportingPeriod, data]
+      properties:
+        reportId:
+          type: string
+          format: uuid
+        jurisdiction:
+          type: string
+          enum: [SEC, FINRA, FCA, ESMA, JFSA, ASIC]
+        reportType:
+          type: string
+          enum: [trade_report, position_report, risk_report, client_report]
+        reportingPeriod:
+          $ref: '#/components/schemas/DateRange'
+        data:
+          type: object
+          description: Report-specific data structure
+          additionalProperties: true
+        submissionDeadline:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [DRAFT, PENDING, SUBMITTED, ACCEPTED, REJECTED]
+        validationErrors:
+          type: array
+          items:
+            type: string
+            maxLength: 200
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
+
+    # Supporting schemas
+    PriceLevel:
+      type: object
+      required: [price, size]
+      properties:
+        price:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+          multipleOf: 0.01
+        size:
+          type: integer
+          minimum: 1
+
+    TradingFees:
+      type: object
+      properties:
+        commission:
+          type: number
+          format: double
+          minimum: 0
+        regulatoryFees:
+          type: number
+          format: double
+          minimum: 0
+        exchangeFees:
+          type: number
+          format: double
+          minimum: 0
+        total:
+          type: number
+          format: double
+          minimum: 0
+
+    Position:
+      type: object
+      required: [symbol, quantity, marketValue, unrealizedPnL]
+      properties:
+        symbol:
+          type: string
+          pattern: '^[A-Z]{1,5}$'
+        quantity:
+          type: number
+          format: double
+          description: Position size (negative for short)
+        marketValue:
+          type: number
+          format: double
+        unrealizedPnL:
+          type: number
+          format: double
+        costBasis:
+          type: number
+          format: double
+        weight:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: Position weight in portfolio
+
+    PnLBreakdown:
+      type: object
+      properties:
+        totalPnL:
+          type: number
+          format: double
+        realizedPnL:
+          type: number
+          format: double
+        unrealizedPnL:
+          type: number
+          format: double
+        dividends:
+          type: number
+          format: double
+        interest:
+          type: number
+          format: double
+        fees:
+          type: number
+          format: double
+
+    PortfolioRiskMetrics:
+      type: object
+      properties:
+        volatility:
+          type: number
+          format: double
+          minimum: 0
+        beta:
+          type: number
+          format: double
+        var95:
+          type: number
+          format: double
+        var99:
+          type: number
+          format: double
+        maxDrawdown:
+          type: number
+          format: double
+
+    BenchmarkComparison:
+      type: object
+      required: [benchmarkName, correlation, trackingError]
+      properties:
+        benchmarkName:
+          type: string
+          maxLength: 50
+        correlation:
+          type: number
+          format: double
+          minimum: -1
+          maximum: 1
+        trackingError:
+          type: number
+          format: double
+          minimum: 0
+        alpha:
+          type: number
+          format: double
+        beta:
+          type: number
+          format: double
+
+    DateRange:
+      type: object
+      required: [startDate, endDate]
+      properties:
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+
+    ReturnsAnalysis:
+      type: object
+      properties:
+        totalReturn:
+          type: number
+          format: double
+        annualizedReturn:
+          type: number
+          format: double
+        monthlyReturns:
+          type: array
+          items:
+            type: number
+            format: double
+          maxItems: 12
+
+    PerformanceMetrics:
+      type: object
+      properties:
+        sharpeRatio:
+          type: number
+          format: double
+        sortinoRatio:
+          type: number
+          format: double
+        calmarRatio:
+          type: number
+          format: double
+        maxDrawdown:
+          type: number
+          format: double
+
+    AttributionAnalysis:
+      type: object
+      properties:
+        sectorAttribution:
+          type: array
+          items:
+            $ref: '#/components/schemas/SectorAttribution'
+        securitySelection:
+          type: number
+          format: double
+        assetAllocation:
+          type: number
+          format: double
+
+    SectorAttribution:
+      type: object
+      required: [sector, contribution]
+      properties:
+        sector:
+          type: string
+          maxLength: 50
+        contribution:
+          type: number
+          format: double
+
+    VaRCalculation:
+      type: object
+      required: [confidence, timeHorizon, value]
+      properties:
+        confidence:
+          type: number
+          format: double
+          minimum: 0.9
+          maximum: 0.99
+          description: Confidence level (e.g., 0.95, 0.99)
+        timeHorizon:
+          type: integer
+          minimum: 1
+          maximum: 252
+          description: Time horizon in days
+        value:
+          type: number
+          format: double
+          description: VaR value
+        method:
+          type: string
+          enum: [PARAMETRIC, HISTORICAL, MONTE_CARLO]
+
+    MessageMetadata:
+      type: object
+      required: [messageId, timestamp, version, source]
+      properties:
+        messageId:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+          pattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
+        source:
+          type: string
+          maxLength: 100
+          description: Message source system
+        correlationId:
+          type: string
+          format: uuid
+        causationId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          pattern: '^USER_[0-9]{8}$'
+        sessionId:
+          type: string
+          format: uuid
+        traceId:
+          type: string
+          description: Distributed tracing identifier
+        environment:
+          type: string
+          enum: [dev, staging, prod]
+        region:
+          type: string
+          enum: [us-east-1, us-west-2, eu-west-1, ap-southeast-1]
+
+    AnalyticsRequest:
+      type: object
+      required: [requestId, analysisType, parameters]
+      properties:
+        requestId:
+          type: string
+          format: uuid
+          description: Unique request identifier
+        analysisType:
+          type: string
+          enum: [PERFORMANCE, RISK, ATTRIBUTION, VAR_CALCULATION]
+          description: Type of analysis to perform
+        portfolioId:
+          type: string
+          pattern: '^[A-Z0-9]{8}$'
+          description: Portfolio identifier
+        dateRange:
+          $ref: '#/components/schemas/DateRange'
+        parameters:
+          type: object
+          additionalProperties: true
+          description: Analysis-specific parameters
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
+
+    AnalyticsResponse:
+      type: object
+      required: [requestId, status]
+      properties:
+        requestId:
+          type: string
+          format: uuid
+          description: Original request identifier
+        status:
+          type: string
+          enum: [SUCCESS, FAILED, PARTIAL]
+          description: Processing status
+        result:
+          type: object
+          additionalProperties: true
+          description: Analysis results
+        error:
+          type: string
+          description: Error message if processing failed
+        processingTime:
+          type: number
+          format: double
+          minimum: 0
+          description: Processing time in seconds
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'

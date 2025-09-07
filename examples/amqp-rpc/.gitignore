@@ -1,2 +1,6 @@
+# Generated code directories
 client/
 server/
+
+# Virtual environment
+.venv/

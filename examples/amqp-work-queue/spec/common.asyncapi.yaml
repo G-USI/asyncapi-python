@@ -1,0 +1,37 @@
+asyncapi: "3.0.0"
+info:
+  title: Work Queue Common Definitions
+  version: 1.0.0
+
+channels:
+  /task/queue:
+    address: task.queue
+    title: Task Work Queue
+    description: Queue for distributing tasks among workers
+    bindings:
+      amqp:
+        queue:
+          name: task-queue
+          durable: true
+          exclusive: false
+          autoDelete: false
+    messages:
+      Task:
+        name: Task
+        title: Work Task
+        payload:
+          type: object
+          properties:
+            id:
+              type: string
+              description: Unique task identifier
+            payload:
+              type: object
+              description: Task data
+            created_at:
+              type: string
+              format: date-time
+              description: Task creation timestamp
+          required:
+            - id
+            - payload

@@ -1,0 +1,88 @@
+"""Generated routers for AsyncAPI operations."""
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, TypedDict, Any
+from typing_extensions import Unpack
+
+from asyncapi_python.kernel.application import BaseApplication
+from asyncapi_python.kernel.endpoint import Publisher, Subscriber, RpcClient, RpcServer
+from asyncapi_python.kernel.wire import AbstractWireFactory
+from asyncapi_python.kernel.codec import CodecFactory
+import asyncapi_python.kernel.document as spec
+from .messages import json
+{% if routers|selectattr("has_parameters")|list -%}
+from . import parameters
+{% endif %}
+
+{% for router in routers %}
+class {{ router.class_name }}(
+{%- if router.operation.reply and router.operation.action == "send" -%}
+    RpcClient[{{ router.input_type | json_prefix }}, {{ router.output_type | json_prefix }}]
+{%- elif router.operation.action == "send" -%}
+    Publisher[{{ router.input_type | json_prefix }}]
+{%- elif router.operation.reply and router.operation.action == "receive" -%}
+    RpcServer[{{ router.input_type | json_prefix }}, {{ router.output_type | json_prefix }}]
+{%- else -%}
+    Subscriber[{{ router.input_type | json_prefix }}]
+{%- endif -%}
+):
+    """{{ router.description }}"""
+{% if router.operation.action == "send" -%}
+
+    {%- if router.has_parameters %}
+    {%- if router.operation.reply %}
+    class Inputs(RpcClient.Inputs):
+        """Parameters for this parameterized channel."""
+        params: parameters.{{ router.parameter_type_name }}
+    {%- else %}
+    class Inputs(Publisher.Inputs):
+        """Parameters for this parameterized channel."""
+        params: parameters.{{ router.parameter_type_name }}
+    {%- endif %}
+    {%- else %}
+    {%- if router.operation.reply %}
+    class Inputs(RpcClient.Inputs):
+        """Base inputs (no channel parameters)."""
+        pass
+    {%- else %}
+    class Inputs(Publisher.Inputs):
+        """Base inputs (no channel parameters)."""
+        pass
+    {%- endif %}
+    {%- endif %}
+{%- endif %}
+
+    def __init__(self, wire_factory: AbstractWireFactory[Any, Any], codec_factory: CodecFactory[Any, Any]):
+        operation = {{ router.operation_repr }}
+        
+        super().__init__(
+            operation=operation,
+            wire_factory=wire_factory,
+            codec_factory=codec_factory
+        )
+
+{% endfor %}
+
+{% for nested_class in producer_nested_classes %}
+{{ nested_class }}
+
+{% endfor %}
+
+{% for nested_class in consumer_nested_classes %}
+{{ nested_class }}
+
+{% endfor %}
+
+class ProducerRouter:
+    """Router aggregating all producer (send) operations."""
+    
+    def __init__(self, wire_factory: AbstractWireFactory[Any, Any], codec_factory: CodecFactory[Any, Any]):
+        """Initialize producer router with all send operations."""
+{{ generate_nested_routers(producer_routers, 8, "Producer") }}
+
+class ConsumerRouter:
+    """Router aggregating all consumer (receive) operations."""
+    
+    def __init__(self, wire_factory: AbstractWireFactory[Any, Any], codec_factory: CodecFactory[Any, Any]):
+        """Initialize consumer router with all receive operations."""
+{{ generate_nested_routers(consumer_routers, 8, "Consumer") }}

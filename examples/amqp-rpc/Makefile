@@ -9,7 +9,7 @@ venv:
 	python3 -m venv $(VENV_NAME)
 
 install:
-	$(PIP) install asyncapi-python[amqp,codegen]==$(PACKAGE_VERSION)
+	$(PIP) install -e ../../[amqp,codegen]
 
 generate:
 	$(CODEGEN) spec/client.asyncapi.yaml client --force

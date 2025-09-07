@@ -15,14 +15,17 @@
 
 import asyncio
 from os import environ
+from typing import Generator
 import pytest
+
+from asyncapi_python.contrib.wire.in_memory import reset_bus
 
 
 @pytest.fixture(scope="session")
 def amqp_uri() -> str:
-    if env_uri := environ.get("AMQP_URI"):
+    if env_uri := environ.get("PYTEST_AMQP_URI"):
         return env_uri
-    return "amqp://guest:guest@rabbitmq/"
+    return "amqp://guest:guest@localhost:5672/"
 
 
 @pytest.fixture(scope="session")
@@ -33,3 +36,11 @@ def event_loop():
         loop = asyncio.new_event_loop()
     yield loop
     loop.close()
+
+
+@pytest.fixture(autouse=True)
+def reset_in_memory_bus() -> Generator[None, None, None]:
+    """Auto-reset the in-memory bus between tests"""
+    reset_bus()
+    yield
+    reset_bus()

@@ -9,17 +9,17 @@ venv:
 	python3 -m venv $(VENV_NAME)
 
 install:
-	$(PIP) install asyncapi-python[amqp,codegen]==$(PACKAGE_VERSION)
+	$(PIP) install -e ../../[amqp,codegen]
 
 generate:
 	$(CODEGEN) spec/subscriber.asyncapi.yaml subscriber --force
 	$(CODEGEN) spec/publisher.asyncapi.yaml publisher --force
 
 client:
-	$(PYTHON) main-subscriber.py
+	$(PYTHON) main-publisher.py
 
 server: 
-	$(PYTHON) main-publisher.py
+	$(PYTHON) main-subscriber.py
 
 clean:
 	rm -rf $(VENV_NAME)

@@ -1,0 +1,6 @@
+# Generated code directories
+producer/
+worker/
+
+# Virtual environment
+.venv/

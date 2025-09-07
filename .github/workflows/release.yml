@@ -6,7 +6,8 @@ permissions:
 
 on:
   push:
-    tags: "v*.*.*"
+    tags: 
+      - "v*.*.*"
 
 jobs:
   test:
@@ -25,7 +26,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.9"
+          python-version: "3.10"
       
       - name: Install UV
         uses: astral-sh/setup-uv@v3
@@ -56,7 +57,7 @@ jobs:
           tag_name: ${{ github.ref }}
           release_name: ${{ github.ref }}
           draft: true
-          prerelease: false
+          prerelease: ${{ contains(github.ref, 'rc') }}
       
       - name: Build sdist, wheel, and pex
         run: >

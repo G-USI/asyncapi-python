@@ -1,0 +1,34 @@
+# File A: Main document that references File B
+asyncapi: "3.0.0"
+info:
+  title: Relative Reference Test A
+  version: 1.0.0
+  description: Main file that references other files
+
+operations:
+  user.create:
+    action: send
+    channel:
+      $ref: "common/channels.yaml#/user_channel"
+      
+  notification.send:
+    action: send
+    channel:
+      $ref: "shared/notifications.yaml#/notification_channel"
+      
+channels:
+  local_channel:
+    address: local.queue
+    messages:
+      local_message:
+        $ref: "#/components/messages/local_message"
+        
+components:
+  messages:
+    local_message:
+      payload:
+        type: object
+        properties:
+          from_main:
+            type: string
+            const: main_file
