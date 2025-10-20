@@ -120,13 +120,8 @@ class AmqpProducer(Producer[AmqpWireMessage]):
             address_override if address_override is not None else self._routing_key
         )
 
-        # Validate we have a destination
-        # Note: empty string is valid for default exchange with default queue
-        if effective_routing_key is None:
-            raise ValueError(
-                f"Cannot send: no routing destination specified. "
-                f"address_override={address_override}, routing_key={self._routing_key}"
-            )
+        # Note: empty string is valid for default exchange routing
+        # All valid routing configurations should result in a non-None string at this point
 
         for message in messages:
             amqp_message = AmqpMessage(
