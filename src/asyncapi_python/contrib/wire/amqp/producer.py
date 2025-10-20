@@ -120,8 +120,18 @@ class AmqpProducer(Producer[AmqpWireMessage]):
             address_override if address_override is not None else self._routing_key
         )
 
-        # Note: empty string is valid for default exchange routing
-        # All valid routing configurations should result in a non-None string at this point
+        # Validate we have a destination
+        # Fail ONLY if both are truly missing:
+        # - address_override is None (not provided by caller)
+        # - AND self._routing_key is "" (no static config was derived from channel/bindings/operation)
+        # Note: empty string IS valid when explicitly configured (fanout exchanges, default exchange)
+        if address_override is None and not self._routing_key:
+            raise ValueError(
+                f"Cannot send: no routing destination available. "
+                f"RPC replies require reply_to from the request, or the channel must "
+                f"have address/bindings/operation-name to derive destination. "
+                f"(address_override={address_override}, routing_key={self._routing_key!r})"
+            )
 
         for message in messages:
             amqp_message = AmqpMessage(
