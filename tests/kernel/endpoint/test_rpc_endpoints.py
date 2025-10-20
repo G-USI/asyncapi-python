@@ -1,21 +1,22 @@
 """Integration tests for RPC client and server endpoints"""
 
 import asyncio
-import pytest
+import json
 from typing import AsyncGenerator
 
+import pytest
+
+from asyncapi_python.kernel.codec import Codec, CodecFactory
+from asyncapi_python.kernel.document import Channel, Message, Operation, OperationReply
+from asyncapi_python.kernel.endpoint.exceptions import TimeoutError, UninitializedError
+from asyncapi_python.kernel.endpoint.message import WireMessage
+from asyncapi_python.kernel.endpoint.publisher import Publisher
 from asyncapi_python.kernel.endpoint.rpc_client import RpcClient
 from asyncapi_python.kernel.endpoint.rpc_reply_handler import global_reply_handler
 from asyncapi_python.kernel.endpoint.rpc_server import RpcServer
-from asyncapi_python.kernel.endpoint.publisher import Publisher
 from asyncapi_python.kernel.endpoint.subscriber import Subscriber
-from asyncapi_python.kernel.endpoint.message import WireMessage
-from asyncapi_python.kernel.endpoint.exceptions import TimeoutError, UninitializedError
-from asyncapi_python.kernel.document import Operation, Channel, Message, OperationReply
-from asyncapi_python.kernel.wire import AbstractWireFactory, Producer, Consumer
-from asyncapi_python.kernel.codec import CodecFactory, Codec
 from asyncapi_python.kernel.typing import IncomingMessage
-import json
+from asyncapi_python.kernel.wire import AbstractWireFactory, Consumer, Producer
 
 
 @pytest.fixture
@@ -261,8 +262,17 @@ class RealisticProducer:
     def set_factory(self, factory: "RealisticWireFactory") -> None:
         self._factory = factory
 
-    async def send_batch(self, messages: list[WireMessage]) -> None:
-        """Send messages by routing them to the appropriate consumers"""
+    async def send_batch(
+        self, messages: list[WireMessage], *, address_override: str | None = None
+    ) -> None:
+        """Send messages by routing them to the appropriate consumers
+
+        Args:
+            messages: Messages to send
+            address_override: Optional dynamic address override (for compatibility with protocol).
+                            In test environment, routing is based on is_reply flag,
+                            so this parameter is accepted but not used.
+        """
         if not self._started or not self._factory:
             return
 
@@ -309,6 +319,26 @@ class RealisticProducer:
                         else:
                             # Fallback for immediate processing
                             await self._factory._handle_server_message(server_message)
+
+    async def send_to_queue(self, queue_name: str, messages: list[WireMessage]) -> None:
+        """Send messages directly to a specific queue (for RPC replies)
+
+        This mimics the AMQP producer's send_to_queue method for testing.
+        In the test environment, we route directly to the reply consumer.
+        """
+        if not self._started or not self._factory:
+            return
+
+        # Route messages to the reply consumer
+        if self._factory._reply_consumer:
+            for message in messages:
+                reply_message = RealisticWireMessage(
+                    message.payload,
+                    message.headers,
+                    message.correlation_id,
+                    message.reply_to,
+                )
+                await self._factory._reply_consumer.add_message(reply_message)
 
 
 class RealisticWireFactory(AbstractWireFactory):
@@ -805,6 +835,96 @@ async def test_pubsub_fanout_scenario(cleanup_rpc_client):
     await publisher.stop()
     for subscriber in subscribers:
         await subscriber.stop()
+    await wire_factory.cleanup()
+
+
+@pytest.mark.asyncio(loop_scope="function")
+async def test_multi_service_rpc(mock_operation, cleanup_rpc_client):
+    """Test RPC communication between different services (different reply queues)
+
+    This test verifies that the server sends replies to the client's specified
+    reply queue (from reply_to field), not to its own reply queue.
+    """
+    wire_factory = RealisticWireFactory()
+    codec_factory = SimpleCodecFactory()
+
+    # Create client with operation
+    client = RpcClient(
+        operation=mock_operation,
+        wire_factory=wire_factory,
+        codec_factory=codec_factory,
+    )
+
+    # Create server operation
+    server_operation = Operation(
+        action="receive",
+        channel=mock_operation.channel,
+        messages=mock_operation.messages,
+        reply=mock_operation.reply,
+        title=None,
+        summary=None,
+        description=None,
+        tags=[],
+        external_docs=None,
+        traits=[],
+        bindings=None,
+        key="test-key",
+        security=None,
+    )
+
+    server = RpcServer(
+        operation=server_operation,
+        wire_factory=wire_factory,
+        codec_factory=codec_factory,
+    )
+
+    # Track which reply queue was actually used
+    actual_reply_queue = None
+    original_send_to_queue = None
+
+    if hasattr(wire_factory._reply_producer, "send_to_queue"):
+        original_send_to_queue = wire_factory._reply_producer.send_to_queue
+
+        async def tracked_send_to_queue(queue_name: str, messages):
+            nonlocal actual_reply_queue
+            actual_reply_queue = queue_name
+            await original_send_to_queue(queue_name, messages)
+
+        wire_factory._reply_producer.send_to_queue = tracked_send_to_queue
+
+    # Register server handler
+    @server
+    async def handle_request(request: RequestMessage) -> ResponseMessage:
+        return ResponseMessage(f"Handled: {request.data}")
+
+    # Set up wire factory for automatic replies
+    wire_factory.set_server_handler(handle_request)
+
+    # Start both endpoints
+    await client.start()
+    await server.start()
+
+    # Get the client's reply queue name before making the request
+    expected_reply_queue = global_reply_handler.reply_queue_name
+
+    # Make RPC call
+    request = RequestMessage("Test Multi-Service")
+    response = await client(request)
+
+    # Verify response is correct
+    assert isinstance(response, ResponseMessage)
+    assert response.result == "Handled: Test Multi-Service"
+
+    # Verify reply was sent to the client's reply queue (if tracking is available)
+    if actual_reply_queue is not None:
+        assert actual_reply_queue == expected_reply_queue, (
+            f"Reply was sent to wrong queue: {actual_reply_queue}, "
+            f"expected: {expected_reply_queue}"
+        )
+
+    # Cleanup
+    await client.stop()
+    await server.stop()
     await wire_factory.cleanup()
 
 

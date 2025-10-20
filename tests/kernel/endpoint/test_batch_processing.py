@@ -1,16 +1,17 @@
 """Unit tests for batch processing in subscriber and RPC server endpoints."""
 
 import asyncio
-import pytest
-from unittest.mock import Mock, AsyncMock
 from typing import AsyncGenerator
+from unittest.mock import AsyncMock, Mock
 
-from asyncapi_python.kernel.endpoint import Subscriber, RpcServer
-from asyncapi_python.kernel.document import Operation, Channel, Message
-from asyncapi_python.kernel.wire import AbstractWireFactory
+import pytest
+
 from asyncapi_python.kernel.codec import CodecFactory
-from asyncapi_python.kernel.typing import BatchConfig
+from asyncapi_python.kernel.document import Channel, Message, Operation
+from asyncapi_python.kernel.endpoint import RpcServer, Subscriber
 from asyncapi_python.kernel.exceptions import Reject
+from asyncapi_python.kernel.typing import BatchConfig
+from asyncapi_python.kernel.wire import AbstractWireFactory
 
 
 class MockIncomingMessage:
@@ -435,7 +436,7 @@ async def test_rpc_server_batch_processing(
         assert message.is_acked
 
     # Reply producer should have been called for each request
-    # (send_batch called once per reply in our implementation)
+    # Each reply uses send_batch with address_override
     assert reply_producer.send_batch.call_count == 3
 
 

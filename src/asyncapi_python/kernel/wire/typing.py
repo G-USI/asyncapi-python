@@ -1,6 +1,6 @@
 from typing import AsyncGenerator, Generic, Protocol
 
-from ..typing import T_Send, T_Recv
+from ..typing import T_Recv, T_Send
 
 
 class EndpointLifecycle(Protocol):
@@ -12,15 +12,17 @@ class EndpointLifecycle(Protocol):
 
 
 class Producer(EndpointLifecycle, Protocol, Generic[T_Send]):
-    async def send_batch(self, messages: list[T_Send]) -> None:
+    async def send_batch(
+        self,
+        messages: list[T_Send],
+        *,
+        address_override: str | None = None,
+    ) -> None:
         """Sends batch of messages to channel"""
+        ...
 
 
 class Consumer(EndpointLifecycle, Protocol, Generic[T_Recv]):
     def recv(self) -> AsyncGenerator[T_Recv, None]:
         """Starts streaming incoming messages"""
-        # This is a protocol method - implementation must provide async generator
-        # Using NotImplemented because protocols cannot have implementations
-        raise NotImplementedError(
-            "Protocol method must be implemented by concrete class"
-        )
+        ...
