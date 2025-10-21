@@ -3,12 +3,13 @@
 import json
 import re
 import tempfile
-import yaml
 from pathlib import Path
 from typing import Any
-from asyncapi_python.kernel.document import Operation
 
+import yaml
 from datamodel_code_generator.__main__ import main as datamodel_codegen
+
+from asyncapi_python.kernel.document import Operation
 
 
 class MessageGenerator:

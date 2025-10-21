@@ -1,15 +1,15 @@
 import asyncio
 from typing import Generic
-from typing_extensions import Unpack
 from uuid import uuid4
 
-from .abc import AbstractEndpoint, Send
-from .exceptions import UninitializedError, TimeoutError
-from .message import WireMessage
-from ..typing import T_Input, T_Output, IncomingMessage
+from typing_extensions import Unpack
+
 from asyncapi_python.kernel.wire import Producer
 
-
+from ..typing import IncomingMessage, T_Input, T_Output
+from .abc import AbstractEndpoint, Send
+from .exceptions import TimeoutError, UninitializedError
+from .message import WireMessage
 from .rpc_reply_handler import global_reply_handler
 
 
@@ -44,7 +44,9 @@ class RpcClient(AbstractEndpoint, Send[T_Input, T_Output], Generic[T_Input, T_Ou
         global_reply_handler.increment_instance_count()
 
         # Ensure global reply handling is set up (only happens once)
-        await global_reply_handler.ensure_reply_handler(self._wire, self._operation)
+        await global_reply_handler.ensure_reply_handler(
+            self._wire, self._operation, self._service_name
+        )
 
         # Create instance-specific producer for sending requests
         self._producer = await self._wire.create_producer(
@@ -52,6 +54,7 @@ class RpcClient(AbstractEndpoint, Send[T_Input, T_Output], Generic[T_Input, T_Ou
             parameters={},
             op_bindings=self._operation.bindings,
             is_reply=False,
+            app_id=self._service_name,
         )
 
         # Start producer

@@ -3,6 +3,7 @@ from types import ModuleType
 from typing import Generic, Protocol
 
 from asyncapi_python.kernel.document.message import Message
+
 from .typing import T_DecodedPayload, T_EncodedPayload
 
 

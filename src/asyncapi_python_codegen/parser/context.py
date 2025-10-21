@@ -4,6 +4,7 @@ import threading
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator, Optional
+
 from .types import ParseContext
 
 # Thread-local storage for context stack

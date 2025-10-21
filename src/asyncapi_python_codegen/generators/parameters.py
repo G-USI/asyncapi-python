@@ -4,6 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 from typing import Any
+
 from datamodel_code_generator.__main__ import main as datamodel_codegen
 
 

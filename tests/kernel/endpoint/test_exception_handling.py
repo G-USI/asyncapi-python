@@ -1,15 +1,16 @@
 """Unit tests for exception handling in subscriber and RPC server endpoints."""
 
 import asyncio
-import pytest
-from unittest.mock import Mock, AsyncMock
 from typing import AsyncGenerator
+from unittest.mock import AsyncMock, Mock
 
-from asyncapi_python.kernel.endpoint import Subscriber, RpcServer
-from asyncapi_python.kernel.document import Operation, Channel, Message
-from asyncapi_python.kernel.wire import AbstractWireFactory
+import pytest
+
 from asyncapi_python.kernel.codec import CodecFactory
+from asyncapi_python.kernel.document import Channel, Message, Operation
+from asyncapi_python.kernel.endpoint import RpcServer, Subscriber
 from asyncapi_python.kernel.exceptions import Reject
+from asyncapi_python.kernel.wire import AbstractWireFactory
 
 
 class MockIncomingMessage:

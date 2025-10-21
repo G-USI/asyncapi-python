@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, Literal, Optional
 from enum import Enum
+from typing import Any, Dict, Literal, Optional
 
 
 class AmqpExchangeType(str, Enum):

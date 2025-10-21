@@ -2,11 +2,12 @@
 
 import asyncio
 import secrets
+from typing import Any
+
+from asyncapi_python.kernel.document import Channel, Operation
+from asyncapi_python.kernel.wire import AbstractWireFactory, Consumer
 
 from ..typing import IncomingMessage
-from typing import Any
-from asyncapi_python.kernel.wire import Consumer, AbstractWireFactory
-from asyncapi_python.kernel.document import Channel, Operation
 
 
 class GlobalRpcReplyHandler:
@@ -25,22 +26,39 @@ class GlobalRpcReplyHandler:
         self._instance_count: int = 0
 
     async def ensure_reply_handler(
-        self, wire_factory: AbstractWireFactory[Any, Any], operation: Operation
+        self,
+        wire_factory: AbstractWireFactory[Any, Any],
+        operation: Operation,
+        service_name: str = "app",
     ) -> None:
-        """Ensure reply consumer and task are running"""
-        if self._reply_consumer is None:
-            # Create reply consumer (only once for all instances)
-            reply_channel = self._get_or_create_reply_channel(operation)
+        """Ensure reply consumer and task are running
 
+        Args:
+            wire_factory: Wire factory for creating consumer
+            operation: Operation definition
+            service_name: Service name for generating consistent app_id
+        """
+        if self._reply_consumer is None:
+            # Generate app_id with service name + random hex (same format as AmqpWire)
+            random_hex = secrets.token_hex(4)  # 4 bytes = 8 hex chars
+            app_id = f"{service_name}-{random_hex}"
+
+            # Use app_id as the reply queue name
+            self._reply_queue_name = f"reply-{app_id}"
+
+            # Create reply channel with the generated queue name as address
+            reply_channel = self._get_or_create_reply_channel(
+                operation, self._reply_queue_name
+            )
+
+            # Create reply consumer with the channel (wire factory will use the address)
             self._reply_consumer = await wire_factory.create_consumer(
                 channel=reply_channel,
                 parameters={},
                 op_bindings=None,
                 is_reply=True,
+                app_id=app_id,
             )
-
-            # Generate unique reply queue name for all clients
-            self._reply_queue_name = f"reply-{secrets.token_hex(8)}"
 
             # Start the consumer
             await self._reply_consumer.start()
@@ -48,14 +66,16 @@ class GlobalRpcReplyHandler:
             # Start background task
             self._consume_task = asyncio.create_task(self._consume_all_replies())
 
-    def _get_or_create_reply_channel(self, operation: Operation) -> Channel:
-        """Get reply channel from operation or create default one"""
+    def _get_or_create_reply_channel(
+        self, operation: Operation, queue_name: str
+    ) -> Channel:
+        """Get reply channel from operation or create default one with specified queue name"""
         if operation.reply and operation.reply.channel:
             return operation.reply.channel
         else:
-            # Create a default reply channel for global use
+            # Create a default reply channel with the generated queue name as address
             return Channel(
-                address=None,  # Use default/null address for global reply queue
+                address=queue_name,  # Use the generated queue name as address
                 title="Global RPC Reply Queue",
                 summary=None,
                 description=None,

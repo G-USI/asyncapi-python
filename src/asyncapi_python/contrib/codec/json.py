@@ -1,6 +1,6 @@
 import json
-from typing import Type, ClassVar
 from types import ModuleType
+from typing import ClassVar, Type
 
 from pydantic import BaseModel, ValidationError
 

@@ -1,7 +1,8 @@
 """AMQP wire factory implementation"""
 
 import secrets
-from typing import Optional, Callable, Any, cast
+from typing import Any, Callable, Optional, cast
+
 from typing_extensions import Unpack
 
 try:
@@ -13,11 +14,11 @@ except ImportError as e:
     ) from e
 
 from asyncapi_python.kernel.wire import AbstractWireFactory, EndpointParams
-from asyncapi_python.kernel.wire.typing import Producer, Consumer
+from asyncapi_python.kernel.wire.typing import Consumer, Producer
 
-from .message import AmqpWireMessage, AmqpIncomingMessage
-from .producer import AmqpProducer
 from .consumer import AmqpConsumer
+from .message import AmqpIncomingMessage, AmqpWireMessage
+from .producer import AmqpProducer
 from .resolver import resolve_amqp_config
 
 
@@ -135,8 +136,12 @@ class AmqpWire(AbstractWireFactory[AmqpWireMessage, AmqpIncomingMessage]):
         # Generate operation name from available information
         operation_name = self._generate_operation_name(kwargs)
 
+        # Use provided app_id if available, otherwise use instance app_id
+        # This allows application-level control over queue naming
+        app_id = kwargs.get("app_id", self._app_id)
+
         # Resolve AMQP configuration using pattern matching
-        config = resolve_amqp_config(kwargs, operation_name, self._app_id)
+        config = resolve_amqp_config(kwargs, operation_name, app_id)
 
         connection = await self._get_connection()
 
@@ -154,8 +159,12 @@ class AmqpWire(AbstractWireFactory[AmqpWireMessage, AmqpIncomingMessage]):
         # Generate operation name from available information
         operation_name = self._generate_operation_name(kwargs)
 
+        # Use provided app_id if available, otherwise use instance app_id
+        # This allows application-level control over queue naming
+        app_id = kwargs.get("app_id", self._app_id)
+
         # Resolve AMQP configuration using pattern matching
-        config = resolve_amqp_config(kwargs, operation_name, self._app_id)
+        config = resolve_amqp_config(kwargs, operation_name, app_id)
 
         connection = await self._get_connection()
 

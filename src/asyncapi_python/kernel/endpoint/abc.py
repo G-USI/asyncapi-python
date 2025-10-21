@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Generic, TypedDict, overload, Union
-from typing_extensions import Unpack, Required, NotRequired
+from typing import Any, Callable, Generic, TypedDict, Union, overload
 
-from ..typing import Handler, T_Input, T_Output, BatchConfig
-from asyncapi_python.kernel.wire import AbstractWireFactory
-from asyncapi_python.kernel.document import Operation
+from typing_extensions import NotRequired, Required, Unpack
+
 from asyncapi_python.kernel.codec import Codec, CodecFactory
+from asyncapi_python.kernel.document import Operation
+from asyncapi_python.kernel.wire import AbstractWireFactory
+
+from ..typing import BatchConfig, Handler, T_Input, T_Output
 
 
 class EndpointParams(TypedDict):
@@ -29,6 +31,7 @@ class AbstractEndpoint(ABC):
         operation: Required[Operation]
         wire_factory: Required[AbstractWireFactory[Any, Any]]
         codec_factory: Required[CodecFactory[Any, Any]]
+        service_name: NotRequired[str]  # Service name for app_id generation
         endpoint_params: NotRequired[EndpointParams]  # Optional endpoint configuration
 
     class StartParams(TypedDict):
@@ -40,6 +43,7 @@ class AbstractEndpoint(ABC):
     def __init__(self, **kwargs: Unpack[Inputs]):
         self._operation = kwargs["operation"]
         self._wire = kwargs["wire_factory"]
+        self._service_name = kwargs.get("service_name", "app")
         codec_factory = kwargs["codec_factory"]
         # Endpoint sets its own defaults - empty dict if not provided
         self._endpoint_params = kwargs.get("endpoint_params", {})

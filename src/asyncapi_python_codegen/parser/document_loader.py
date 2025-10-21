@@ -1,10 +1,12 @@
 """Main document loader and operations extractor."""
 
 from pathlib import Path
+
 from asyncapi_python.kernel.document import Operation
-from .references import load_yaml_file
-from .extractors import extract_operation
+
 from .context import parsing_context
+from .extractors import extract_operation
+from .references import load_yaml_file
 
 
 def extract_all_operations(yaml_path: Path) -> dict[str, Operation]:

@@ -1,7 +1,9 @@
-from typing import ClassVar, Any
 from types import ModuleType
-from asyncapi_python.kernel.codec import CodecFactory, Codec
+from typing import Any, ClassVar
+
+from asyncapi_python.kernel.codec import Codec, CodecFactory
 from asyncapi_python.kernel.document.message import Message
+
 from .json import JsonCodecFactory
 
 

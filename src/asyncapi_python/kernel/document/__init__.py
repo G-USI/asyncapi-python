@@ -1,3 +1,10 @@
+from .bindings import (
+    AmqpChannelBinding,
+    AmqpExchange,
+    AmqpExchangeType,
+    AmqpOperationBinding,
+    AmqpQueue,
+)
 from .channel import AddressParameter, Channel, ChannelBindings
 from .common import ExternalDocs, Server, Tag
 from .message import (
@@ -14,13 +21,6 @@ from .operation import (
     OperationReplyAddress,
     OperationTrait,
     SecurityScheme,
-)
-from .bindings import (
-    AmqpChannelBinding,
-    AmqpOperationBinding,
-    AmqpExchange,
-    AmqpQueue,
-    AmqpExchangeType,
 )
 
 __all__ = [

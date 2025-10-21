@@ -1,7 +1,8 @@
 """Router generation with nested path support."""
 
-from typing import Any
 from dataclasses import dataclass
+from typing import Any
+
 from asyncapi_python.kernel.document import Channel, Operation
 from asyncapi_python.utils import snake_case
 

@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 from typing import Any, Literal
-from .common import *
-from .channel import Channel
-from .message import Message
+
 from .bindings import AmqpOperationBinding
+from .channel import Channel
+from .common import *
+from .message import Message
 
 __all__ = [
     "SecurityScheme",

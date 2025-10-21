@@ -2,5 +2,4 @@
 
 from .registry import CodecRegistry
 
-
 __all__ = ["CodecRegistry"]

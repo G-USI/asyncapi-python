@@ -1,11 +1,13 @@
 from typing import Generic
+
 from typing_extensions import Unpack
 
+from asyncapi_python.kernel.wire import Producer
+
+from ..typing import T_Input
 from .abc import AbstractEndpoint, Send
 from .exceptions import UninitializedError
 from .message import WireMessage
-from ..typing import T_Input
-from asyncapi_python.kernel.wire import Producer
 
 
 class Publisher(AbstractEndpoint, Send[T_Input, None], Generic[T_Input]):

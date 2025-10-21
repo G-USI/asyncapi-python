@@ -2,27 +2,26 @@
 
 import os
 from typing import Awaitable, Callable
+
 import pytest
 
-from asyncapi_python.kernel.wire import AbstractWireFactory
-from asyncapi_python.kernel.codec import CodecFactory
-from asyncapi_python.contrib.wire.in_memory import InMemoryWire
-from asyncapi_python.contrib.wire.amqp import AmqpWire
 from asyncapi_python.contrib.codec.json import JsonCodecFactory
-
-from .scenarios import (
-    producer_consumer_roundtrip,
-    reply_channel_creation,
-    error_handling,
-    malformed_message_handling,
-    fan_in_logging,
-    fan_out_broadcasting,
-    many_to_many_microservices,
-)
+from asyncapi_python.contrib.wire.amqp import AmqpWire
+from asyncapi_python.contrib.wire.in_memory import InMemoryWire
+from asyncapi_python.kernel.codec import CodecFactory
+from asyncapi_python.kernel.wire import AbstractWireFactory
 
 # Import test app module
 from . import test_app
-
+from .scenarios import (
+    error_handling,
+    fan_in_logging,
+    fan_out_broadcasting,
+    malformed_message_handling,
+    many_to_many_microservices,
+    producer_consumer_roundtrip,
+    reply_channel_creation,
+)
 
 # Wire implementations
 IN_MEMORY_WIRE = InMemoryWire()

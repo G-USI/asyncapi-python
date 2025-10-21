@@ -425,7 +425,12 @@ class RealisticWireFactory(AbstractWireFactory):
             await self._reply_producer.stop()
 
     async def create_consumer(
-        self, channel, parameters, op_bindings, is_reply: bool
+        self,
+        channel,
+        parameters,
+        op_bindings,
+        is_reply: bool,
+        app_id: str | None = None,
     ) -> Consumer:
         consumer = RealisticConsumer(is_reply=is_reply)
         consumer.set_factory(self)
@@ -442,7 +447,12 @@ class RealisticWireFactory(AbstractWireFactory):
         return consumer
 
     async def create_producer(
-        self, channel, parameters, op_bindings, is_reply: bool
+        self,
+        channel,
+        parameters,
+        op_bindings,
+        is_reply: bool,
+        app_id: str | None = None,
     ) -> Producer:
         producer = RealisticProducer(is_reply=is_reply)
         producer.set_factory(self)

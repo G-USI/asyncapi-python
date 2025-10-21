@@ -1,21 +1,5 @@
 from importlib.metadata import version
-from pants.engine.internals.native_engine import (
-    Digest,
-    MergeDigests,
-    RemovePrefix,
-    AddPrefix,
-    Snapshot,
-)
-from pants.core.util_rules.stripped_source_files import StrippedSourceFiles
-from pants.core.util_rules.source_files import SourceFilesRequest
-from pants.engine.target import (
-    GeneratedSources,
-    TransitiveTargets,
-    TransitiveTargetsRequest,
-)
-from pants.engine.rules import rule, Get, MultiGet
-from pants.engine.process import ProcessResult
-from pants.source.source_root import SourceRoot, SourceRootRequest
+
 from pants.backend.python.target_types import ConsoleScript
 from pants.backend.python.util_rules.interpreter_constraints import (
     InterpreterConstraints,
@@ -26,6 +10,24 @@ from pants.backend.python.util_rules.pex import (
     PexRequest,
     PexRequirements,
 )
+from pants.core.util_rules.source_files import SourceFilesRequest
+from pants.core.util_rules.stripped_source_files import StrippedSourceFiles
+from pants.engine.internals.native_engine import (
+    AddPrefix,
+    Digest,
+    MergeDigests,
+    RemovePrefix,
+    Snapshot,
+)
+from pants.engine.process import ProcessResult
+from pants.engine.rules import Get, MultiGet, rule
+from pants.engine.target import (
+    GeneratedSources,
+    TransitiveTargets,
+    TransitiveTargetsRequest,
+)
+from pants.source.source_root import SourceRoot, SourceRootRequest
+
 from .targets import *
 
 
