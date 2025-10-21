@@ -1,7 +1,8 @@
 """AMQP wire factory implementation"""
 
 import secrets
-from typing import Optional, Callable, Any, cast
+from typing import Any, Callable, Optional, cast
+
 from typing_extensions import Unpack
 
 try:
@@ -13,11 +14,11 @@ except ImportError as e:
     ) from e
 
 from asyncapi_python.kernel.wire import AbstractWireFactory, EndpointParams
-from asyncapi_python.kernel.wire.typing import Producer, Consumer
+from asyncapi_python.kernel.wire.typing import Consumer, Producer
 
-from .message import AmqpWireMessage, AmqpIncomingMessage
-from .producer import AmqpProducer
 from .consumer import AmqpConsumer
+from .message import AmqpIncomingMessage, AmqpWireMessage
+from .producer import AmqpProducer
 from .resolver import resolve_amqp_config
 
 
@@ -31,7 +32,6 @@ class AmqpWire(AbstractWireFactory[AmqpWireMessage, AmqpIncomingMessage]):
     def __init__(
         self,
         connection_url: str,
-        service_name: str = "app",
         robust: bool = False,
         reconnect_interval: float = 1.0,
         max_reconnect_interval: float = 60.0,
@@ -45,7 +45,6 @@ class AmqpWire(AbstractWireFactory[AmqpWireMessage, AmqpIncomingMessage]):
 
         Args:
             connection_url: AMQP connection URL
-            service_name: Service name prefix for app_id
             robust: Enable robust connection with auto-reconnect (default: False)
             reconnect_interval: Initial reconnect interval in seconds (for robust mode)
             max_reconnect_interval: Maximum reconnect interval in seconds (for robust mode)
@@ -55,9 +54,10 @@ class AmqpWire(AbstractWireFactory[AmqpWireMessage, AmqpIncomingMessage]):
             on_connection_lost: Callback when connection is lost (for non-robust mode)
         """
         self._connection_url = connection_url
-        # Generate app_id with service name plus 8 random hex characters
+        # Generate fallback app_id with random hex characters
+        # Note: For RPC, app_id should be provided via EndpointParams from application level
         random_hex = secrets.token_hex(4)  # 4 bytes = 8 hex chars
-        self._app_id = f"{service_name}-{random_hex}"
+        self._app_id = f"wire-{random_hex}"
         self._connection: AbstractConnection | None = None
         self._robust = robust
         self._reconnect_interval = reconnect_interval
@@ -135,8 +135,12 @@ class AmqpWire(AbstractWireFactory[AmqpWireMessage, AmqpIncomingMessage]):
         # Generate operation name from available information
         operation_name = self._generate_operation_name(kwargs)
 
+        # Use provided app_id if available, otherwise use instance app_id
+        # This allows application-level control over queue naming
+        app_id = kwargs.get("app_id", self._app_id)
+
         # Resolve AMQP configuration using pattern matching
-        config = resolve_amqp_config(kwargs, operation_name, self._app_id)
+        config = resolve_amqp_config(kwargs, operation_name, app_id)
 
         connection = await self._get_connection()
 
@@ -154,8 +158,12 @@ class AmqpWire(AbstractWireFactory[AmqpWireMessage, AmqpIncomingMessage]):
         # Generate operation name from available information
         operation_name = self._generate_operation_name(kwargs)
 
+        # Use provided app_id if available, otherwise use instance app_id
+        # This allows application-level control over queue naming
+        app_id = kwargs.get("app_id", self._app_id)
+
         # Resolve AMQP configuration using pattern matching
-        config = resolve_amqp_config(kwargs, operation_name, self._app_id)
+        config = resolve_amqp_config(kwargs, operation_name, app_id)
 
         connection = await self._get_connection()
 

@@ -1,10 +1,12 @@
 from typing import ClassVar, Literal
+
 from typing_extensions import Unpack
+
 from .abc import AbstractEndpoint
 from .publisher import Publisher
-from .subscriber import Subscriber
 from .rpc_client import RpcClient
 from .rpc_server import RpcServer
+from .subscriber import Subscriber
 
 __all__ = [
     "AbstractEndpoint",

@@ -2,25 +2,26 @@
 
 # Type imports for extraction functions
 from asyncapi_python.kernel.document import (
+    AddressParameter,
     Channel,
     ChannelBindings,
-    AddressParameter,
-    Operation,
-    OperationReply,
-    OperationBindings,
-    OperationTrait,
-    SecurityScheme,
+    CorrelationId,
+    ExternalDocs,
     Message,
     MessageBindings,
-    MessageTrait,
     MessageExample,
-    CorrelationId,
-    Tag,
-    ExternalDocs,
+    MessageTrait,
+    Operation,
+    OperationBindings,
+    OperationReply,
+    OperationTrait,
+    SecurityScheme,
     Server,
+    Tag,
 )
-from .types import YamlDocument
+
 from .references import maybe_ref
+from .types import YamlDocument
 
 
 @maybe_ref

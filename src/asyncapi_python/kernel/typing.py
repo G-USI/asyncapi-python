@@ -4,9 +4,10 @@ This module defines all TypeVars used across the kernel with clear relationships
 between application data, encoded data, and wire messages.
 """
 
-from typing import Any, Protocol, TypeVar, TypedDict
-from typing_extensions import TypeAlias, Required
 from types import CodeType
+from typing import Any, Protocol, TypedDict, TypeVar
+
+from typing_extensions import Required, TypeAlias
 
 
 # Base protocols for type bounds

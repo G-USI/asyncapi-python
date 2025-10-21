@@ -6,10 +6,10 @@ from typing import Any, AsyncGenerator
 try:
     from aio_pika import ExchangeType  # type: ignore[import-not-found]
     from aio_pika.abc import (  # type: ignore[import-not-found]
-        AbstractConnection,
         AbstractChannel,
-        AbstractQueue,
+        AbstractConnection,
         AbstractExchange,
+        AbstractQueue,
     )
 except ImportError as e:
     raise ImportError(

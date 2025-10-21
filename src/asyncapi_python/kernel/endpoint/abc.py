@@ -1,19 +1,23 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Generic, TypedDict, overload, Union
-from typing_extensions import Unpack, Required, NotRequired
+from typing import Any, Callable, Generic, TypedDict, Union, overload
 
-from ..typing import Handler, T_Input, T_Output, BatchConfig
-from asyncapi_python.kernel.wire import AbstractWireFactory
-from asyncapi_python.kernel.document import Operation
+from typing_extensions import NotRequired, Required, Unpack
+
 from asyncapi_python.kernel.codec import Codec, CodecFactory
+from asyncapi_python.kernel.document import Operation
+from asyncapi_python.kernel.wire import AbstractWireFactory
+
+from ..typing import BatchConfig, Handler, T_Input, T_Output
 
 
-class EndpointParams(TypedDict):
+class EndpointParams(TypedDict, total=False):
     """Optional parameters for endpoint configuration"""
 
-    disable_handler_validation: NotRequired[
-        bool
-    ]  # Opt-out of handler enforcement for testing
+    service_name: str  # Service name for generating app_id
+    default_rpc_timeout: (
+        float | None
+    )  # Default timeout in seconds for RPC client requests (default: 180.0), or None to disable
+    disable_handler_validation: bool  # Opt-out of handler enforcement for testing
 
 
 class HandlerParams(TypedDict):

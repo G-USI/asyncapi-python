@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any
-from .common import *
+
 from .bindings import AmqpMessageBinding
+from .common import *
 
 __all__ = [
     "CorrelationId",

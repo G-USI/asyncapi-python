@@ -1,15 +1,15 @@
 import asyncio
 from typing import Generic
-from typing_extensions import Unpack
 from uuid import uuid4
 
-from .abc import AbstractEndpoint, Send
-from .exceptions import UninitializedError, TimeoutError
-from .message import WireMessage
-from ..typing import T_Input, T_Output, IncomingMessage
+from typing_extensions import NotRequired, Unpack
+
 from asyncapi_python.kernel.wire import Producer
 
-
+from ..typing import IncomingMessage, T_Input, T_Output
+from .abc import AbstractEndpoint, Send
+from .exceptions import TimeoutError, UninitializedError
+from .message import WireMessage
 from .rpc_reply_handler import global_reply_handler
 
 
@@ -20,6 +20,13 @@ class RpcClient(AbstractEndpoint, Send[T_Input, T_Output], Generic[T_Input, T_Ou
     on a shared global reply queue. All RPC client instances share
     a single reply consumer and background task for efficiency.
     """
+
+    class RouterInputs(Send.RouterInputs):
+        """Router inputs for RPC client, extending Send.RouterInputs with timeout"""
+
+        timeout: NotRequired[
+            float | None
+        ]  # Timeout in seconds for this RPC request, or None to disable timeout
 
     def __init__(self, **kwargs: Unpack[AbstractEndpoint.Inputs]):
         super().__init__(**kwargs)
@@ -44,7 +51,12 @@ class RpcClient(AbstractEndpoint, Send[T_Input, T_Output], Generic[T_Input, T_Ou
         global_reply_handler.increment_instance_count()
 
         # Ensure global reply handling is set up (only happens once)
-        await global_reply_handler.ensure_reply_handler(self._wire, self._operation)
+        await global_reply_handler.ensure_reply_handler(
+            self._wire, self._operation, self._endpoint_params
+        )
+
+        # Extract service_name from endpoint_params for app_id
+        service_name = self._endpoint_params.get("service_name", "app")
 
         # Create instance-specific producer for sending requests
         self._producer = await self._wire.create_producer(
@@ -52,6 +64,7 @@ class RpcClient(AbstractEndpoint, Send[T_Input, T_Output], Generic[T_Input, T_Ou
             parameters={},
             op_bindings=self._operation.bindings,
             is_reply=False,
+            app_id=service_name,
         )
 
         # Start producer
@@ -70,18 +83,17 @@ class RpcClient(AbstractEndpoint, Send[T_Input, T_Output], Generic[T_Input, T_Ou
         if remaining_count == 0:
             await global_reply_handler.cleanup_if_last_instance()
 
-    async def __call__(
-        self,
-        payload: T_Input,
-        /,
-        timeout: float = 30.0,
-        **kwargs: Unpack[Send.RouterInputs],
+    async def __call__(  # type: ignore[override]
+        self, payload: T_Input, /, **kwargs: Unpack[RouterInputs]
     ) -> T_Output:
         """Send an RPC request and wait for response using global reply handling
 
         Args:
             payload: The request payload to send
-            timeout: Maximum time to wait for response (default 30 seconds)
+            **kwargs: Router inputs including optional timeout:
+                     - Not provided: uses default_rpc_timeout from endpoint_params (default: 180.0)
+                     - float: uses the specified timeout in seconds
+                     - None: disables timeout (waits indefinitely)
 
         Returns:
             The response payload
@@ -92,6 +104,14 @@ class RpcClient(AbstractEndpoint, Send[T_Input, T_Output], Generic[T_Input, T_Ou
         """
         if not self._producer:
             raise UninitializedError()
+
+        # Determine timeout: use provided value, or fall back to endpoint_params default
+        if "timeout" in kwargs:
+            # Explicitly provided (could be float or None)
+            timeout = kwargs["timeout"]
+        else:
+            # Not provided, use default from endpoint_params
+            timeout = self._endpoint_params.get("default_rpc_timeout", 180.0)
 
         # Generate correlation ID for this request
         correlation_id: str = str(uuid4())

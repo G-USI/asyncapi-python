@@ -1,16 +1,16 @@
-from pants.engine.target import GenerateSourcesRequest
-from pants.engine.target import (
-    COMMON_TARGET_FIELDS,
-    Dependencies,
-    Target,
-    AsyncFieldMixin,
-    MultipleSourcesField,
-    StringField,
-)
-from pants.backend.python.target_types import PythonSourceField
 from pants.backend.python.target_types import (
     InterpreterConstraintsField,
     PythonResolveField,
+    PythonSourceField,
+)
+from pants.engine.target import (
+    COMMON_TARGET_FIELDS,
+    AsyncFieldMixin,
+    Dependencies,
+    GenerateSourcesRequest,
+    MultipleSourcesField,
+    StringField,
+    Target,
 )
 
 

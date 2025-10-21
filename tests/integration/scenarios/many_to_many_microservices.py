@@ -2,22 +2,22 @@
 
 import asyncio
 from uuid import uuid4
-from asyncapi_python.kernel.wire import AbstractWireFactory
-from asyncapi_python.kernel.codec import CodecFactory
-from asyncapi_python.kernel.document.message import Message
-from asyncapi_python.kernel.document.channel import Channel
-from asyncapi_python.kernel.document.operation import Operation
+
 from asyncapi_python.kernel.application import BaseApplication
+from asyncapi_python.kernel.codec import CodecFactory
+from asyncapi_python.kernel.document.channel import Channel
+from asyncapi_python.kernel.document.message import Message
+from asyncapi_python.kernel.document.operation import Operation
+from asyncapi_python.kernel.wire import AbstractWireFactory
 
 # Import test models
 from ..test_app.messages.json import (
-    UserCreated,
-    OrderPlaced,
-    PaymentProcessed,
     InventoryUpdated,
+    OrderPlaced,
     OrderShipped,
+    PaymentProcessed,
+    UserCreated,
 )
-
 
 # Generate unique channel ID for this scenario to avoid collisions
 SCENARIO_CHANNEL_ID = str(uuid4())[:8]

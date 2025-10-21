@@ -1,11 +1,13 @@
 """Reference resolution decorator and utilities."""
 
-import yaml
 from functools import wraps
 from pathlib import Path
 from typing import Any, Callable, TypeVar
+
+import yaml
+
+from .context import get_current_context, pop_context, push_context
 from .types import YamlDocument, navigate_json_pointer
-from .context import get_current_context, push_context, pop_context
 
 T = TypeVar("T")
 

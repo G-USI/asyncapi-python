@@ -3,10 +3,11 @@
 from typing import Any
 
 try:
-    from aio_pika import Message as AmqpMessage, ExchangeType  # type: ignore[import-not-found]
+    from aio_pika import ExchangeType
+    from aio_pika import Message as AmqpMessage  # type: ignore[import-not-found]
     from aio_pika.abc import (  # type: ignore[import-not-found]
-        AbstractConnection,
         AbstractChannel,
+        AbstractConnection,
         AbstractExchange,
     )
 except ImportError as e:
@@ -100,10 +101,37 @@ class AmqpProducer(Producer[AmqpWireMessage]):
 
         self._started = False
 
-    async def send_batch(self, messages: list[AmqpWireMessage]) -> None:
-        """Send a batch of messages using the configured exchange"""
+    async def send_batch(
+        self, messages: list[AmqpWireMessage], *, address_override: str | None = None
+    ) -> None:
+        """Send a batch of messages using the configured exchange
+
+        Args:
+            messages: Messages to send
+            address_override: Optional dynamic routing key/queue to override static config.
+                            If provided, overrides self._routing_key for this send operation.
+                            If None, uses static routing_key from configuration/bindings.
+        """
         if not self._started or not self._channel or not self._target_exchange:
             raise RuntimeError("Producer not started")
+
+        # Determine effective routing key: override takes precedence over static config
+        effective_routing_key = (
+            address_override if address_override is not None else self._routing_key
+        )
+
+        # Validate we have a destination
+        # Fail ONLY if both are truly missing:
+        # - address_override is None (not provided by caller)
+        # - AND self._routing_key is "" (no static config was derived from channel/bindings/operation)
+        # Note: empty string IS valid when explicitly configured (fanout exchanges, default exchange)
+        if address_override is None and not self._routing_key:
+            raise ValueError(
+                f"Cannot send: no routing destination available. "
+                f"RPC replies require reply_to from the request, or the channel must "
+                f"have address/bindings/operation-name to derive destination. "
+                f"(address_override={address_override}, routing_key={self._routing_key!r})"
+            )
 
         for message in messages:
             amqp_message = AmqpMessage(
@@ -113,8 +141,8 @@ class AmqpProducer(Producer[AmqpWireMessage]):
                 reply_to=message.reply_to,
             )
 
-            # Publish to the configured target exchange (not always default)
+            # Publish to the configured target exchange with dynamic or static routing key
             await self._target_exchange.publish(
                 amqp_message,
-                routing_key=self._routing_key,
+                routing_key=effective_routing_key,
             )

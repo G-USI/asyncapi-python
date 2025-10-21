@@ -1,13 +1,14 @@
 """Unit tests for handler enforcement and location tracking in receiving endpoints."""
 
 import asyncio
-import pytest
-from unittest.mock import Mock, AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock
 
-from asyncapi_python.kernel.endpoint import Subscriber, RpcServer
-from asyncapi_python.kernel.document import Operation, Channel
-from asyncapi_python.kernel.wire import AbstractWireFactory
+import pytest
+
 from asyncapi_python.kernel.codec import CodecFactory
+from asyncapi_python.kernel.document import Channel, Operation
+from asyncapi_python.kernel.endpoint import RpcServer, Subscriber
+from asyncapi_python.kernel.wire import AbstractWireFactory
 
 
 @pytest.fixture

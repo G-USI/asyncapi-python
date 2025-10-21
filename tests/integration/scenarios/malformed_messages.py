@@ -1,16 +1,18 @@
 """Malformed message handling scenario"""
 
-import pytest
 import json
-from asyncapi_python.kernel.wire import AbstractWireFactory
-from asyncapi_python.kernel.codec import CodecFactory
-from asyncapi_python.kernel.document.message import Message
-from asyncapi_python.kernel.document.channel import Channel
-from asyncapi_python.kernel.document.operation import Operation
+
+import pytest
+
 from asyncapi_python.kernel.application import BaseApplication
+from asyncapi_python.kernel.codec import CodecFactory
+from asyncapi_python.kernel.document.channel import Channel
+from asyncapi_python.kernel.document.message import Message
+from asyncapi_python.kernel.document.operation import Operation
+from asyncapi_python.kernel.wire import AbstractWireFactory
 
 # Import test models
-from ..test_app.messages.json import TestUser, UserCreated, UserUpdated, TestEvent
+from ..test_app.messages.json import TestEvent, TestUser, UserCreated, UserUpdated
 
 
 class UserManagementApp(BaseApplication):

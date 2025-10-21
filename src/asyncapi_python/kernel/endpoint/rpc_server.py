@@ -1,19 +1,21 @@
 import asyncio
-from typing import Callable, Generic, overload, Union
+from typing import Callable, Generic, Union, overload
+
 from typing_extensions import Unpack
 
-from .abc import AbstractEndpoint, Receive, HandlerParams
-from .message import WireMessage
+from asyncapi_python.kernel.wire import Consumer, Producer
+
+from ..exceptions import Reject
 from ..typing import (
+    BatchConfig,
+    BatchHandler,
+    Handler,
+    IncomingMessage,
     T_Input,
     T_Output,
-    Handler,
-    BatchHandler,
-    BatchConfig,
-    IncomingMessage,
 )
-from ..exceptions import Reject
-from asyncapi_python.kernel.wire import Consumer, Producer
+from .abc import AbstractEndpoint, HandlerParams, Receive
+from .message import WireMessage
 
 
 class RpcServer(
@@ -284,8 +286,8 @@ class RpcServer(
                     _reply_to=None,  # No further reply expected
                 )
 
-                # Send reply
-                await self._send_reply(reply_message)
+                # Send reply to client's reply_to address (or static config if None)
+                await self._send_reply(reply_message, wire_message.reply_to)
 
                 # Acknowledge successful processing
                 await wire_message.ack()
@@ -343,8 +345,8 @@ class RpcServer(
                             _reply_to=None,  # No further reply expected
                         )
 
-                        # Send reply
-                        await self._send_reply(reply_message)
+                        # Send reply to client's reply_to address (or static config if None)
+                        await self._send_reply(reply_message, wire_message.reply_to)
 
                         # Acknowledge successful processing
                         await wire_message.ack()
@@ -437,10 +439,22 @@ class RpcServer(
                     for _, wire_message in batch:
                         await wire_message.nack()
 
-    async def _send_reply(self, reply_message: WireMessage) -> None:
-        """Send reply message"""
+    async def _send_reply(
+        self, reply_message: WireMessage, reply_to_address: str | None = None
+    ) -> None:
+        """Send reply message
+
+        Args:
+            reply_message: The reply message to send
+            reply_to_address: Optional dynamic reply address (from request's reply_to field).
+                            If None, uses producer's static configuration from bindings.
+        """
         if not self._reply_producer:
             return
 
-        # Send the reply
-        await self._reply_producer.send_batch([reply_message])
+        # Send reply with optional address override
+        # - If reply_to_address is provided: send to that specific queue (direct RPC reply)
+        # - If None: use producer's static routing from AsyncAPI spec (topic-based reply)
+        await self._reply_producer.send_batch(
+            [reply_message], address_override=reply_to_address
+        )

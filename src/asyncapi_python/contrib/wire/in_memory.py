@@ -4,10 +4,11 @@ import asyncio
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from typing import Any, AsyncGenerator
+
 from typing_extensions import Unpack
 
 from asyncapi_python.kernel.wire import AbstractWireFactory, EndpointParams
-from asyncapi_python.kernel.wire.typing import Producer, Consumer
+from asyncapi_python.kernel.wire.typing import Consumer, Producer
 
 
 @dataclass
@@ -142,13 +143,34 @@ class InMemoryProducer(Producer[InMemoryMessage]):
         """Stop the producer"""
         self._started = False
 
-    async def send_batch(self, messages: list[InMemoryMessage]) -> None:
-        """Send a batch of messages to the channel"""
+    async def send_batch(
+        self, messages: list[InMemoryMessage], *, address_override: str | None = None
+    ) -> None:
+        """Send a batch of messages to the channel
+
+        Args:
+            messages: Messages to send
+            address_override: Optional dynamic channel name to override static config.
+                            If provided, overrides self._channel_name for this send operation.
+                            If None, uses static channel_name from configuration.
+        """
         if not self._started:
             raise RuntimeError("Producer not started")
 
+        # Determine effective channel: override takes precedence over static config
+        effective_channel = (
+            address_override if address_override is not None else self._channel_name
+        )
+
+        # Validate we have a destination
+        if not effective_channel:
+            raise ValueError(
+                f"Cannot send: no channel specified. "
+                f"address_override={address_override}, channel_name={self._channel_name}"
+            )
+
         for message in messages:
-            await _bus.publish(self._channel_name, message)
+            await _bus.publish(effective_channel, message)
 
 
 class InMemoryConsumer(Consumer[InMemoryIncomingMessage]):

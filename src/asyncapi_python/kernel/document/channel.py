@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from typing import Any
-from .message import Message
-from .common import *
+
 from .bindings import AmqpChannelBinding
+from .common import *
+from .message import Message
 
 __all__ = ["AddressParameter", "ChannelBindings", "Channel"]
 

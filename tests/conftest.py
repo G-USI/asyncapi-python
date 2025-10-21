@@ -16,6 +16,7 @@
 import asyncio
 from os import environ
 from typing import Generator
+
 import pytest
 
 from asyncapi_python.contrib.wire.in_memory import reset_bus

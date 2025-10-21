@@ -1,12 +1,14 @@
 import asyncio
-from typing import TypedDict, Any
-from typing_extensions import Unpack, Required, NotRequired
+from typing import Any, TypedDict
+
+from typing_extensions import NotRequired, Required, Unpack
 
 from asyncapi_python.kernel.document.operation import Operation
 from asyncapi_python.kernel.wire import AbstractWireFactory
+
+from .codec import CodecFactory
 from .endpoint import AbstractEndpoint, EndpointFactory
 from .endpoint.abc import EndpointParams
-from .codec import CodecFactory
 
 
 class BaseApplication:

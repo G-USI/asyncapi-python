@@ -1,17 +1,13 @@
 import asyncio
 from typing import Any, Callable, Generic, overload
+
 from typing_extensions import Unpack
 
-from .abc import AbstractEndpoint, Receive, HandlerParams
-from ..typing import (
-    T_Input,
-    Handler,
-    BatchConsumer,
-    BatchConfig,
-    IncomingMessage,
-)
-from ..exceptions import Reject
 from asyncapi_python.kernel.wire import Consumer
+
+from ..exceptions import Reject
+from ..typing import BatchConfig, BatchConsumer, Handler, IncomingMessage, T_Input
+from .abc import AbstractEndpoint, HandlerParams, Receive
 
 
 class Subscriber(AbstractEndpoint, Receive[T_Input, None], Generic[T_Input]):

@@ -3,16 +3,16 @@
 import asyncio
 import uuid
 from uuid import uuid4
-from asyncapi_python.kernel.wire import AbstractWireFactory
-from asyncapi_python.kernel.codec import CodecFactory
-from asyncapi_python.kernel.document.message import Message
-from asyncapi_python.kernel.document.channel import Channel
-from asyncapi_python.kernel.document.operation import Operation
+
 from asyncapi_python.kernel.application import BaseApplication
+from asyncapi_python.kernel.codec import CodecFactory
+from asyncapi_python.kernel.document.channel import Channel
+from asyncapi_python.kernel.document.message import Message
+from asyncapi_python.kernel.document.operation import Operation
+from asyncapi_python.kernel.wire import AbstractWireFactory
 
 # Import test models
 from ..test_app.messages.json import LogEvent
-
 
 # Generate unique channel ID for this scenario to avoid collisions
 SCENARIO_CHANNEL_ID = str(uuid4())[:8]
@@ -27,8 +27,14 @@ class BaseLoggingService(BaseApplication):
         wire_factory: AbstractWireFactory,
         codec_factory: CodecFactory,
     ):
-        self.service_name = service_name
-        super().__init__(wire_factory=wire_factory, codec_factory=codec_factory)
+        # Pass service_name via endpoint_params
+        endpoint_params = {"service_name": service_name}
+        super().__init__(
+            wire_factory=wire_factory,
+            codec_factory=codec_factory,
+            endpoint_params=endpoint_params,
+        )
+        self.service_name = service_name  # Store for use in _setup_endpoints
         self._setup_endpoints()
 
     def _setup_endpoints(self):

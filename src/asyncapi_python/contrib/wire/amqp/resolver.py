@@ -1,12 +1,13 @@
 """Binding resolution with comprehensive pattern matching"""
 
 from typing import Any
-from asyncapi_python.kernel.wire import EndpointParams
-from asyncapi_python.kernel.document.channel import Channel
-from asyncapi_python.kernel.document.bindings import AmqpChannelBinding
 
-from .config import AmqpConfig, AmqpBindingType
-from .utils import validate_parameters_strict, substitute_parameters
+from asyncapi_python.kernel.document.bindings import AmqpChannelBinding
+from asyncapi_python.kernel.document.channel import Channel
+from asyncapi_python.kernel.wire import EndpointParams
+
+from .config import AmqpBindingType, AmqpConfig
+from .utils import substitute_parameters, validate_parameters_strict
 
 
 def resolve_amqp_config(
@@ -57,17 +58,32 @@ def resolve_amqp_config(
                 },
             )
 
-        # Reply channel with explicit address - shared channel with filtering
+        # Reply channel with explicit address - check if direct queue or topic exchange
         case (True, _, address, _) if address:
             resolved_address = substitute_parameters(address, param_values)
-            return AmqpConfig(
-                queue_name=f"reply-{app_id}",  # App-specific reply queue
-                exchange_name=resolved_address,  # Shared exchange for replies
-                exchange_type="topic",  # Enable pattern matching for filtering
-                routing_key=app_id,  # Filter messages by app_id
-                binding_type=AmqpBindingType.REPLY,
-                queue_properties={"durable": True, "exclusive": False},
-            )
+            # If address starts with "reply-", treat it as a direct queue name (RPC pattern)
+            if resolved_address.startswith("reply-"):
+                return AmqpConfig(
+                    queue_name=resolved_address,  # Use address as queue name
+                    exchange_name="",  # Default exchange for direct routing
+                    routing_key=resolved_address,  # Route directly to queue
+                    binding_type=AmqpBindingType.REPLY,
+                    queue_properties={
+                        "durable": False,
+                        "exclusive": True,
+                        "auto_delete": True,
+                    },
+                )
+            else:
+                # Topic-based reply pattern - shared exchange with filtering
+                return AmqpConfig(
+                    queue_name=f"reply-{app_id}",  # App-specific reply queue
+                    exchange_name=resolved_address,  # Shared exchange for replies
+                    exchange_type="topic",  # Enable pattern matching for filtering
+                    routing_key=app_id,  # Filter messages by app_id
+                    binding_type=AmqpBindingType.REPLY,
+                    queue_properties={"durable": True, "exclusive": False},
+                )
 
         # Reply channel with binding - defer to binding resolution
         case (True, binding, _, _) if binding and binding.type == "queue":

@@ -1,7 +1,7 @@
 """Type aliases and basic types for AsyncAPI parsing."""
 
-from typing import Any
 from pathlib import Path
+from typing import Any
 
 # Type alias for raw YAML document data
 YamlDocument = dict[str, Any]
