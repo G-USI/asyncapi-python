@@ -64,7 +64,7 @@ wheels = [
 
 [[package]]
 name = "asyncapi-python"
-version = "0.3.0rc3"
+version = "0.3.0rc4"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic" },
