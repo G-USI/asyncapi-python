@@ -5,9 +5,10 @@ import secrets
 from typing import Any
 
 from asyncapi_python.kernel.document import Channel, Operation
-from asyncapi_python.kernel.wire import AbstractWireFactory, Consumer, EndpointParams
+from asyncapi_python.kernel.wire import AbstractWireFactory, Consumer
 
 from ..typing import IncomingMessage
+from .abc import EndpointParams
 
 
 class GlobalRpcReplyHandler:
