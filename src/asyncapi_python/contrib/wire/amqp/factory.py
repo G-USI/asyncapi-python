@@ -32,7 +32,6 @@ class AmqpWire(AbstractWireFactory[AmqpWireMessage, AmqpIncomingMessage]):
     def __init__(
         self,
         connection_url: str,
-        service_name: str = "app",
         robust: bool = False,
         reconnect_interval: float = 1.0,
         max_reconnect_interval: float = 60.0,
@@ -46,7 +45,6 @@ class AmqpWire(AbstractWireFactory[AmqpWireMessage, AmqpIncomingMessage]):
 
         Args:
             connection_url: AMQP connection URL
-            service_name: Service name prefix for app_id
             robust: Enable robust connection with auto-reconnect (default: False)
             reconnect_interval: Initial reconnect interval in seconds (for robust mode)
             max_reconnect_interval: Maximum reconnect interval in seconds (for robust mode)
@@ -56,9 +54,10 @@ class AmqpWire(AbstractWireFactory[AmqpWireMessage, AmqpIncomingMessage]):
             on_connection_lost: Callback when connection is lost (for non-robust mode)
         """
         self._connection_url = connection_url
-        # Generate app_id with service name plus 8 random hex characters
+        # Generate fallback app_id with random hex characters
+        # Note: For RPC, app_id should be provided via EndpointParams from application level
         random_hex = secrets.token_hex(4)  # 4 bytes = 8 hex chars
-        self._app_id = f"{service_name}-{random_hex}"
+        self._app_id = f"wire-{random_hex}"
         self._connection: AbstractConnection | None = None
         self._robust = robust
         self._reconnect_interval = reconnect_interval
