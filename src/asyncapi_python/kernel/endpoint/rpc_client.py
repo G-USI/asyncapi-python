@@ -45,8 +45,11 @@ class RpcClient(AbstractEndpoint, Send[T_Input, T_Output], Generic[T_Input, T_Ou
 
         # Ensure global reply handling is set up (only happens once)
         await global_reply_handler.ensure_reply_handler(
-            self._wire, self._operation, self._service_name
+            self._wire, self._operation, self._endpoint_params
         )
+
+        # Extract service_name from endpoint_params for app_id
+        service_name = self._endpoint_params.get("service_name", "app")
 
         # Create instance-specific producer for sending requests
         self._producer = await self._wire.create_producer(
@@ -54,7 +57,7 @@ class RpcClient(AbstractEndpoint, Send[T_Input, T_Output], Generic[T_Input, T_Ou
             parameters={},
             op_bindings=self._operation.bindings,
             is_reply=False,
-            app_id=self._service_name,
+            app_id=service_name,
         )
 
         # Start producer

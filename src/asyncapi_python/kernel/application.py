@@ -15,30 +15,22 @@ class BaseApplication:
     class Inputs(TypedDict):
         wire_factory: Required[AbstractWireFactory[Any, Any]]
         codec_factory: Required[CodecFactory[Any, Any]]
-        service_name: NotRequired[str]
         endpoint_params: NotRequired[EndpointParams]
 
     def __init__(self, **kwargs: Unpack[Inputs]) -> None:
         self.__endpoints: set[AbstractEndpoint] = set()
         self.__wire_factory: AbstractWireFactory[Any, Any] = kwargs["wire_factory"]
         self.__codec_factory: CodecFactory[Any, Any] = kwargs["codec_factory"]
-        self.__service_name: str = kwargs.get("service_name", "app")
         self.__endpoint_params: EndpointParams = kwargs.get("endpoint_params", {})
         self._stop_event: asyncio.Event | None = None
         self._monitor_task: asyncio.Task[None] | None = None
         self._exception_future: asyncio.Future[Exception] | None = None
-
-    @property
-    def service_name(self) -> str:
-        """Get the service name for this application"""
-        return self.__service_name
 
     def _register_endpoint(self, op: Operation) -> AbstractEndpoint:
         endpoint = EndpointFactory.create(
             operation=op,
             wire_factory=self.__wire_factory,
             codec_factory=self.__codec_factory,
-            service_name=self.__service_name,
             endpoint_params=self.__endpoint_params,
         )
         self.__endpoints.add(endpoint)

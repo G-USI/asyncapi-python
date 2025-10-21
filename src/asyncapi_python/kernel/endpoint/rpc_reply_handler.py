@@ -5,7 +5,7 @@ import secrets
 from typing import Any
 
 from asyncapi_python.kernel.document import Channel, Operation
-from asyncapi_python.kernel.wire import AbstractWireFactory, Consumer
+from asyncapi_python.kernel.wire import AbstractWireFactory, Consumer, EndpointParams
 
 from ..typing import IncomingMessage
 
@@ -29,16 +29,19 @@ class GlobalRpcReplyHandler:
         self,
         wire_factory: AbstractWireFactory[Any, Any],
         operation: Operation,
-        service_name: str = "app",
+        endpoint_params: EndpointParams,
     ) -> None:
         """Ensure reply consumer and task are running
 
         Args:
             wire_factory: Wire factory for creating consumer
             operation: Operation definition
-            service_name: Service name for generating consistent app_id
+            endpoint_params: Endpoint parameters including service_name
         """
         if self._reply_consumer is None:
+            # Extract service_name from endpoint_params
+            service_name = endpoint_params.get("service_name", "app")
+
             # Generate app_id with service name + random hex (same format as AmqpWire)
             random_hex = secrets.token_hex(4)  # 4 bytes = 8 hex chars
             app_id = f"{service_name}-{random_hex}"

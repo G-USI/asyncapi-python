@@ -10,12 +10,11 @@ from asyncapi_python.kernel.wire import AbstractWireFactory
 from ..typing import BatchConfig, Handler, T_Input, T_Output
 
 
-class EndpointParams(TypedDict):
+class EndpointParams(TypedDict, total=False):
     """Optional parameters for endpoint configuration"""
 
-    disable_handler_validation: NotRequired[
-        bool
-    ]  # Opt-out of handler enforcement for testing
+    service_name: str  # Service name for generating app_id
+    disable_handler_validation: bool  # Opt-out of handler enforcement for testing
 
 
 class HandlerParams(TypedDict):
@@ -31,7 +30,6 @@ class AbstractEndpoint(ABC):
         operation: Required[Operation]
         wire_factory: Required[AbstractWireFactory[Any, Any]]
         codec_factory: Required[CodecFactory[Any, Any]]
-        service_name: NotRequired[str]  # Service name for app_id generation
         endpoint_params: NotRequired[EndpointParams]  # Optional endpoint configuration
 
     class StartParams(TypedDict):
@@ -43,7 +41,6 @@ class AbstractEndpoint(ABC):
     def __init__(self, **kwargs: Unpack[Inputs]):
         self._operation = kwargs["operation"]
         self._wire = kwargs["wire_factory"]
-        self._service_name = kwargs.get("service_name", "app")
         codec_factory = kwargs["codec_factory"]
         # Endpoint sets its own defaults - empty dict if not provided
         self._endpoint_params = kwargs.get("endpoint_params", {})

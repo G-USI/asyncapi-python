@@ -108,11 +108,14 @@ class BaseConsumerService(BaseApplication):
         wire_factory: AbstractWireFactory,
         codec_factory: CodecFactory,
     ):
+        # Pass service_name via endpoint_params
+        endpoint_params = {"service_name": service_name}
         super().__init__(
             wire_factory=wire_factory,
             codec_factory=codec_factory,
-            service_name=service_name,
+            endpoint_params=endpoint_params,
         )
+        self.service_name = service_name  # Store for use in _setup_endpoints
         self._setup_endpoints()
 
     def _setup_endpoints(self):
