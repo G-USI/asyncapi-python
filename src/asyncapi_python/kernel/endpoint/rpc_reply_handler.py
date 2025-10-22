@@ -25,6 +25,7 @@ class GlobalRpcReplyHandler:
         self._consume_task: asyncio.Task[None] | None = None
         self._reply_queue_name: str | None = None
         self._instance_count: int = 0
+        self._lock: asyncio.Lock = asyncio.Lock()
 
     async def ensure_reply_handler(
         self,
@@ -39,36 +40,37 @@ class GlobalRpcReplyHandler:
             operation: Operation definition
             endpoint_params: Endpoint parameters including service_name
         """
-        if self._reply_consumer is None:
-            # Extract service_name from endpoint_params
-            service_name = endpoint_params.get("service_name", "app")
+        async with self._lock:
+            if self._reply_consumer is None:
+                # Extract service_name from endpoint_params
+                service_name = endpoint_params.get("service_name", "app")
 
-            # Generate app_id with service name + random hex (same format as AmqpWire)
-            random_hex = secrets.token_hex(4)  # 4 bytes = 8 hex chars
-            app_id = f"{service_name}-{random_hex}"
+                # Generate app_id with service name + random hex (same format as AmqpWire)
+                random_hex = secrets.token_hex(4)  # 4 bytes = 8 hex chars
+                app_id = f"{service_name}-{random_hex}"
 
-            # Use app_id as the reply queue name
-            self._reply_queue_name = f"reply-{app_id}"
+                # Use app_id as the reply queue name
+                self._reply_queue_name = f"reply-{app_id}"
 
-            # Create reply channel with the generated queue name as address
-            reply_channel = self._get_or_create_reply_channel(
-                operation, self._reply_queue_name
-            )
+                # Create reply channel with the generated queue name as address
+                reply_channel = self._get_or_create_reply_channel(
+                    operation, self._reply_queue_name
+                )
 
-            # Create reply consumer with the channel (wire factory will use the address)
-            self._reply_consumer = await wire_factory.create_consumer(
-                channel=reply_channel,
-                parameters={},
-                op_bindings=None,
-                is_reply=True,
-                app_id=app_id,
-            )
+                # Create reply consumer with the channel (wire factory will use the address)
+                self._reply_consumer = await wire_factory.create_consumer(
+                    channel=reply_channel,
+                    parameters={},
+                    op_bindings=None,
+                    is_reply=True,
+                    app_id=app_id,
+                )
 
-            # Start the consumer
-            await self._reply_consumer.start()
+                # Start the consumer
+                await self._reply_consumer.start()
 
-            # Start background task
-            self._consume_task = asyncio.create_task(self._consume_all_replies())
+                # Start background task
+                self._consume_task = asyncio.create_task(self._consume_all_replies())
 
     def _get_or_create_reply_channel(
         self, operation: Operation, queue_name: str
