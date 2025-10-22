@@ -1,0 +1,24 @@
+# Level 1: Main entry point
+asyncapi: "3.0.0"
+info:
+  title: Deep Recursion Test - Level 1
+  version: 1.0.0
+  description: Main file that starts the 4-level reference chain
+
+operations:
+  process.data:
+    action: send
+    channel:
+      $ref: "level2.yaml#/channels/data_channel"
+
+components:
+  schemas:
+    Level1Schema:
+      type: object
+      properties:
+        level:
+          type: integer
+          const: 1
+        message:
+          type: string
+          const: "from_level_1"

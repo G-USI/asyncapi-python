@@ -264,3 +264,45 @@ def test_invalid_yaml_structure():
             extract_all_operations(invalid_yaml)
     finally:
         invalid_yaml.unlink(missing_ok=True)
+
+
+def test_four_level_deep_recursion():
+    """Test 4-level deep file reference chain: Level1->Level2->Level3->Level4.
+
+    This test verifies that the MessageGenerator recursively collects component schemas
+    from all referenced files, not just the main spec file.
+    """
+    from src.asyncapi_python_codegen.generators.messages import MessageGenerator
+
+    spec_path = Path("tests/codegen/specs/deep_recursion/level1.yaml")
+
+    # Test that MessageGenerator collects schemas from all 4 levels
+    generator = MessageGenerator()
+    schemas = generator._load_component_schemas(spec_path)
+
+    # Without recursive file loading, we would only get Level1Schema
+    # With recursive loading, we should get schemas from all 4 files
+    assert "Level1Schema" in schemas, "Level1Schema from main file not found"
+    assert (
+        "Level2Schema" in schemas
+    ), "Level2Schema from level2.yaml not found (recursive loading failed)"
+    assert (
+        "Level3Schema" in schemas
+    ), "Level3Schema from level3.yaml not found (recursive loading failed)"
+    assert (
+        "Level4Schema" in schemas
+    ), "Level4Schema from level4.yaml not found (recursive loading failed)"
+    assert "DataMessage" in schemas, "DataMessage from level3.yaml not found"
+
+    # Verify the deepest level schema has correct structure
+    level4_schema = schemas["Level4Schema"]
+    assert level4_schema["properties"]["level"]["const"] == 4
+    assert level4_schema["properties"]["message"]["const"] == "from_level_4_deepest"
+
+    # Also verify operations can be extracted (tests parser, not generator)
+    operations = extract_all_operations(spec_path)
+    assert len(operations) == 1
+
+    process_data = operations["process.data"]
+    assert process_data.channel.address == "data.queue"
+    assert process_data.channel.title == "Data Channel from Level 2"

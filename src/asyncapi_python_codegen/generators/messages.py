@@ -10,6 +10,7 @@ import yaml
 from datamodel_code_generator.__main__ import main as datamodel_codegen
 
 from asyncapi_python.kernel.document import Operation
+from asyncapi_python_codegen.parser.types import ParseContext, navigate_json_pointer
 
 
 class MessageGenerator:
@@ -67,35 +68,110 @@ class MessageGenerator:
         return schemas  # type: ignore[return-value]
 
     def _load_component_schemas(self, spec_path: Path) -> dict[str, Any]:
-        """Load component schemas from the AsyncAPI specification file."""
-        try:
-            with spec_path.open("r") as f:
-                spec = yaml.safe_load(f)
+        """Load component schemas from the AsyncAPI specification file and all referenced files."""
+        all_schemas: dict[str, Any] = {}
+        visited_files: set[Path] = set()
 
-            components = spec.get("components", {})
-            schemas = components.get("schemas", {})
-            messages = components.get("messages", {})
+        def load_schemas_from_file(file_path: Path) -> None:
+            """Recursively load schemas from a file and its references."""
+            abs_path = file_path.absolute()
 
-            # Combine schemas and message payloads
-            all_schemas = {}
+            # Avoid infinite loops
+            if abs_path in visited_files:
+                return
+            visited_files.add(abs_path)
 
-            # Add component schemas directly
-            for schema_name, schema_def in schemas.items():
-                all_schemas[schema_name] = schema_def
+            try:
+                with abs_path.open("r") as f:
+                    spec = yaml.safe_load(f)
 
-            # Add message payloads from components (only if not already present from schemas)
-            for msg_name, msg_def in messages.items():
-                if isinstance(msg_def, dict) and "payload" in msg_def:
-                    schema_name = self._to_pascal_case(msg_name)
-                    # Only add if we don't already have this schema from the schemas section
+                components = spec.get("components", {})
+                schemas = components.get("schemas", {})
+                messages = components.get("messages", {})
+
+                # Add component schemas directly
+                for schema_name, schema_def in schemas.items():
                     if schema_name not in all_schemas:
-                        all_schemas[schema_name] = msg_def["payload"]
+                        # Check if this schema is itself a reference
+                        if isinstance(schema_def, dict) and "$ref" in schema_def:
+                            ref_value: Any = schema_def["$ref"]  # type: ignore[misc]
+                            # Resolve the reference using ParseContext utilities
+                            if isinstance(ref_value, str):
+                                try:
+                                    context = ParseContext(abs_path)
+                                    target_context = context.resolve_reference(
+                                        ref_value
+                                    )
 
-            return all_schemas  # type: ignore[return-value]
+                                    # Load and navigate to the referenced schema
+                                    with target_context.filepath.open("r") as ref_file:
+                                        ref_spec = yaml.safe_load(ref_file)
 
-        except Exception as e:
-            print(f"Warning: Could not load component schemas from {spec_path}: {e}")
-            return {}
+                                    if target_context.json_pointer:
+                                        resolved_schema = navigate_json_pointer(
+                                            ref_spec, target_context.json_pointer
+                                        )
+                                    else:
+                                        resolved_schema = ref_spec
+
+                                    all_schemas[schema_name] = resolved_schema
+                                except Exception as e:
+                                    print(
+                                        f"Warning: Could not resolve reference {ref_value} in {abs_path}: {e}"
+                                    )
+                                    all_schemas[schema_name] = schema_def
+                        else:
+                            all_schemas[schema_name] = schema_def
+
+                # Add message payloads from components
+                for msg_name, msg_def in messages.items():
+                    if isinstance(msg_def, dict) and "payload" in msg_def:
+                        schema_name = self._to_pascal_case(msg_name)
+                        if schema_name not in all_schemas:
+                            all_schemas[schema_name] = msg_def["payload"]
+
+                # Find and process all external file references
+                self._find_and_process_refs(
+                    spec, abs_path.parent, load_schemas_from_file
+                )
+
+            except Exception as e:
+                print(f"Warning: Could not load component schemas from {abs_path}: {e}")
+
+        # Start loading from the main spec file
+        load_schemas_from_file(spec_path)
+
+        return all_schemas  # type: ignore[return-value]
+
+    def _find_and_process_refs(
+        self, data: Any, base_dir: Path, process_file: Any
+    ) -> None:
+        """Recursively find all $ref entries pointing to external files."""
+        if isinstance(data, dict):
+            # Check if this is a reference
+            if "$ref" in data:
+                ref_value: Any = data["$ref"]  # type: ignore[misc]
+                if isinstance(ref_value, str) and not ref_value.startswith("#"):
+                    # External reference - extract file path
+                    file_part: str
+                    if "#" in ref_value:
+                        file_part = ref_value.split("#")[0]
+                    else:
+                        file_part = ref_value
+
+                    if file_part:
+                        # Resolve relative path
+                        ref_path = (base_dir / file_part).resolve()
+                        process_file(ref_path)
+
+            # Recurse into all dict values
+            for value in data.values():  # type: ignore[misc]
+                self._find_and_process_refs(value, base_dir, process_file)
+
+        elif isinstance(data, list):
+            # Recurse into all list items
+            for item in data:  # type: ignore[misc]
+                self._find_and_process_refs(item, base_dir, process_file)
 
     def _resolve_references(self, schemas: dict[str, Any]) -> dict[str, Any]:
         """Recursively resolve $ref references to use #/$defs/... instead of #/components/schemas/..."""
@@ -105,17 +181,24 @@ class MessageGenerator:
                 resolved_obj: dict[str, Any] = {}
                 for key, value in obj.items():  # type: ignore[misc]
                     if key == "$ref" and isinstance(value, str):
-                        # Transform references from #/components/schemas/... to #/$defs/...
-                        if value.startswith("#/components/schemas/"):
-                            schema_name = value.split("/")[-1]
+                        # Extract schema name from the reference
+                        schema_name = value.split("/")[-1]
+
+                        # Transform all component references to #/$defs/...
+                        if "#/components/schemas/" in value:
+                            # Internal or external schema reference
                             resolved_obj[key] = f"#/$defs/{schema_name}"
-                        elif value.startswith("#/components/messages/"):
+                        elif "#/components/messages/" in value:
                             # Handle message references - convert message name to PascalCase
-                            msg_name = value.split("/")[-1]
-                            schema_name = self._to_pascal_case(msg_name)
+                            schema_name = self._to_pascal_case(schema_name)
                             resolved_obj[key] = f"#/$defs/{schema_name}"
-                        else:
+                        elif value.startswith("#"):
+                            # Other internal references, keep as-is
                             resolved_obj[key] = value
+                        else:
+                            # External file reference (e.g., "./commons2.yaml#/components/schemas/Foo")
+                            # Extract just the schema name and point to #/$defs
+                            resolved_obj[key] = f"#/$defs/{schema_name}"
                     else:
                         resolved_obj[key] = resolve_in_object(value)
                 return resolved_obj
