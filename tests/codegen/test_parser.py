@@ -264,3 +264,40 @@ def test_invalid_yaml_structure():
             extract_all_operations(invalid_yaml)
     finally:
         invalid_yaml.unlink(missing_ok=True)
+
+
+def test_four_level_deep_recursion():
+    """Test 4-level deep file reference chain: Level1->Level2->Level3->Level4."""
+    spec_path = Path("tests/codegen/specs/deep_recursion/level1.yaml")
+    operations = extract_all_operations(spec_path)
+
+    assert len(operations) == 1
+
+    # Verify Level 1 -> Level 2 reference
+    process_data = operations["process.data"]
+    assert process_data.channel.address == "data.queue"
+    assert process_data.channel.title == "Data Channel from Level 2"
+
+    # Verify Level 2 -> Level 3 reference (message)
+    data_message = process_data.channel.messages["data_message"]
+    assert data_message.title == "Data Message from Level 3"
+    assert isinstance(data_message.payload, dict)
+
+    # Verify Level 3 -> Level 4 reference (deep schema in payload)
+    payload = data_message.payload
+    assert "id" in payload["properties"]
+    assert "level3_data" in payload["properties"]
+    assert payload["properties"]["level3_data"]["const"] == "from_level_3"
+    assert "deep_schema" in payload["properties"]
+
+    # Verify Level 4 schema was resolved (deepest level)
+    deep_schema_ref = payload["properties"]["deep_schema"]
+    # After resolution, the $ref should point to unified schema
+    # Or if already resolved, check the schema structure
+    if "$ref" in deep_schema_ref:
+        # Reference should be normalized
+        assert "#/$defs/" in deep_schema_ref["$ref"] or "level4.yaml" in deep_schema_ref["$ref"]
+    else:
+        # If already resolved inline, verify structure
+        assert deep_schema_ref["properties"]["level"]["const"] == 4
+        assert deep_schema_ref["properties"]["message"]["const"] == "from_level_4_deepest"

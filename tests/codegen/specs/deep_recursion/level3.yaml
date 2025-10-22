@@ -1,0 +1,28 @@
+# Level 3: References Level 4
+components:
+  messages:
+    DataMessage:
+      title: Data Message from Level 3
+      payload:
+        type: object
+        properties:
+          id:
+            type: string
+          level3_data:
+            type: string
+            const: "from_level_3"
+          deep_schema:
+            $ref: "level4.yaml#/components/schemas/Level4Schema"
+
+  schemas:
+    Level3Schema:
+      type: object
+      properties:
+        level:
+          type: integer
+          const: 3
+        message:
+          type: string
+          const: "from_level_3"
+        level2_ref:
+          $ref: "level2.yaml#/components/schemas/Level2Schema"

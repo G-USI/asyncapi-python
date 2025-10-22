@@ -1,0 +1,22 @@
+# Level 2: References Level 3
+channels:
+  data_channel:
+    address: data.queue
+    title: Data Channel from Level 2
+    messages:
+      data_message:
+        $ref: "level3.yaml#/components/messages/DataMessage"
+
+components:
+  schemas:
+    Level2Schema:
+      type: object
+      properties:
+        level:
+          type: integer
+          const: 2
+        message:
+          type: string
+          const: "from_level_2"
+        level1_ref:
+          $ref: "level1.yaml#/components/schemas/Level1Schema"

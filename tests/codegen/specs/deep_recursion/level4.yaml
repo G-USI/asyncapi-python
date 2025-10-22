@@ -1,0 +1,21 @@
+# Level 4: Deepest level - no more references
+components:
+  schemas:
+    Level4Schema:
+      type: object
+      properties:
+        level:
+          type: integer
+          const: 4
+        message:
+          type: string
+          const: "from_level_4_deepest"
+        metadata:
+          type: object
+          properties:
+            depth:
+              type: integer
+              const: 4
+            status:
+              type: string
+              enum: ["deep", "deeper", "deepest"]
