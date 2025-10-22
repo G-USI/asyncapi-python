@@ -283,9 +283,15 @@ def test_four_level_deep_recursion():
     # Without recursive file loading, we would only get Level1Schema
     # With recursive loading, we should get schemas from all 4 files
     assert "Level1Schema" in schemas, "Level1Schema from main file not found"
-    assert "Level2Schema" in schemas, "Level2Schema from level2.yaml not found (recursive loading failed)"
-    assert "Level3Schema" in schemas, "Level3Schema from level3.yaml not found (recursive loading failed)"
-    assert "Level4Schema" in schemas, "Level4Schema from level4.yaml not found (recursive loading failed)"
+    assert (
+        "Level2Schema" in schemas
+    ), "Level2Schema from level2.yaml not found (recursive loading failed)"
+    assert (
+        "Level3Schema" in schemas
+    ), "Level3Schema from level3.yaml not found (recursive loading failed)"
+    assert (
+        "Level4Schema" in schemas
+    ), "Level4Schema from level4.yaml not found (recursive loading failed)"
     assert "DataMessage" in schemas, "DataMessage from level3.yaml not found"
 
     # Verify the deepest level schema has correct structure

@@ -94,25 +94,32 @@ class MessageGenerator:
                     if schema_name not in all_schemas:
                         # Check if this schema is itself a reference
                         if isinstance(schema_def, dict) and "$ref" in schema_def:
-                            ref = schema_def["$ref"]
+                            ref_value: Any = schema_def["$ref"]  # type: ignore[misc]
                             # Resolve the reference using ParseContext utilities
-                            try:
-                                context = ParseContext(abs_path)
-                                target_context = context.resolve_reference(ref)
+                            if isinstance(ref_value, str):
+                                try:
+                                    context = ParseContext(abs_path)
+                                    target_context = context.resolve_reference(
+                                        ref_value
+                                    )
 
-                                # Load and navigate to the referenced schema
-                                with target_context.filepath.open("r") as ref_file:
-                                    ref_spec = yaml.safe_load(ref_file)
+                                    # Load and navigate to the referenced schema
+                                    with target_context.filepath.open("r") as ref_file:
+                                        ref_spec = yaml.safe_load(ref_file)
 
-                                if target_context.json_pointer:
-                                    resolved_schema = navigate_json_pointer(ref_spec, target_context.json_pointer)
-                                else:
-                                    resolved_schema = ref_spec
+                                    if target_context.json_pointer:
+                                        resolved_schema = navigate_json_pointer(
+                                            ref_spec, target_context.json_pointer
+                                        )
+                                    else:
+                                        resolved_schema = ref_spec
 
-                                all_schemas[schema_name] = resolved_schema
-                            except Exception as e:
-                                print(f"Warning: Could not resolve reference {ref} in {abs_path}: {e}")
-                                all_schemas[schema_name] = schema_def
+                                    all_schemas[schema_name] = resolved_schema
+                                except Exception as e:
+                                    print(
+                                        f"Warning: Could not resolve reference {ref_value} in {abs_path}: {e}"
+                                    )
+                                    all_schemas[schema_name] = schema_def
                         else:
                             all_schemas[schema_name] = schema_def
 
@@ -124,7 +131,9 @@ class MessageGenerator:
                             all_schemas[schema_name] = msg_def["payload"]
 
                 # Find and process all external file references
-                self._find_and_process_refs(spec, abs_path.parent, load_schemas_from_file)
+                self._find_and_process_refs(
+                    spec, abs_path.parent, load_schemas_from_file
+                )
 
             except Exception as e:
                 print(f"Warning: Could not load component schemas from {abs_path}: {e}")
@@ -141,13 +150,14 @@ class MessageGenerator:
         if isinstance(data, dict):
             # Check if this is a reference
             if "$ref" in data:
-                ref = data["$ref"]
-                if isinstance(ref, str) and not ref.startswith("#"):
+                ref_value: Any = data["$ref"]  # type: ignore[misc]
+                if isinstance(ref_value, str) and not ref_value.startswith("#"):
                     # External reference - extract file path
-                    if "#" in ref:
-                        file_part = ref.split("#")[0]
+                    file_part: str
+                    if "#" in ref_value:
+                        file_part = ref_value.split("#")[0]
                     else:
-                        file_part = ref
+                        file_part = ref_value
 
                     if file_part:
                         # Resolve relative path
@@ -155,12 +165,12 @@ class MessageGenerator:
                         process_file(ref_path)
 
             # Recurse into all dict values
-            for value in data.values():
+            for value in data.values():  # type: ignore[misc]
                 self._find_and_process_refs(value, base_dir, process_file)
 
         elif isinstance(data, list):
             # Recurse into all list items
-            for item in data:
+            for item in data:  # type: ignore[misc]
                 self._find_and_process_refs(item, base_dir, process_file)
 
     def _resolve_references(self, schemas: dict[str, Any]) -> dict[str, Any]:
