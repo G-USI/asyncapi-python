@@ -1,5 +1,6 @@
 """AMQP wire factory implementation"""
 
+import asyncio
 import secrets
 from typing import Any, Callable, Optional, cast
 
@@ -7,7 +8,10 @@ from typing_extensions import Unpack
 
 try:
     from aio_pika import connect, connect_robust  # type: ignore[import-not-found]
-    from aio_pika.abc import AbstractConnection  # type: ignore[import-not-found]
+    from aio_pika.abc import (  # type: ignore[import-not-found]
+        AbstractChannel,
+        AbstractConnection,
+    )
 except ImportError as e:
     raise ImportError(
         "aio-pika is required for AMQP support. Install with: pip install asyncapi-python[amqp]"
@@ -59,6 +63,8 @@ class AmqpWire(AbstractWireFactory[AmqpWireMessage, AmqpIncomingMessage]):
         random_hex = secrets.token_hex(4)  # 4 bytes = 8 hex chars
         self._app_id = f"wire-{random_hex}"
         self._connection: AbstractConnection | None = None
+        self._shared_channel: AbstractChannel | None = None
+        self._channel_lock = asyncio.Lock()
         self._robust = robust
         self._reconnect_interval = reconnect_interval
         self._max_reconnect_interval = max_reconnect_interval
@@ -108,6 +114,14 @@ class AmqpWire(AbstractWireFactory[AmqpWireMessage, AmqpIncomingMessage]):
 
         return self._connection
 
+    async def _get_or_create_channel(self) -> AbstractChannel:
+        """Get or create shared AMQP channel with race condition protection"""
+        async with self._channel_lock:
+            if self._shared_channel is None or self._shared_channel.is_closed:
+                connection = await self._get_connection()
+                self._shared_channel = await connection.channel()
+            return self._shared_channel
+
     def _handle_connection_lost(
         self, connection: AbstractConnection, exception: Optional[BaseException] = None
     ) -> None:
@@ -142,9 +156,9 @@ class AmqpWire(AbstractWireFactory[AmqpWireMessage, AmqpIncomingMessage]):
         # Resolve AMQP configuration using pattern matching
         config = resolve_amqp_config(kwargs, operation_name, app_id)
 
-        connection = await self._get_connection()
+        channel = await self._get_or_create_channel()
 
-        return AmqpConsumer(connection=connection, **config.to_consumer_args())
+        return AmqpConsumer(channel=channel, **config.to_consumer_args())
 
     async def create_producer(
         self, **kwargs: Unpack[EndpointParams]
@@ -165,9 +179,9 @@ class AmqpWire(AbstractWireFactory[AmqpWireMessage, AmqpIncomingMessage]):
         # Resolve AMQP configuration using pattern matching
         config = resolve_amqp_config(kwargs, operation_name, app_id)
 
-        connection = await self._get_connection()
+        channel = await self._get_or_create_channel()
 
-        return AmqpProducer(connection=connection, **config.to_producer_args())
+        return AmqpProducer(channel=channel, **config.to_producer_args())
 
     def _generate_operation_name(self, params: EndpointParams) -> str:
         """Generate operation name from available endpoint parameters"""
@@ -190,6 +204,12 @@ class AmqpWire(AbstractWireFactory[AmqpWireMessage, AmqpIncomingMessage]):
         return f"op-{self._app_id}" if self._app_id else "op-default"
 
     async def close(self) -> None:
-        """Close the connection"""
+        """Close the shared channel and connection"""
+        # Close shared channel first
+        if self._shared_channel and not self._shared_channel.is_closed:
+            await self._shared_channel.close()
+            self._shared_channel = None
+
+        # Then close connection
         if self._connection and not self._connection.is_closed:
             await self._connection.close()

@@ -7,7 +7,6 @@ try:
     from aio_pika import Message as AmqpMessage  # type: ignore[import-not-found]
     from aio_pika.abc import (  # type: ignore[import-not-found]
         AbstractChannel,
-        AbstractConnection,
         AbstractExchange,
     )
 except ImportError as e:
@@ -25,20 +24,19 @@ class AmqpProducer(Producer[AmqpWireMessage]):
 
     def __init__(
         self,
-        connection: AbstractConnection,
+        channel: AbstractChannel,
         queue_name: str,
         exchange_name: str = "",
         exchange_type: str = "direct",
         routing_key: str = "",
         queue_properties: dict[str, Any] | None = None,
     ):
-        self._connection = connection
+        self._channel = channel
         self._queue_name = queue_name
         self._exchange_name = exchange_name
         self._exchange_type = exchange_type
         self._routing_key = routing_key
         self._queue_properties = queue_properties or {}
-        self._channel: AbstractChannel | None = None
         self._target_exchange: AbstractExchange | None = None
         self._started = False
 
@@ -46,8 +44,6 @@ class AmqpProducer(Producer[AmqpWireMessage]):
         """Start the producer with exchange type pattern matching"""
         if self._started:
             return
-
-        self._channel = await self._connection.channel()
 
         # Pattern matching for exchange setup based on type
         match (self._exchange_name, self._exchange_type):
@@ -98,10 +94,9 @@ class AmqpProducer(Producer[AmqpWireMessage]):
         if not self._started:
             return
 
-        if self._channel:
-            await self._channel.close()
-            self._channel = None
-            self._target_exchange = None
+        # Note: We don't close the channel since it's shared across all operations.
+        # The AmqpWire factory owns the channel and is responsible for closing it.
+        self._target_exchange = None
 
         self._started = False
 

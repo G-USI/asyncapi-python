@@ -7,7 +7,6 @@ try:
     from aio_pika import ExchangeType  # type: ignore[import-not-found]
     from aio_pika.abc import (  # type: ignore[import-not-found]
         AbstractChannel,
-        AbstractConnection,
         AbstractExchange,
         AbstractQueue,
     )
@@ -28,7 +27,7 @@ class AmqpConsumer(Consumer[AmqpIncomingMessage]):
 
     def __init__(
         self,
-        connection: AbstractConnection,
+        channel: AbstractChannel,
         queue_name: str,
         exchange_name: str = "",
         exchange_type: str = "direct",
@@ -37,7 +36,7 @@ class AmqpConsumer(Consumer[AmqpIncomingMessage]):
         queue_properties: dict[str, Any] | None = None,
         binding_arguments: dict[str, Any] | None = None,
     ):
-        self._connection = connection
+        self._channel = channel
         self._queue_name = queue_name
         self._exchange_name = exchange_name
         self._exchange_type = exchange_type
@@ -45,7 +44,6 @@ class AmqpConsumer(Consumer[AmqpIncomingMessage]):
         self._binding_type = binding_type
         self._queue_properties = queue_properties or {}
         self._binding_arguments = binding_arguments or {}
-        self._channel: AbstractChannel | None = None
         self._queue: AbstractQueue | None = None
         self._exchange: AbstractExchange | None = None
         self._started = False
@@ -55,8 +53,6 @@ class AmqpConsumer(Consumer[AmqpIncomingMessage]):
         """Start the consumer with pattern matching for binding types"""
         if self._started:
             return
-
-        self._channel = await self._connection.channel()
 
         # Pattern matching for queue setup based on binding type
         match self._binding_type:
@@ -176,11 +172,10 @@ class AmqpConsumer(Consumer[AmqpIncomingMessage]):
 
         self._stop_event.set()
 
-        if self._channel:
-            await self._channel.close()
-            self._channel = None
-            self._queue = None
-            self._exchange = None
+        # Note: We don't close the channel since it's shared across all operations.
+        # The AmqpWire factory owns the channel and is responsible for closing it.
+        self._queue = None
+        self._exchange = None
 
         self._started = False
 
