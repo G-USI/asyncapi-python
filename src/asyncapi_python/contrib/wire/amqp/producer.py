@@ -55,7 +55,11 @@ class AmqpProducer(Producer[AmqpWireMessage]):
             case ("", _):
                 self._target_exchange = self._channel.default_exchange
                 # Declare queue for default exchange routing
-                if self._queue_name:
+                # Skip declaration for exclusive reply queues (RPC clients declare them)
+                if self._queue_name and not (
+                    self._queue_properties.get("exclusive", False)
+                    and self._queue_properties.get("is_reply", False)
+                ):
                     await self._channel.declare_queue(
                         name=self._queue_name,
                         durable=self._queue_properties.get("durable", True),

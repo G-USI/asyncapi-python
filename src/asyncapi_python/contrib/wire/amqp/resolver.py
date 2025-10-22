@@ -55,6 +55,7 @@ def resolve_amqp_config(
                     "durable": False,
                     "exclusive": True,
                     "auto_delete": True,
+                    "is_reply": True,  # Mark as reply queue to prevent server-side declaration
                 },
             )
 
@@ -72,6 +73,7 @@ def resolve_amqp_config(
                         "durable": False,
                         "exclusive": True,
                         "auto_delete": True,
+                        "is_reply": True,  # Mark as reply queue to prevent server-side declaration
                     },
                 )
             else:
