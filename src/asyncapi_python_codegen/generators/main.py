@@ -105,6 +105,13 @@ class CodeGenerator:
             "application.py.j2", output_dir / "application.py", context
         )
 
+        # Generate messages/__init__.py for module structure
+        messages_dir = output_dir / "messages"
+        messages_dir.mkdir(parents=True, exist_ok=True)
+        self.template_renderer.render_file(
+            "messages_init.py.j2", messages_dir / "__init__.py", context
+        )
+
         # Generate messages/json/__init__.py using datamodel-code-generator
         messages_json_dir = output_dir / "messages" / "json"
         messages_json_dir.mkdir(parents=True, exist_ok=True)
