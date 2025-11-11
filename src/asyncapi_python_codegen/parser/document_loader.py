@@ -9,11 +9,15 @@ from .extractors import extract_operation
 from .references import load_yaml_file
 
 
-def extract_all_operations(yaml_path: Path) -> dict[str, Operation]:
+def extract_all_operations(
+    yaml_path: Path, validate: bool = True, fail_on_error: bool = True
+) -> dict[str, Operation]:
     """Extract all operations from AsyncAPI document.
 
     Args:
         yaml_path: Path to AsyncAPI YAML file
+        validate: Whether to run validation rules (default: True)
+        fail_on_error: Whether to raise ValidationError on errors (default: True)
 
     Returns:
         Dictionary mapping operation IDs to Operation dataclasses
@@ -21,6 +25,7 @@ def extract_all_operations(yaml_path: Path) -> dict[str, Operation]:
     Raises:
         RuntimeError: If file cannot be loaded or parsed
         ValueError: If document structure is invalid
+        ValidationError: If validation fails and fail_on_error is True
     """
     # Load the main document
     with parsing_context(yaml_path):
@@ -65,6 +70,30 @@ def extract_all_operations(yaml_path: Path) -> dict[str, Operation]:
                 raise RuntimeError(
                     f"Failed to extract operation '{operation_id}': {e}"
                 ) from e
+
+        # Run validation if enabled
+        if validate:
+            from ..validation import Severity, ValidationError, validate_spec
+
+            try:
+                issues = validate_spec(
+                    spec=document,
+                    operations=operations,
+                    spec_path=yaml_path,
+                    fail_on_error=fail_on_error,
+                )
+
+                # Print warnings and info even if not failing
+                for issue in issues:
+                    if issue.severity in (Severity.WARNING, Severity.INFO):
+                        print(f"  {issue}")
+
+            except ValidationError as e:
+                # Print all issues before re-raising
+                print("\n❌ Document validation failed:\n")
+                for issue in e.issues:
+                    print(f"  {issue}\n")
+                raise
 
         return operations
 
