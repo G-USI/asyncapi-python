@@ -7,6 +7,7 @@ Many of these rules address issues documented in BUG.md.
 # pyright: reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false
 
 import re
+from typing import Any
 
 from ..base import rule
 from ..context import ValidationContext
@@ -141,8 +142,8 @@ def channel_address_matches_parameters(ctx: ValidationContext) -> list[Validatio
 
 
 @rule("core")
-def parameter_has_schema_or_location(ctx: ValidationContext) -> list[ValidationIssue]:
-    """Validate that parameters have either a schema or a location field."""
+def parameter_requires_location(ctx: ValidationContext) -> list[ValidationIssue]:
+    """All parameters MUST have a location field."""
     issues = []
 
     for channel_key, channel_def in ctx.get_channels().items():
@@ -154,22 +155,15 @@ def parameter_has_schema_or_location(ctx: ValidationContext) -> list[ValidationI
             if not isinstance(param_def, dict):
                 continue
 
-            # AsyncAPI 3.0 allows schema properties directly on parameter
-            # Check for: schema field, or direct schema properties (enum, type, pattern, etc.), or location
-            has_schema_field = "schema" in param_def
-            has_schema_properties = any(
-                key in param_def
-                for key in ["enum", "type", "pattern", "format", "minimum", "maximum"]
-            )
-            has_location = "location" in param_def
-
-            if not has_schema_field and not has_schema_properties and not has_location:
+            location = param_def.get("location", "")
+            if not location:
                 issues.append(
                     ValidationIssue(
                         severity=Severity.ERROR,
-                        message=f"Parameter '{param_name}' must have either 'schema' or 'location' field",
+                        message=f"Parameter '{param_name}' must have 'location' field",
                         path=f"$.channels.{channel_key}.parameters.{param_name}",
-                        rule="parameter-has-schema-or-location",
+                        rule="parameter-requires-location",
+                        suggestion="Add location: $message.payload#/fieldName",
                     )
                 )
 
@@ -227,12 +221,8 @@ def parameter_location_syntax_valid(ctx: ValidationContext) -> list[ValidationIs
 
 
 @rule("core")
-def warn_location_not_implemented(ctx: ValidationContext) -> list[ValidationIssue]:
-    """
-    Warn that location-based parameter extraction is not yet implemented.
-
-    FIX BUG.md: Documents that location field is recognized but not functional.
-    """
+def location_must_be_payload(ctx: ValidationContext) -> list[ValidationIssue]:
+    """Location must use $message.payload#/ format (headers not supported)."""
     issues = []
 
     for channel_key, channel_def in ctx.get_channels().items():
@@ -241,18 +231,86 @@ def warn_location_not_implemented(ctx: ValidationContext) -> list[ValidationIssu
 
         parameters = channel_def.get("parameters", {})
         for param_name, param_def in parameters.items():
-            if isinstance(param_def, dict) and "location" in param_def:
+            if not isinstance(param_def, dict):
+                continue
+
+            location = param_def.get("location")
+            if location and not location.startswith("$message.payload#/"):
                 issues.append(
                     ValidationIssue(
-                        severity=Severity.WARNING,
-                        message=f"Parameter '{param_name}' uses 'location' field which is not yet implemented in runtime",
-                        path=f"$.channels.{channel_key}.parameters.{param_name}",
-                        rule="warn-location-not-implemented",
-                        suggestion="Use static parameters in address template for now",
+                        severity=Severity.ERROR,
+                        message=f"Parameter '{param_name}' location must start with '$message.payload#/'",
+                        path=f"$.channels.{channel_key}.parameters.{param_name}.location",
+                        rule="location-must-be-payload",
+                        suggestion="Use format: $message.payload#/path/to/field",
                     )
                 )
 
     return issues
+
+
+@rule("core")
+def location_path_exists_in_schema(ctx: ValidationContext) -> list[ValidationIssue]:
+    """Validate location path exists in message payload schemas."""
+    issues = []
+
+    for channel_key, channel_def in ctx.get_channels().items():
+        if not isinstance(channel_def, dict):
+            continue
+
+        parameters = channel_def.get("parameters", {})
+        messages = channel_def.get("messages", {})
+
+        for param_name, param_def in parameters.items():
+            if not isinstance(param_def, dict):
+                continue
+
+            location = param_def.get("location")
+            if not location:
+                continue
+
+            # Parse path from location
+            path = location.replace("$message.payload#/", "")
+            parts = [p for p in path.split("/") if p]
+
+            # Check if path exists in ANY message schema
+            path_found = False
+            for msg_def in messages.values():
+                if not isinstance(msg_def, dict):
+                    continue
+                if _path_exists_in_schema(msg_def.get("payload"), parts):
+                    path_found = True
+                    break
+
+            if not path_found and messages:
+                issues.append(
+                    ValidationIssue(
+                        severity=Severity.ERROR,
+                        message=f"Parameter '{param_name}' location path '{path}' not found in message schemas",
+                        path=f"$.channels.{channel_key}.parameters.{param_name}.location",
+                        rule="location-path-exists-in-schema",
+                    )
+                )
+
+    return issues
+
+
+def _path_exists_in_schema(schema: dict[str, Any] | None, parts: list[str]) -> bool:
+    """Helper to check if path exists in JSON schema."""
+    if not schema or not parts:
+        return False
+
+    current = schema
+    for part in parts:
+        if current.get("type") == "object":
+            props = current.get("properties", {})
+            if part in props:
+                current = props[part]
+            else:
+                return False
+        else:
+            return False
+    return True
 
 
 @rule("core")
@@ -283,6 +341,38 @@ def operation_references_valid_channel(ctx: ValidationContext) -> list[Validatio
                             rule="operation-references-valid-channel",
                         )
                     )
+
+    return issues
+
+
+@rule("core")
+def operation_messages_ignored(ctx: ValidationContext) -> list[ValidationIssue]:
+    """Warn when operation.messages is specified but will be ignored.
+
+    In AsyncAPI 3.0, when an operation references a channel, the channel's messages
+    are used, and any messages specified directly on the operation are ignored.
+    """
+    issues = []
+    operations_spec = ctx.get_operations_spec()
+
+    for op_id, op_def in operations_spec.items():
+        if not isinstance(op_def, dict):
+            continue
+
+        # Check if operation has both channel reference and messages
+        has_channel = "channel" in op_def and op_def["channel"]
+        has_messages = "messages" in op_def and op_def["messages"]
+
+        if has_channel and has_messages:
+            issues.append(
+                ValidationIssue(
+                    severity=Severity.WARNING,
+                    message=f"Operation '{op_id}' specifies 'messages' but they will be ignored",
+                    path=f"$.operations.{op_id}.messages",
+                    rule="operation-messages-ignored",
+                    suggestion="Remove 'messages' from operation - channel messages are used instead",
+                )
+            )
 
     return issues
 

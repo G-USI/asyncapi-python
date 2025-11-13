@@ -59,7 +59,7 @@ def extract_address_parameter(data: YamlDocument) -> AddressParameter:
     """Extract AddressParameter from YAML data."""
     return AddressParameter(
         description=data.get("description"),
-        location=data.get("location", ""),
+        location=data.get("location", ""),  # Validation will catch if missing
         key="",  # TODO: Pass actual parameter key from extraction context
     )
 
