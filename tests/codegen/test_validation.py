@@ -70,12 +70,14 @@ channels:
     address: user.{userId}
     parameters:
       userId:
-        schema:
-          type: string
+        location: $message.payload#/userId
     messages:
       userMessage:
         payload:
           type: object
+          properties:
+            userId:
+              type: string
 operations:
   sendUser:
     action: send
@@ -133,6 +135,9 @@ channels:
       userMessage:
         payload:
           type: object
+          properties:
+            userId:
+              type: string
 operations:
   myOp:
     action: send
