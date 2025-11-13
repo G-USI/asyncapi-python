@@ -108,6 +108,73 @@ class AbstractEndpoint(ABC):
             f"Failed to {operation} payload with any available codec. Last error: {last_error}"
         )
 
+    def _extract_parameters(self, payload: Any) -> dict[str, str]:
+        """Extract channel parameters from decoded payload.
+
+        Uses the channel parameter definitions to extract values from the payload
+        using the codec's extract_field method. Parameters without a location are skipped.
+
+        Args:
+            payload: The decoded message payload
+
+        Returns:
+            Dictionary mapping parameter names to extracted string values
+
+        Raises:
+            ValueError: If parameter extraction fails for any parameter
+        """
+        parameters: dict[str, str] = {}
+        for param_name, param_def in self._operation.channel.parameters.items():
+            if param_def.location:
+                try:
+                    # Use first codec (all should extract consistently)
+                    codec = self._codecs[0]
+                    value = codec.extract_field(payload, param_def.location)
+                    parameters[param_name] = value
+                except ValueError as e:
+                    raise ValueError(f"Failed to extract parameter '{param_name}': {e}")
+        return parameters
+
+    def _build_address(self, parameters: dict[str, str]) -> str:
+        """Build address from channel template and parameters.
+
+        Replaces {param_name} placeholders in the channel address with the
+        corresponding parameter values.
+
+        Args:
+            parameters: Dictionary of parameter names to values
+
+        Returns:
+            The fully resolved address string
+
+        Raises:
+            ValueError: If channel address is None
+        """
+        address = self._operation.channel.address
+        if address is None:
+            raise ValueError("Channel address is None, cannot build parameterized address")
+        for param_name, param_value in parameters.items():
+            address = address.replace(f"{{{param_name}}}", param_value)
+        return address
+
+    def _build_address_with_parameters(self, payload: Any) -> str | None:
+        """Extract parameters from payload and build address if needed.
+
+        Convenience method that extracts parameters and builds the address in one call.
+        Returns None if no parameters are defined or extracted.
+
+        Args:
+            payload: The decoded message payload
+
+        Returns:
+            The resolved address string, or None if no parameters to extract
+
+        Raises:
+            ValueError: If parameter extraction or address building fails
+        """
+        parameters = self._extract_parameters(payload)
+        return self._build_address(parameters) if parameters else None
+
     @abstractmethod
     async def start(self, **params: Unpack[StartParams]) -> None: ...
 
