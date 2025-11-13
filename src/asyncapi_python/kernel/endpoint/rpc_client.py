@@ -122,6 +122,19 @@ class RpcClient(AbstractEndpoint, Send[T_Input, T_Output], Generic[T_Input, T_Ou
         )
 
         try:
+            # Extract parameters from decoded payload BEFORE encoding
+            parameters = {}
+            for param_name, param_def in self._operation.channel.parameters.items():
+                if param_def.location:
+                    try:
+                        # Use codec to extract field value
+                        # Get first codec (all should extract consistently)
+                        codec = self._codecs[0]
+                        value = codec.extract_field(payload, param_def.location)
+                        parameters[param_name] = value
+                    except ValueError as e:
+                        raise ValueError(f"Failed to extract parameter '{param_name}': {e}")
+
             # Encode request payload
             encoded_payload: bytes = self._encode_message(payload)
 
@@ -133,8 +146,11 @@ class RpcClient(AbstractEndpoint, Send[T_Input, T_Output], Generic[T_Input, T_Ou
                 _reply_to=global_reply_handler.reply_queue_name,  # Global reply queue
             )
 
+            # Build dynamic address with extracted parameters
+            address_override = self._build_address(parameters) if parameters else None
+
             # Send request
-            await self._producer.send_batch([wire_message])
+            await self._producer.send_batch([wire_message], address_override=address_override)
 
             # Wait for response with timeout (handled by global background task)
             try:
@@ -151,3 +167,12 @@ class RpcClient(AbstractEndpoint, Send[T_Input, T_Output], Generic[T_Input, T_Ou
         finally:
             # Clean up future on timeout or error (if not already removed)
             global_reply_handler.cleanup_request(correlation_id)
+
+    def _build_address(self, parameters: dict[str, str]) -> str:
+        """Build address from template and parameters."""
+        address = self._operation.channel.address
+        if address is None:
+            raise ValueError("Channel address is None, cannot build parameterized address")
+        for param_name, param_value in parameters.items():
+            address = address.replace(f"{{{param_name}}}", param_value)
+        return address

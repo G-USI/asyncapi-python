@@ -60,6 +60,19 @@ class Publisher(AbstractEndpoint, Send[T_Input, None], Generic[T_Input]):
         if not self._producer:
             raise UninitializedError()
 
+        # Extract parameters from decoded payload BEFORE encoding
+        parameters = {}
+        for param_name, param_def in self._operation.channel.parameters.items():
+            if param_def.location:
+                try:
+                    # Use codec to extract field value
+                    # Get first codec (all should extract consistently)
+                    codec = self._codecs[0]
+                    value = codec.extract_field(payload, param_def.location)
+                    parameters[param_name] = value
+                except ValueError as e:
+                    raise ValueError(f"Failed to extract parameter '{param_name}': {e}")
+
         # Encode payload using main message codecs
         encoded_payload = self._encode_message(payload)
 
@@ -68,5 +81,17 @@ class Publisher(AbstractEndpoint, Send[T_Input, None], Generic[T_Input]):
             _payload=encoded_payload, _headers={}, _correlation_id=None, _reply_to=None
         )
 
+        # Build dynamic address with extracted parameters
+        address_override = self._build_address(parameters) if parameters else None
+
         # Send via producer
-        await self._producer.send_batch([wire_message])
+        await self._producer.send_batch([wire_message], address_override=address_override)
+
+    def _build_address(self, parameters: dict[str, str]) -> str:
+        """Build address from template and parameters."""
+        address = self._operation.channel.address
+        if address is None:
+            raise ValueError("Channel address is None, cannot build parameterized address")
+        for param_name, param_value in parameters.items():
+            address = address.replace(f"{{{param_name}}}", param_value)
+        return address
