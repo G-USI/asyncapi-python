@@ -402,6 +402,34 @@ def valid_operation_action(ctx: ValidationContext) -> list[ValidationIssue]:
 
 
 @rule("core")
+def channel_id_no_braces(ctx: ValidationContext) -> list[ValidationIssue]:
+    """Prohibit curly braces in channel identifiers.
+
+    Channel IDs (keys) should not contain {braces}. Parameters belong in the
+    channel's address field, not in the channel identifier itself.
+    """
+    issues = []
+
+    for channel_key, channel_def in ctx.get_channels().items():
+        if not isinstance(channel_def, dict):
+            continue
+
+        # Check if channel ID contains braces
+        if "{" in channel_key or "}" in channel_key:
+            issues.append(
+                ValidationIssue(
+                    severity=Severity.ERROR,
+                    message=f"Channel ID '{channel_key}' must not contain curly braces",
+                    path=f"$.channels.{channel_key}",
+                    rule="channel-id-no-braces",
+                    suggestion="Use a simple identifier for the channel key and put parameters in the 'address' field",
+                )
+            )
+
+    return issues
+
+
+@rule("core")
 def channel_has_address_if_not_reference(ctx: ValidationContext) -> list[ValidationIssue]:
     """Validate that channels have an address field (can be null for reusable channels)."""
     issues = []
