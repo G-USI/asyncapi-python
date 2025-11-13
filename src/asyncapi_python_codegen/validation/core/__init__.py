@@ -455,3 +455,39 @@ def channel_has_address_if_not_reference(ctx: ValidationContext) -> list[Validat
             )
 
     return issues
+
+
+@rule("core")
+def channel_address_same_as_id(ctx: ValidationContext) -> list[ValidationIssue]:
+    """Warn when channel address is identical to channel ID.
+
+    When the address field is the same as the channel identifier, it's redundant.
+    The address field should only be specified when it differs from the channel ID
+    or when it contains parameters.
+    """
+    issues = []
+
+    for channel_key, channel_def in ctx.get_channels().items():
+        if not isinstance(channel_def, dict):
+            continue
+
+        # Skip if this is a reference
+        if "$ref" in channel_def:
+            continue
+
+        # Get the address field
+        address = channel_def.get("address")
+
+        # Check if address is identical to channel ID
+        if address and address == channel_key:
+            issues.append(
+                ValidationIssue(
+                    severity=Severity.WARNING,
+                    message=f"Channel '{channel_key}' has address identical to its ID",
+                    path=f"$.channels.{channel_key}.address",
+                    rule="channel-address-same-as-id",
+                    suggestion="Remove redundant 'address' field or use null if the address should match the channel ID",
+                )
+            )
+
+    return issues
