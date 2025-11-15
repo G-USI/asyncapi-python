@@ -6,10 +6,7 @@ from typing import Any
 from asyncapi_python.kernel.document.bindings import AmqpChannelBinding
 from asyncapi_python.kernel.document.channel import Channel
 from asyncapi_python.kernel.wire import EndpointParams
-from asyncapi_python.kernel.wire.utils import (
-    substitute_parameters,
-    validate_parameters_strict,
-)
+from asyncapi_python.kernel.wire.utils import substitute_parameters
 
 from .config import AmqpBindingType, AmqpConfig
 
@@ -186,8 +183,7 @@ def resolve_amqp_config(
 
         # Channel address pattern (with parameter substitution)
         case (False, None, address, _) if address:
-            # Strict validation for implicit queue binding
-            validate_parameters_strict(channel, param_values)
+            # Validate no wildcards for implicit queue binding
             _validate_no_wildcards_in_queue(param_values)
             resolved_address = substitute_parameters(address, param_values)
             return AmqpConfig(
@@ -200,8 +196,7 @@ def resolve_amqp_config(
 
         # Operation name pattern (fallback)
         case (False, None, None, op_name) if op_name:
-            # Strict validation for implicit queue binding
-            validate_parameters_strict(channel, param_values)
+            # Validate no wildcards for implicit queue binding
             _validate_no_wildcards_in_queue(param_values)
             return AmqpConfig(
                 queue_name=op_name,
@@ -228,12 +223,8 @@ def resolve_queue_binding(
     """Resolve AMQP queue binding configuration
 
     Queue bindings require:
-    - All channel parameters must be provided (strict validation)
     - No wildcards allowed in parameter values
     """
-
-    # Strict validation: all parameters required, exact match
-    validate_parameters_strict(channel, param_values)
 
     # Validate no wildcards in queue binding parameters
     _validate_no_wildcards_in_queue(param_values)
@@ -280,13 +271,9 @@ def resolve_routing_key_binding(
     """Resolve AMQP routing key binding configuration for pub/sub patterns
 
     For routing key bindings:
-    - All channel-defined parameters must be provided (strict validation)
     - Parameter values can explicitly contain wildcards ('*' or '#')
     - Wildcards are allowed for topic exchange pattern matching
     """
-
-    # Strict validation: all parameters required, exact match
-    validate_parameters_strict(channel, param_values)
 
     # Determine exchange name and type
     # For exchange name, we need concrete values (no wildcards)

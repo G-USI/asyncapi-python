@@ -4,6 +4,7 @@ from typing import Callable, Generic, Union, overload
 from typing_extensions import Unpack
 
 from asyncapi_python.kernel.wire import Consumer, Producer
+from asyncapi_python.kernel.wire.utils import validate_parameters_strict
 
 from ..exceptions import Reject
 from ..typing import (
@@ -62,6 +63,11 @@ class RpcServer(
         # Validate we have reply codecs
         if not self._reply_codecs:
             raise RuntimeError("RPC server operation has no reply messages defined")
+
+        # Validate subscription parameters before creating consumer
+        validate_parameters_strict(
+            self._operation.channel, self._subscription_parameters
+        )
 
         # Create consumer for receiving requests
         self._consumer = await self._wire.create_consumer(
