@@ -280,11 +280,13 @@ def resolve_routing_key_binding(
     """Resolve AMQP routing key binding configuration for pub/sub patterns
 
     For routing key bindings:
-    - Parameters are optional (can be empty dict)
-    - Missing parameters are replaced with '*' wildcard
+    - All channel-defined parameters must be provided (strict validation)
     - Parameter values can explicitly contain wildcards ('*' or '#')
-    - No strict validation - this is for topic exchange pattern matching
+    - Wildcards are allowed for topic exchange pattern matching
     """
+
+    # Strict validation: all parameters required, exact match
+    validate_parameters_strict(channel, param_values)
 
     # Determine exchange name and type
     # For exchange name, we need concrete values (no wildcards)
