@@ -131,8 +131,3 @@ make help
 
 Shows available Makefile targets.
 
-## Learn More
-
-- [AsyncAPI Specification](https://www.asyncapi.com/)
-- [AMQP Topic Exchanges](https://www.rabbitmq.com/tutorials/tutorial-five-python.html)
-- [AsyncAPI Python Documentation](https://github.com/yourorg/asyncapi-python)
