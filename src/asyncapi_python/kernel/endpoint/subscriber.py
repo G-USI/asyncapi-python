@@ -4,6 +4,7 @@ from typing import Any, Callable, Generic, overload
 from typing_extensions import Unpack
 
 from asyncapi_python.kernel.wire import Consumer
+from asyncapi_python.kernel.wire.utils import validate_parameters_strict
 
 from ..exceptions import Reject
 from ..typing import BatchConfig, BatchConsumer, Handler, IncomingMessage, T_Input
@@ -45,6 +46,11 @@ class Subscriber(AbstractEndpoint, Receive[T_Input, None], Generic[T_Input]):
                 f"Subscriber endpoint '{self._operation.key}' requires exactly one handler. "
                 f"Use @{self._operation.key} decorator to register a handler function."
             )
+
+        # Validate subscription parameters before creating consumer
+        validate_parameters_strict(
+            self._operation.channel, self._subscription_parameters
+        )
 
         # Create consumer from wire factory
         self._consumer = await self._wire.create_consumer(
@@ -330,4 +336,5 @@ class Subscriber(AbstractEndpoint, Receive[T_Input, None], Generic[T_Input]):
                 except Exception:
                     # If processing remaining batch fails, just nack all and continue
                     for _, wire_message in batch:
+                        await wire_message.nack()
                         await wire_message.nack()
