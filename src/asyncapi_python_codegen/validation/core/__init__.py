@@ -251,7 +251,12 @@ def location_must_be_payload(ctx: ValidationContext) -> list[ValidationIssue]:
 
 @rule("core")
 def location_path_exists_in_schema(ctx: ValidationContext) -> list[ValidationIssue]:
-    """Validate location path exists in message payload schemas."""
+    """Validate location path exists in ALL message payload schemas.
+
+    Parameters with location fields must reference paths that exist in every
+    message in the channel, not just some of them. This prevents runtime errors
+    when processing messages that lack the required field.
+    """
     issues = []
 
     for channel_key, channel_def in ctx.get_channels().items():
@@ -273,22 +278,23 @@ def location_path_exists_in_schema(ctx: ValidationContext) -> list[ValidationIss
             path = location.replace("$message.payload#/", "")
             parts = [p for p in path.split("/") if p]
 
-            # Check if path exists in ANY message schema
-            path_found = False
-            for msg_def in messages.values():
+            # Check if path exists in ALL message schemas
+            missing_in_messages = []
+            for msg_name, msg_def in messages.items():
                 if not isinstance(msg_def, dict):
                     continue
-                if _path_exists_in_schema(msg_def.get("payload"), parts):
-                    path_found = True
-                    break
+                if not _path_exists_in_schema(msg_def.get("payload"), parts):
+                    missing_in_messages.append(msg_name)
 
-            if not path_found and messages:
+            if missing_in_messages:
                 issues.append(
                     ValidationIssue(
                         severity=Severity.ERROR,
-                        message=f"Parameter '{param_name}' location path '{path}' not found in message schemas",
+                        message=f"Parameter '{param_name}' location path '{path}' not found in all message schemas. "
+                        f"Missing in: {', '.join(missing_in_messages)}",
                         path=f"$.channels.{channel_key}.parameters.{param_name}.location",
                         rule="location-path-exists-in-schema",
+                        suggestion=f"Add '{path}' field to all message payloads in this channel",
                     )
                 )
 
