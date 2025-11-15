@@ -1,0 +1,7 @@
+# Generated code directories
+publisher/
+subscriber1/
+subscriber2/
+
+# Virtual environment
+.venv/

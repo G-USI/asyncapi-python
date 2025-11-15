@@ -1,0 +1,81 @@
+asyncapi: "3.0.0"
+
+info:
+  title: Weather Alert System - Common Definitions
+  version: 1.0.0
+  description: |
+    Shared channel and message definitions for a weather alert system using AMQP topic exchange.
+    Demonstrates parameterized channels where routing keys are dynamically built from message payload.
+
+channels:
+  weatherAlerts:
+    address: weather.{location}.{severity}
+    title: Weather Alert Channel
+    description: |
+      Topic-based weather alerts with dynamic routing keys.
+      Parameters are extracted from message payload at runtime.
+    parameters:
+      location:
+        description: Geographic location code (e.g., NYC, LA, CHI)
+        location: $message.payload#/location
+      severity:
+        description: Alert severity level
+        location: $message.payload#/severity
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: weather_alerts
+          type: topic
+          durable: true
+          autoDelete: false
+          vhost: /
+    messages:
+      WeatherAlert:
+        name: WeatherAlert
+        title: Weather Alert Message
+        contentType: application/json
+        payload:
+          type: object
+          required:
+            - location
+            - severity
+            - temperature
+            - description
+            - timestamp
+          properties:
+            location:
+              type: string
+              description: Geographic location code
+              pattern: '^[A-Z]{2,5}$'
+              examples:
+                - NYC
+                - LA
+                - CHI
+            severity:
+              type: string
+              description: Alert severity level
+              enum:
+                - low
+                - medium
+                - high
+                - critical
+              examples:
+                - high
+            temperature:
+              type: number
+              description: Current temperature in Fahrenheit
+              minimum: -50
+              maximum: 150
+              examples:
+                - 95
+            description:
+              type: string
+              description: Human-readable alert description
+              maxLength: 500
+              examples:
+                - Heat wave warning in effect
+            timestamp:
+              type: string
+              format: date-time
+              description: Alert timestamp in ISO 8601 format
