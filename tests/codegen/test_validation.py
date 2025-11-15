@@ -230,6 +230,177 @@ operations:
     assert "myOp" in operations
 
 
+def test_location_path_must_exist_in_all_messages(tmp_path: Path):
+    """Test that parameter location path must exist in ALL messages, not just some."""
+    spec_file = tmp_path / "location_missing_in_some.yaml"
+    spec_file.write_text(
+        """
+asyncapi: 3.0.0
+channels:
+  alerts:
+    address: alerts.{location}
+    parameters:
+      location:
+        location: $message.payload#/location
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: alerts_exchange
+          type: topic
+    messages:
+      alert1:
+        payload:
+          type: object
+          properties:
+            location:
+              type: string
+            message:
+              type: string
+      alert2:
+        payload:
+          type: object
+          properties:
+            message:
+              type: string
+operations:
+  sendAlert:
+    action: send
+    channel:
+      $ref: '#/channels/alerts'
+"""
+    )
+
+    with pytest.raises(ValidationError) as exc_info:
+        extract_all_operations(spec_file)
+
+    # Should fail because 'location' field is missing in alert2
+    assert any(
+        "not found in all message schemas" in error.message
+        and "alert2" in error.message
+        for error in exc_info.value.errors
+    )
+
+
+def test_location_path_exists_in_all_messages_passes(tmp_path: Path):
+    """Test that validation passes when location exists in all messages."""
+    spec_file = tmp_path / "location_in_all.yaml"
+    spec_file.write_text(
+        """
+asyncapi: 3.0.0
+channels:
+  alerts:
+    address: alerts.{location}
+    parameters:
+      location:
+        location: $message.payload#/location
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: alerts_exchange
+          type: topic
+    messages:
+      alert1:
+        payload:
+          type: object
+          properties:
+            location:
+              type: string
+            message:
+              type: string
+      alert2:
+        payload:
+          type: object
+          properties:
+            location:
+              type: string
+            severity:
+              type: string
+operations:
+  sendAlert:
+    action: send
+    channel:
+      $ref: '#/channels/alerts'
+"""
+    )
+
+    # Should succeed - location exists in both messages
+    operations = extract_all_operations(spec_file, fail_on_error=True)
+    assert "sendAlert" in operations
+
+
+def test_location_path_with_single_message(tmp_path: Path):
+    """Test that validation works correctly with single message."""
+    spec_file = tmp_path / "location_single_message.yaml"
+    spec_file.write_text(
+        """
+asyncapi: 3.0.0
+channels:
+  users:
+    address: users.{userId}
+    parameters:
+      userId:
+        location: $message.payload#/userId
+    bindings:
+      amqp:
+        is: queue
+    messages:
+      userEvent:
+        payload:
+          type: object
+          properties:
+            userId:
+              type: string
+            name:
+              type: string
+operations:
+  publishUser:
+    action: send
+    channel:
+      $ref: '#/channels/users'
+"""
+    )
+
+    # Should succeed - location exists in the single message
+    operations = extract_all_operations(spec_file, fail_on_error=True)
+    assert "publishUser" in operations
+
+
+def test_location_path_with_no_messages(tmp_path: Path):
+    """Test that validation skips channels with no messages."""
+    spec_file = tmp_path / "location_no_messages.yaml"
+    spec_file.write_text(
+        """
+asyncapi: 3.0.0
+channels:
+  emptyChannel:
+    address: empty.{param}
+    parameters:
+      param:
+        location: $message.payload#/param
+    bindings:
+      amqp:
+        is: queue
+operations:
+  emptyOp:
+    action: send
+    channel:
+      $ref: '#/channels/emptyChannel'
+    messages:
+      - payload:
+          type: object
+          properties:
+            param:
+              type: string
+"""
+    )
+
+    # Should succeed - validation skips channels with no messages
+    operations = extract_all_operations(spec_file, fail_on_error=True)
+    assert "emptyOp" in operations
+
+
 def test_undefined_placeholders_in_address(tmp_path: Path):
     """Test that undefined placeholders in address raise error."""
     spec_file = tmp_path / "undefined_params.yaml"
