@@ -301,7 +301,9 @@ def resolve_routing_key_binding(
         case (None, address, _) if address:
             # If address is used for exchange, check if it has parameters
             # If it does, use wildcards; if not, use as-is
-            resolved_exchange = _substitute_routing_key_with_wildcards(address, param_values)
+            resolved_exchange = _substitute_routing_key_with_wildcards(
+                address, param_values
+            )
         case (None, None, op_name) if op_name:
             resolved_exchange = op_name
         case _:
@@ -316,10 +318,14 @@ def resolve_routing_key_binding(
     match (getattr(binding, "routingKey", None), channel.address, operation_name):
         case (routing_key, _, _) if routing_key:
             # Use wildcard substitution for routing keys
-            resolved_routing_key = _substitute_routing_key_with_wildcards(routing_key, param_values)
+            resolved_routing_key = _substitute_routing_key_with_wildcards(
+                routing_key, param_values
+            )
         case (None, address, _) if address:
             # Use wildcard substitution for routing keys from address
-            resolved_routing_key = _substitute_routing_key_with_wildcards(address, param_values)
+            resolved_routing_key = _substitute_routing_key_with_wildcards(
+                address, param_values
+            )
         case (None, None, op_name) if op_name:
             resolved_routing_key = op_name
         case _:
