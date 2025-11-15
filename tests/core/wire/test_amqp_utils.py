@@ -47,9 +47,7 @@ class TestValidateParametersStrict:
         )
 
         # Should not raise
-        validate_parameters_strict(
-            channel, {"location": "NYC", "severity": "high"}
-        )
+        validate_parameters_strict(channel, {"location": "NYC", "severity": "high"})
 
     def test_rejects_missing_parameters(self):
         """Should raise ValueError when required parameters are missing."""
@@ -85,9 +83,7 @@ class TestValidateParametersStrict:
         channel = create_test_channel("weather.{location}", ["location"])
 
         with pytest.raises(ValueError) as exc_info:
-            validate_parameters_strict(
-                channel, {"location": "NYC", "severity": "high"}
-            )
+            validate_parameters_strict(channel, {"location": "NYC", "severity": "high"})
 
         error_msg = str(exc_info.value)
         assert "Unexpected parameters" in error_msg
@@ -149,13 +145,14 @@ class TestValidateParametersStrict:
         with pytest.raises(ValueError) as exc_info:
             # Missing: severity
             # Extra: priority
-            validate_parameters_strict(
-                channel, {"location": "NYC", "priority": "high"}
-            )
+            validate_parameters_strict(channel, {"location": "NYC", "priority": "high"})
 
         error_msg = str(exc_info.value)
         # Should fail on missing first (that's the implementation order)
-        assert "Missing required parameters" in error_msg or "Unexpected parameters" in error_msg
+        assert (
+            "Missing required parameters" in error_msg
+            or "Unexpected parameters" in error_msg
+        )
 
 
 class TestSubstituteParameters:
@@ -190,9 +187,7 @@ class TestSubstituteParameters:
     def test_fails_on_missing_parameter(self):
         """Should raise ValueError when template has placeholder without value."""
         with pytest.raises(ValueError) as exc_info:
-            substitute_parameters(
-                "weather.{location}.{severity}", {"location": "NYC"}
-            )
+            substitute_parameters("weather.{location}.{severity}", {"location": "NYC"})
 
         error_msg = str(exc_info.value)
         assert "undefined parameters" in error_msg

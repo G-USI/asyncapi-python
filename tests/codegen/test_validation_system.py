@@ -141,9 +141,7 @@ class TestValidationContext:
     def test_create_context(self):
         """Test creating validation context."""
         spec = {"asyncapi": "3.0.0", "channels": {}}
-        ctx = ValidationContext(
-            spec=spec, spec_path=Path("test.yaml"), operations=None
-        )
+        ctx = ValidationContext(spec=spec, spec_path=Path("test.yaml"), operations=None)
 
         assert ctx.spec == spec
         assert ctx.spec_path == Path("test.yaml")
@@ -418,6 +416,7 @@ class TestValidateSpecFunction:
 
     def test_validate_spec_with_categories(self):
         """Test validate_spec with specific categories."""
+
         # Register a test rule in a custom category
         @rule("custom-test")
         def custom_rule(ctx):

@@ -133,6 +133,7 @@ async def test_subscriber_accepts_parameters():
 
     # Create a minimal module for codec factory with messages.json structure
     import types
+
     test_module = types.SimpleNamespace()
     test_module.messages = types.SimpleNamespace()
     test_module.messages.json = types.SimpleNamespace()
@@ -201,6 +202,7 @@ async def test_subscriber_wildcard_parameters_flow_to_wire():
     wire = InMemoryWire()
 
     import types
+
     test_module = types.SimpleNamespace()
     test_module.messages = types.SimpleNamespace()
     test_module.messages.json = types.SimpleNamespace()
@@ -286,6 +288,7 @@ async def test_queue_binding_with_wildcards_raises_error():
     from asyncapi_python.contrib.wire.amqp import AmqpWire
 
     import types
+
     test_module = types.SimpleNamespace()
 
     # This would fail at runtime when creating consumer
@@ -348,6 +351,7 @@ async def test_default_empty_parameters():
     wire = InMemoryWire()
 
     import types
+
     test_module = types.SimpleNamespace()
     test_module.messages = types.SimpleNamespace()
     test_module.messages.json = types.SimpleNamespace()
@@ -414,6 +418,7 @@ async def test_subscriber_rejects_missing_parameters():
     wire = AmqpWire("amqp://guest:guest@localhost")
 
     import types
+
     test_module = types.SimpleNamespace()
     test_module.messages = types.SimpleNamespace()
     test_module.messages.json = types.SimpleNamespace()
@@ -527,6 +532,7 @@ async def test_subscriber_rejects_extra_parameters():
     wire = AmqpWire("amqp://guest:guest@localhost")
 
     import types
+
     test_module = types.SimpleNamespace()
     test_module.messages = types.SimpleNamespace()
     test_module.messages.json = types.SimpleNamespace()
