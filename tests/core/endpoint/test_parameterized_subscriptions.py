@@ -17,7 +17,7 @@ from asyncapi_python.kernel.document.bindings import (
 from asyncapi_python.kernel.document.channel import AddressParameter, ChannelBindings
 from asyncapi_python.kernel.document.message import Message
 from asyncapi_python.kernel.endpoint import Publisher, Subscriber
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
 class AlertMessage(BaseModel):
@@ -632,3 +632,142 @@ async def test_subscriber_rejects_extra_parameters():
     # Should raise ValueError when starting
     with pytest.raises(ValueError, match="Unexpected parameters"):
         await subscriber.start()
+
+
+async def test_publisher_extracts_parameters_from_root_model():
+    """Publisher should extract parameters from RootModel-wrapped payloads."""
+    from asyncapi_python.contrib.wire.in_memory import get_bus, reset_bus
+
+    # Reset the bus for clean test
+    reset_bus()
+    wire = InMemoryWire()
+
+    import types
+
+    # Create RootModel wrapper for alert message
+    class AlertRootModel(RootModel[AlertMessage]):
+        """RootModel wrapper for testing parameter extraction"""
+
+        root: AlertMessage
+
+    test_module = types.SimpleNamespace()
+    test_module.messages = types.SimpleNamespace()
+    test_module.messages.json = types.SimpleNamespace()
+    test_module.messages.json.TestMessage = AlertRootModel
+    codec_factory = JsonCodecFactory(test_module)
+
+    # Create parameterized channel directly
+    channel = Channel(
+        key="test_channel",
+        address="alerts.{location}.{severity}",
+        title="Test Channel",
+        summary=None,
+        description=None,
+        servers=[],
+        messages={
+            "TestMessage": Message(
+                name="TestMessage",
+                title="Test Message",
+                summary=None,
+                description=None,
+                content_type="application/json",
+                headers=None,
+                tags=[],
+                externalDocs=None,
+                bindings=None,
+                deprecated=None,
+                correlation_id=None,
+                traits=[],
+                payload={"type": "object"},
+                key="",
+            )
+        },
+        parameters={
+            "location": AddressParameter(
+                key="location",
+                description="Location code",
+                location="$message.payload#/location",
+            ),
+            "severity": AddressParameter(
+                key="severity",
+                description="Severity level",
+                location="$message.payload#/severity",
+            ),
+        },
+        tags=[],
+        external_docs=None,
+        bindings=ChannelBindings(
+            amqp=AmqpChannelBinding(
+                type="routingKey",
+                exchange=AmqpExchange(
+                    name="test_exchange",
+                    type=AmqpExchangeType.TOPIC,
+                ),
+            )
+        ),
+    )
+
+    # Create operation with parameterized channel
+    operation = Operation(
+        key="test_op",
+        action="send",
+        title=None,
+        summary=None,
+        description=None,
+        channel=channel,
+        messages=[
+            Message(
+                name="TestMessage",
+                title="Test Message",
+                summary=None,
+                description=None,
+                content_type="application/json",
+                headers=None,
+                tags=[],
+                externalDocs=None,
+                bindings=None,
+                deprecated=None,
+                correlation_id=None,
+                traits=[],
+                payload={"type": "object"},
+                key="",
+            )
+        ],
+        reply=None,
+        traits=[],
+        security=[],
+        tags=[],
+        external_docs=None,
+        bindings=None,
+    )
+
+    publisher = Publisher(
+        operation=operation,
+        wire_factory=wire,
+        codec_factory=codec_factory,
+    )
+
+    # Capture the channel name used for publishing by intercepting bus.publish
+    captured_channel: str | None = None
+    bus = get_bus()
+    original_publish = bus.publish
+
+    async def mock_publish(channel_name: str, message: Any) -> None:
+        nonlocal captured_channel
+        captured_channel = channel_name
+        await original_publish(channel_name, message)
+
+    bus.publish = mock_publish  # type: ignore
+
+    await publisher.start()
+
+    # Send message wrapped in RootModel
+    wrapped_message = AlertRootModel.model_validate(
+        {"location": "NYC", "severity": "high", "data": "test"}
+    )
+    await publisher(wrapped_message)
+
+    # Should extract parameters from RootModel and build correct address
+    assert captured_channel == "alerts.NYC.high"
+
+    await publisher.stop()
