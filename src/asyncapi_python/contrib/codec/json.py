@@ -1,4 +1,5 @@
 import json
+from enum import Enum
 from types import ModuleType
 from typing import ClassVar, Type
 
@@ -62,6 +63,9 @@ class JsonCodec(Codec[BaseModel, bytes]):
             # Convert to string
             if isinstance(value, (str, int, float, bool)):
                 return str(value)
+            elif isinstance(value, Enum):
+                # Handle Enum types - extract the value attribute
+                return str(value.value)
             else:
                 # Complex types: JSON serialize
                 return json.dumps(value)

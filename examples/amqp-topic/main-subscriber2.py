@@ -39,14 +39,13 @@ signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
 
-@app.consumer.receive_weather_alert
+@app.consumer.receive_weather_alert(parameters={"severity": "critical"})
 async def handle_weather_alert(alert: WeatherAlert) -> None:
     """
-    Handle incoming weather alerts.
+    Handle incoming critical weather alerts.
 
-    This handler is called for every weather alert received from the topic exchange.
-    This is subscriber 2, demonstrating that multiple consumers can independently
-    receive the same messages.
+    This handler subscribes to weather.*.critical pattern to receive
+    all critical alerts regardless of location.
     """
     # Determine severity emoji
     severity_emoji = {

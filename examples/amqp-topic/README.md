@@ -92,10 +92,18 @@ Subscribers can use AMQP wildcards for pattern matching:
 - `*` - Matches exactly one word
 - `#` - Matches zero or more words
 
-Example:
-- `weather.NYC.*` - All NYC alerts (any severity)
-- `weather.*.critical` - Critical alerts (any location)
-- `weather.#` - ALL weather alerts
+**This Example**:
+- **Subscriber 1**: `weather.NYC.*` - All NYC alerts (any severity)
+  - Uses `parameters={"location": "NYC"}`
+  - Receives: NYC-HIGH
+- **Subscriber 2**: `weather.*.critical` - Critical alerts (any location)
+  - Uses `parameters={"severity": "critical"}`
+  - Receives: CHI-CRITICAL
+
+**Other Possible Patterns**:
+- `weather.LA.*` - All LA alerts
+- `weather.*.high` - High severity alerts from any location
+- `weather.*.*` - ALL weather alerts (empty parameters)
 
 ### Parameter Validation
 

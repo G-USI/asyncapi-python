@@ -39,12 +39,13 @@ signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
 
-@app.consumer.receive_weather_alert
+@app.consumer.receive_weather_alert(parameters={"location": "NYC"})
 async def handle_weather_alert(alert: WeatherAlert) -> None:
     """
-    Handle incoming weather alerts.
+    Handle incoming weather alerts for NYC.
 
-    This handler is called for every weather alert received from the topic exchange.
+    This handler subscribes to weather.NYC.* pattern to receive
+    all NYC alerts regardless of severity.
     """
     # Determine severity emoji
     severity_emoji = {

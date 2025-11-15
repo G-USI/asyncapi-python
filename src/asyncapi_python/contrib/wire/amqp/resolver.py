@@ -1,5 +1,6 @@
 """Binding resolution with comprehensive pattern matching"""
 
+import re
 from typing import Any
 
 from asyncapi_python.kernel.document.bindings import AmqpChannelBinding
@@ -39,6 +40,42 @@ def _validate_no_wildcards_in_queue(param_values: dict[str, str]) -> None:
         )
 
 
+def _substitute_routing_key_with_wildcards(
+    template: str, param_values: dict[str, str]
+) -> str:
+    """
+    Substitute parameters in routing key template, using wildcards for missing parameters.
+
+    For topic exchange bindings, missing parameters are replaced with '*' (single-word wildcard).
+    If no parameters are provided and template has placeholders, all are replaced with '*'.
+    Parameter values can also explicitly contain wildcards ('*' or '#').
+
+    Args:
+        template: Template string with {param} placeholders (e.g., "weather.{location}.{severity}")
+        param_values: Dictionary of parameter values (can be empty, partial, or contain wildcards)
+
+    Returns:
+        Resolved routing key with wildcards for missing parameters
+
+    Examples:
+        - template="weather.{location}.{severity}", params={} → "weather.*.*"
+        - template="weather.{location}.{severity}", params={"location": "NYC"} → "weather.NYC.*"
+        - template="weather.{location}.{severity}", params={"severity": "#"} → "weather.*.#"
+    """
+    # Find all {param} placeholders
+    placeholders = re.findall(r"\{(\w+)\}", template)
+
+    # Build substitution dict - use provided value or '*' wildcard for missing params
+    substitutions = {p: param_values.get(p, "*") for p in placeholders}
+
+    # Perform substitution
+    result = template
+    for key, value in substitutions.items():
+        result = result.replace(f"{{{key}}}", value)
+
+    return result
+
+
 def resolve_amqp_config(
     params: EndpointParams, operation_name: str, app_id: str
 ) -> AmqpConfig:
@@ -56,10 +93,7 @@ def resolve_amqp_config(
     param_values = params["parameters"] or {}
     is_reply = params["is_reply"]
 
-    # Strict parameter validation first
-    validate_parameters_strict(channel, param_values)
-
-    # Extract AMQP binding if present
+    # Extract AMQP binding if present (validation will be done later based on binding type)
     amqp_binding = None
     if channel.bindings and hasattr(channel.bindings, "amqp") and channel.bindings.amqp:
         amqp_binding = channel.bindings.amqp
@@ -152,7 +186,8 @@ def resolve_amqp_config(
 
         # Channel address pattern (with parameter substitution)
         case (False, None, address, _) if address:
-            # Validate no wildcards for implicit queue binding
+            # Strict validation for implicit queue binding
+            validate_parameters_strict(channel, param_values)
             _validate_no_wildcards_in_queue(param_values)
             resolved_address = substitute_parameters(address, param_values)
             return AmqpConfig(
@@ -165,7 +200,8 @@ def resolve_amqp_config(
 
         # Operation name pattern (fallback)
         case (False, None, None, op_name) if op_name:
-            # Validate no wildcards for implicit queue binding
+            # Strict validation for implicit queue binding
+            validate_parameters_strict(channel, param_values)
             _validate_no_wildcards_in_queue(param_values)
             return AmqpConfig(
                 queue_name=op_name,
@@ -189,7 +225,15 @@ def resolve_queue_binding(
     channel: Channel,
     operation_name: str,
 ) -> AmqpConfig:
-    """Resolve AMQP queue binding configuration"""
+    """Resolve AMQP queue binding configuration
+
+    Queue bindings require:
+    - All channel parameters must be provided (strict validation)
+    - No wildcards allowed in parameter values
+    """
+
+    # Strict validation: all parameters required, exact match
+    validate_parameters_strict(channel, param_values)
 
     # Validate no wildcards in queue binding parameters
     _validate_no_wildcards_in_queue(param_values)
@@ -233,9 +277,18 @@ def resolve_routing_key_binding(
     channel: Channel,
     operation_name: str,
 ) -> AmqpConfig:
-    """Resolve AMQP routing key binding configuration for pub/sub patterns"""
+    """Resolve AMQP routing key binding configuration for pub/sub patterns
+
+    For routing key bindings:
+    - Parameters are optional (can be empty dict)
+    - Missing parameters are replaced with '*' wildcard
+    - Parameter values can explicitly contain wildcards ('*' or '#')
+    - No strict validation - this is for topic exchange pattern matching
+    """
 
     # Determine exchange name and type
+    # For exchange name, we need concrete values (no wildcards)
+    # If param_values has placeholders, use them; otherwise use literal exchange name
     exchange_config = getattr(binding, "exchange", None)
     match (
         exchange_config and getattr(exchange_config, "name", None),
@@ -243,9 +296,12 @@ def resolve_routing_key_binding(
         operation_name,
     ):
         case (exchange_name, _, _) if exchange_name:
-            resolved_exchange = substitute_parameters(exchange_name, param_values)
+            # Exchange name should be literal (no parameter substitution for exchange names)
+            resolved_exchange = exchange_name
         case (None, address, _) if address:
-            resolved_exchange = substitute_parameters(address, param_values)
+            # If address is used for exchange, check if it has parameters
+            # If it does, use wildcards; if not, use as-is
+            resolved_exchange = _substitute_routing_key_with_wildcards(address, param_values)
         case (None, None, op_name) if op_name:
             resolved_exchange = op_name
         case _:
@@ -256,12 +312,14 @@ def resolve_routing_key_binding(
     if exchange_config and hasattr(exchange_config, "type"):
         exchange_type = exchange_config.type
 
-    # Determine routing key
+    # Determine routing key - this is where wildcards are allowed
     match (getattr(binding, "routingKey", None), channel.address, operation_name):
         case (routing_key, _, _) if routing_key:
-            resolved_routing_key = substitute_parameters(routing_key, param_values)
+            # Use wildcard substitution for routing keys
+            resolved_routing_key = _substitute_routing_key_with_wildcards(routing_key, param_values)
         case (None, address, _) if address:
-            resolved_routing_key = substitute_parameters(address, param_values)
+            # Use wildcard substitution for routing keys from address
+            resolved_routing_key = _substitute_routing_key_with_wildcards(address, param_values)
         case (None, None, op_name) if op_name:
             resolved_routing_key = op_name
         case _:
