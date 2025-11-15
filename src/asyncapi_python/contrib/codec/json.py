@@ -1,4 +1,5 @@
 import json
+from enum import Enum
 from types import ModuleType
 from typing import ClassVar, Type
 
@@ -26,6 +27,51 @@ class JsonCodec(Codec[BaseModel, bytes]):
             return self._model_class.model_validate(json_data)
         except (json.JSONDecodeError, ValidationError, UnicodeDecodeError) as e:
             raise ValueError(f"Failed to decode JSON payload: {e}")
+
+    def extract_field(self, payload: BaseModel, location: str) -> str:
+        """Extract field from Pydantic model using location path.
+
+        Examples:
+            "$message.payload#/userId" → payload.userId → "123"
+            "$message.payload#/user/id" → payload.user.id → "456"
+            "$message.payload#/items" → payload.items → "[1, 2, 3]"
+
+        Args:
+            payload: Pydantic BaseModel instance
+            location: Location expression like "$message.payload#/userId"
+
+        Returns:
+            str: Extracted value converted to string
+
+        Raises:
+            ValueError: If location format is invalid or path doesn't exist in payload
+        """
+        # Parse location: "$message.payload#/userId" → "/userId"
+        if not location.startswith("$message.payload#/"):
+            raise ValueError(f"Invalid location format: {location}")
+
+        path = location.replace("$message.payload#/", "")
+
+        # Navigate path: "user/id" → ["user", "id"]
+        parts = [p for p in path.split("/") if p]
+
+        try:
+            value = payload
+            for part in parts:
+                value = getattr(value, part)
+
+            # Convert to string
+            if isinstance(value, (str, int, float, bool)):
+                return str(value)
+            elif isinstance(value, Enum):
+                # Handle Enum types - extract the value attribute
+                return str(value.value)
+            else:
+                # Complex types: JSON serialize
+                return json.dumps(value)
+
+        except AttributeError as e:
+            raise ValueError(f"Path '{path}' not found in payload: {e}")
 
 
 class JsonCodecFactory(CodecFactory[BaseModel, bytes]):

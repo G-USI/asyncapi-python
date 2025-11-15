@@ -1,60 +1,19 @@
-"""Parameter validation and substitution utilities"""
-
-# TODO: This thing should be general wire utils, not tied to specific wire
+"""AMQP-specific parameter validation utilities"""
 
 import re
 
 from asyncapi_python.kernel.document.channel import Channel
+from asyncapi_python.kernel.wire.utils import (
+    substitute_parameters,
+    validate_parameters_strict,
+)
 
-
-def validate_parameters_strict(channel: Channel, provided: dict[str, str]) -> None:
-    """
-    Strict parameter validation - all defined parameters must be provided.
-    Raises ValueError with detailed message if any parameters are missing.
-    """
-    if not channel.parameters:
-        return  # No parameters defined, nothing to validate
-
-    required = set(channel.parameters.keys())
-    provided_keys = set(provided.keys())
-
-    missing = required - provided_keys
-    if missing:
-        raise ValueError(
-            f"Missing required parameters for channel '{channel.address}': {missing}. "
-            f"Required: {sorted(required)}, Provided: {sorted(provided_keys)}"
-        )
-
-    extra = provided_keys - required
-    if extra:
-        raise ValueError(
-            f"Unexpected parameters for channel '{channel.address}': {extra}. "
-            f"Expected: {sorted(required)}, Provided: {sorted(provided_keys)}"
-        )
-
-
-def substitute_parameters(template: str, parameters: dict[str, str]) -> str:
-    """
-    Substitute {param} placeholders with actual values.
-    All placeholders must have corresponding parameter values.
-    """
-    # Find all {param} placeholders
-    placeholders = re.findall(r"\{(\w+)\}", template)
-
-    # Check for undefined placeholders
-    undefined = [p for p in placeholders if p not in parameters]
-    if undefined:
-        raise ValueError(
-            f"Template '{template}' references undefined parameters: {undefined}. "
-            f"Available parameters: {sorted(parameters.keys())}"
-        )
-
-    # Perform substitution
-    result = template
-    for key, value in parameters.items():
-        result = result.replace(f"{{{key}}}", value)
-
-    return result
+# Re-export for backward compatibility
+__all__ = [
+    "validate_parameters_strict",
+    "substitute_parameters",
+    "validate_channel_template",
+]
 
 
 def validate_channel_template(

@@ -122,6 +122,9 @@ class RpcClient(AbstractEndpoint, Send[T_Input, T_Output], Generic[T_Input, T_Ou
         )
 
         try:
+            # Extract parameters and build address (if parameters exist)
+            address_override = self._build_address_with_parameters(payload)
+
             # Encode request payload
             encoded_payload: bytes = self._encode_message(payload)
 
@@ -134,7 +137,9 @@ class RpcClient(AbstractEndpoint, Send[T_Input, T_Output], Generic[T_Input, T_Ou
             )
 
             # Send request
-            await self._producer.send_batch([wire_message])
+            await self._producer.send_batch(
+                [wire_message], address_override=address_override
+            )
 
             # Wait for response with timeout (handled by global background task)
             try:

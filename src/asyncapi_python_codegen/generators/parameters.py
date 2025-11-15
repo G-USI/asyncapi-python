@@ -11,40 +11,65 @@ from datamodel_code_generator.__main__ import main as datamodel_codegen
 class ParameterGenerator:
     """Generates TypedDict classes for channel parameters."""
 
-    def generate_parameter_models(self, spec: dict[str, Any]) -> str:
-        """Generate TypedDict models for all channel parameters."""
-        channels = spec.get("channels", {})
+    def generate_parameter_models(self, operations: list[Any]) -> str:
+        """Generate TypedDict models from operations' resolved channels."""
+        from asyncapi_python.kernel.document import Operation
+
         parameter_schemas: dict[str, Any] = {}
 
-        # Collect all parameter definitions from channels
-        for channel_name, channel_def in channels.items():
-            if "{" in channel_name and "parameters" in channel_def:
-                # Generate TypedDict name from channel pattern
-                dict_name = self._channel_to_dict_name(channel_name)
+        # Collect unique parameterized channels from all operations
+        seen_addresses: set[str] = set()
 
-                # Build schema for this channel's parameters
-                properties: dict[str, Any] = {}
-                required: list[str] = []
+        for op in operations:
+            if not isinstance(op, Operation):
+                continue
 
-                for param_name, param_def in channel_def["parameters"].items():
-                    # Skip parameters that have a 'location' field
-                    if isinstance(param_def, dict) and "location" in param_def:
-                        continue
+            channel = op.channel
+            if not channel or not channel.address:
+                continue
 
+            # Check if channel has parameters in address
+            if "{" not in channel.address or "}" not in channel.address:
+                continue
+
+            # Skip if we've already processed this channel address
+            if channel.address in seen_addresses:
+                continue
+            seen_addresses.add(channel.address)
+
+            # Skip if channel has no parameters defined
+            if not channel.parameters:
+                continue
+
+            # Generate TypedDict name from channel address pattern
+            dict_name = self._channel_to_dict_name(channel.address)
+
+            # Build schema for this channel's parameters
+            properties: dict[str, Any] = {}
+            required: list[str] = []
+
+            for param_name, param_obj in channel.parameters.items():
+                # For parameters with 'location' field (used by publishers for extraction),
+                # generate as 'str' type for subscriber wildcard support
+                if hasattr(param_obj, "location") and param_obj.location:
+                    properties[param_name] = {"type": "string"}
+                else:
                     # Convert parameter definition to JSON Schema property
-                    properties[param_name] = self._param_to_schema(param_def)  # type: ignore[arg-type]
-                    # All channel parameters are required
-                    required.append(param_name)
+                    # For AddressParameter objects without location, use default schema
+                    properties[param_name] = {"type": "string"}
 
-                # Only create TypedDict if there are properties after filtering
-                if properties:
-                    parameter_schemas[dict_name] = {
-                        "type": "object",
-                        "properties": properties,
-                        "required": required,
-                        "additionalProperties": False,
-                        "title": dict_name,
-                    }
+                # All channel parameters are required
+                required.append(param_name)
+
+            # Only create TypedDict if there are properties
+            if properties:
+                parameter_schemas[dict_name] = {
+                    "type": "object",
+                    "properties": properties,
+                    "required": required,
+                    "additionalProperties": False,
+                    "title": dict_name,
+                }
 
         if not parameter_schemas:
             return self._generate_empty_parameters()

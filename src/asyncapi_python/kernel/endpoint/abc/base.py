@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Generic, TypedDict, Union, overload
+from typing import Any, Callable, TypedDict
 
 from typing_extensions import NotRequired, Required, Unpack
 
@@ -7,23 +7,9 @@ from asyncapi_python.kernel.codec import Codec, CodecFactory
 from asyncapi_python.kernel.document import Operation
 from asyncapi_python.kernel.wire import AbstractWireFactory
 
-from ..typing import BatchConfig, Handler, T_Input, T_Output
+from .params import EndpointParams
 
-
-class EndpointParams(TypedDict, total=False):
-    """Optional parameters for endpoint configuration"""
-
-    service_name: str  # Service name for generating app_id
-    default_rpc_timeout: (
-        float | None
-    )  # Default timeout in seconds for RPC client requests (default: 180.0), or None to disable
-    disable_handler_validation: bool  # Opt-out of handler enforcement for testing
-
-
-class HandlerParams(TypedDict):
-    """Parameters for message handlers"""
-
-    pass  # Currently empty, but extensible for future parameters like queue, routing_key, etc.
+__all__ = ["AbstractEndpoint"]
 
 
 class AbstractEndpoint(ABC):
@@ -108,56 +94,77 @@ class AbstractEndpoint(ABC):
             f"Failed to {operation} payload with any available codec. Last error: {last_error}"
         )
 
+    def _extract_parameters(self, payload: Any) -> dict[str, str]:
+        """Extract channel parameters from decoded payload.
+
+        Uses the channel parameter definitions to extract values from the payload
+        using the codec's extract_field method. Parameters without a location are skipped.
+
+        Args:
+            payload: The decoded message payload
+
+        Returns:
+            Dictionary mapping parameter names to extracted string values
+
+        Raises:
+            ValueError: If parameter extraction fails for any parameter
+        """
+        parameters: dict[str, str] = {}
+        for param_name, param_def in self._operation.channel.parameters.items():
+            if param_def.location:
+                try:
+                    # Use first codec (all should extract consistently)
+                    codec = self._codecs[0]
+                    value = codec.extract_field(payload, param_def.location)
+                    parameters[param_name] = value
+                except ValueError as e:
+                    raise ValueError(f"Failed to extract parameter '{param_name}': {e}")
+        return parameters
+
+    def _build_address(self, parameters: dict[str, str]) -> str:
+        """Build address from channel template and parameters.
+
+        Replaces {param_name} placeholders in the channel address with the
+        corresponding parameter values.
+
+        Args:
+            parameters: Dictionary of parameter names to values
+
+        Returns:
+            The fully resolved address string
+
+        Raises:
+            ValueError: If channel address is None
+        """
+        address = self._operation.channel.address
+        if address is None:
+            raise ValueError(
+                "Channel address is None, cannot build parameterized address"
+            )
+        for param_name, param_value in parameters.items():
+            address = address.replace(f"{{{param_name}}}", param_value)
+        return address
+
+    def _build_address_with_parameters(self, payload: Any) -> str | None:
+        """Extract parameters from payload and build address if needed.
+
+        Convenience method that extracts parameters and builds the address in one call.
+        Returns None if no parameters are defined or extracted.
+
+        Args:
+            payload: The decoded message payload
+
+        Returns:
+            The resolved address string, or None if no parameters to extract
+
+        Raises:
+            ValueError: If parameter extraction or address building fails
+        """
+        parameters = self._extract_parameters(payload)
+        return self._build_address(parameters) if parameters else None
+
     @abstractmethod
     async def start(self, **params: Unpack[StartParams]) -> None: ...
 
     @abstractmethod
     async def stop(self) -> None: ...
-
-
-class Send(ABC, Generic[T_Input, T_Output]):
-    """An interface that sending endpoint implements"""
-
-    class RouterInputs(TypedDict):
-        """Base inputs for send endpoints. Router subclasses can extend this with specific parameters."""
-
-        pass  # Empty for now, extensible for future fields
-
-    @abstractmethod
-    async def __call__(
-        self, payload: T_Input, /, **kwargs: Unpack[RouterInputs]
-    ) -> T_Output: ...
-
-
-class Receive(ABC, Generic[T_Input, T_Output]):
-
-    @overload
-    def __call__(
-        self, fn: Handler[T_Input, T_Output]
-    ) -> Handler[T_Input, T_Output]: ...
-
-    @overload
-    def __call__(
-        self,
-        fn: None = None,
-        *,
-        batch: BatchConfig,
-        **kwargs: Unpack[HandlerParams],
-    ) -> Callable[[Handler[T_Input, T_Output]], Handler[T_Input, T_Output]]: ...
-
-    @overload
-    def __call__(
-        self, fn: None = None, **kwargs: Unpack[HandlerParams]
-    ) -> Callable[[Handler[T_Input, T_Output]], Handler[T_Input, T_Output]]: ...
-
-    @abstractmethod
-    def __call__(
-        self,
-        fn: Handler[T_Input, T_Output] | None = None,
-        *,
-        batch: BatchConfig | None = None,
-        **kwargs: Unpack[HandlerParams],
-    ) -> Union[
-        Handler[T_Input, T_Output],
-        Callable[[Handler[T_Input, T_Output]], Handler[T_Input, T_Output]],
-    ]: ...

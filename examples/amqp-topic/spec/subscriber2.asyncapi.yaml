@@ -1,0 +1,24 @@
+asyncapi: "3.0.0"
+
+info:
+  title: Weather Alert Subscriber 2
+  version: 1.0.0
+  description: |
+    Second subscriber service that receives all weather alerts from the topic exchange.
+    Demonstrates multiple independent consumers on the same channel.
+
+operations:
+  receiveWeatherAlert:
+    action: receive
+    title: Receive Weather Alert
+    description: |
+      Receives weather alerts from the topic exchange.
+      This is a second independent subscriber that also receives all alerts,
+      demonstrating that multiple consumers can subscribe to the same topic.
+    channel:
+      $ref: "./common.asyncapi.yaml#/channels/weatherAlerts"
+    messages:
+      - $ref: "./common.asyncapi.yaml#/channels/weatherAlerts/messages/WeatherAlert"
+    bindings:
+      amqp:
+        ack: true

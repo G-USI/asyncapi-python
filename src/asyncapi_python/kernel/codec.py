@@ -12,6 +12,21 @@ class Codec(Protocol, Generic[T_DecodedPayload, T_EncodedPayload]):
 
     def decode(self, payload: T_EncodedPayload) -> T_DecodedPayload: ...
 
+    def extract_field(self, payload: T_DecodedPayload, location: str) -> str:
+        """Extract field value from decoded payload using location expression.
+
+        Args:
+            payload: Decoded payload (Pydantic model, Protobuf object, etc.)
+            location: Location expression like "$message.payload#/userId"
+
+        Returns:
+            str: Extracted value converted to string
+
+        Raises:
+            ValueError: If location path doesn't exist in payload
+        """
+        ...
+
 
 class CodecFactory(ABC, Generic[T_DecodedPayload, T_EncodedPayload]):
     """A codec factory

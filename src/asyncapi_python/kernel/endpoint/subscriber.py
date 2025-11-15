@@ -23,6 +23,9 @@ class Subscriber(AbstractEndpoint, Receive[T_Input, None], Generic[T_Input]):
         self._handler_location: str | None = None
         self._batch_config: BatchConfig | None = None
         self._consume_task: asyncio.Task[None] | None = None
+        self._subscription_parameters: dict[str, str] = (
+            {}
+        )  # Parameters for subscription (wildcards or concrete values)
 
     async def start(self, **params: Unpack[AbstractEndpoint.StartParams]) -> None:
         """Initialize the subscriber endpoint"""
@@ -46,7 +49,7 @@ class Subscriber(AbstractEndpoint, Receive[T_Input, None], Generic[T_Input]):
         # Create consumer from wire factory
         self._consumer = await self._wire.create_consumer(
             channel=self._operation.channel,
-            parameters={},
+            parameters=self._subscription_parameters,
             op_bindings=self._operation.bindings,
             is_reply=False,
         )
@@ -165,6 +168,10 @@ class Subscriber(AbstractEndpoint, Receive[T_Input, None], Generic[T_Input]):
                 f"New handler: {handler.__name__} at {handler.__code__.co_filename}:{handler.__code__.co_firstlineno}\n"
                 f"Each subscriber endpoint must have exactly one handler."
             )
+
+        # Extract subscription parameters if provided
+        if "parameters" in params:
+            self._subscription_parameters = params["parameters"]
 
         # Determine if this is a batch handler by checking if batch config exists
         if batch_config is not None:

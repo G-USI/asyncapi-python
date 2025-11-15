@@ -1,0 +1,25 @@
+asyncapi: "3.0.0"
+
+info:
+  title: Weather Alert Publisher
+  version: 1.0.0
+  description: |
+    Publisher service that sends weather alerts to a topic exchange.
+    Uses parameterized channels to dynamically route messages based on location and severity.
+
+operations:
+  publishWeatherAlert:
+    action: send
+    title: Publish Weather Alert
+    description: |
+      Sends a weather alert to the topic exchange.
+      The routing key is dynamically built from the message payload:
+      - location field becomes the {location} parameter
+      - severity field becomes the {severity} parameter
+
+      Example: payload with location="NYC" and severity="high"
+      creates routing key "weather.NYC.high"
+    channel:
+      $ref: "./common.asyncapi.yaml#/channels/weatherAlerts"
+    messages:
+      - $ref: "./common.asyncapi.yaml#/channels/weatherAlerts/messages/WeatherAlert"

@@ -60,6 +60,9 @@ class Publisher(AbstractEndpoint, Send[T_Input, None], Generic[T_Input]):
         if not self._producer:
             raise UninitializedError()
 
+        # Extract parameters and build address (if parameters exist)
+        address_override = self._build_address_with_parameters(payload)
+
         # Encode payload using main message codecs
         encoded_payload = self._encode_message(payload)
 
@@ -69,4 +72,6 @@ class Publisher(AbstractEndpoint, Send[T_Input, None], Generic[T_Input]):
         )
 
         # Send via producer
-        await self._producer.send_batch([wire_message])
+        await self._producer.send_batch(
+            [wire_message], address_override=address_override
+        )

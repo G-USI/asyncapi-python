@@ -55,11 +55,9 @@ class CodeGenerator:
         )
 
         # Generate parameter TypedDicts for parameterized channels
-        import yaml
-
-        with spec_path.open() as f:
-            spec = yaml.safe_load(f)
-        parameter_models_code = self.parameter_generator.generate_parameter_models(spec)
+        parameter_models_code = self.parameter_generator.generate_parameter_models(
+            list(operations.values())
+        )
 
         # Legacy compatibility - extract messages for router generation
         messages = self.message_generator.extract_messages(operations)
