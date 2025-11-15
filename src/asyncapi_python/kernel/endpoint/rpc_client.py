@@ -137,7 +137,9 @@ class RpcClient(AbstractEndpoint, Send[T_Input, T_Output], Generic[T_Input, T_Ou
             )
 
             # Send request
-            await self._producer.send_batch([wire_message], address_override=address_override)
+            await self._producer.send_batch(
+                [wire_message], address_override=address_override
+            )
 
             # Wait for response with timeout (handled by global background task)
             try:

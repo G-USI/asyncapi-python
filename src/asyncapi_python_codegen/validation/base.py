@@ -49,7 +49,7 @@ class RuleRegistry:
 
         Args:
             context: Validation context with document data
-            categories: List of categories to validate (None = all)
+            categories: List of categories to validate (None = default: ["core", "protocol.amqp"])
 
         Returns:
             List of all validation issues found
@@ -58,7 +58,8 @@ class RuleRegistry:
 
         # Determine which categories to run
         if categories is None:
-            categories = self.get_all_categories()
+            # Default: validate core rules + AMQP protocol rules
+            categories = ["core", "protocol.amqp"]
 
         # Run all rules in specified categories
         for category in categories:
@@ -84,12 +85,12 @@ class RuleRegistry:
 _global_registry = RuleRegistry()
 
 
-def rule(category: str) -> Callable[[RuleFunction], RuleFunction]:
+def rule(*tags: str) -> Callable[[RuleFunction], RuleFunction]:
     """
-    Decorator to register a validation rule.
+    Decorator to register a validation rule with one or more tags.
 
     Args:
-        category: Category name (e.g., "core", "protocol.amqp", "codegen")
+        *tags: One or more tag names (e.g., "core", "protocol.amqp", "requires-amqp")
 
     Returns:
         Decorator function
@@ -100,10 +101,18 @@ def rule(category: str) -> Callable[[RuleFunction], RuleFunction]:
             if "asyncapi" not in ctx.spec:
                 return [ValidationIssue(...)]
             return []
+
+        @rule("core", "protocol.amqp")
+        def amqp_rule(ctx: ValidationContext) -> list[ValidationIssue]:
+            # AMQP-specific validation
+            return []
     """
 
     def decorator(func: RuleFunction) -> RuleFunction:
-        return _global_registry.register(category, func)
+        # Register function under ALL provided tags
+        for tag in tags:
+            _global_registry.register(tag, func)
+        return func
 
     return decorator
 

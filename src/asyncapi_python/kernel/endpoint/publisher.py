@@ -72,4 +72,6 @@ class Publisher(AbstractEndpoint, Send[T_Input, None], Generic[T_Input]):
         )
 
         # Send via producer
-        await self._producer.send_batch([wire_message], address_override=address_override)
+        await self._producer.send_batch(
+            [wire_message], address_override=address_override
+        )

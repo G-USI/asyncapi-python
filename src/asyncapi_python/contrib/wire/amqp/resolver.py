@@ -5,9 +5,38 @@ from typing import Any
 from asyncapi_python.kernel.document.bindings import AmqpChannelBinding
 from asyncapi_python.kernel.document.channel import Channel
 from asyncapi_python.kernel.wire import EndpointParams
+from asyncapi_python.kernel.wire.utils import (
+    substitute_parameters,
+    validate_parameters_strict,
+)
 
 from .config import AmqpBindingType, AmqpConfig
-from .utils import substitute_parameters, validate_parameters_strict
+
+
+def _validate_no_wildcards_in_queue(param_values: dict[str, str]) -> None:
+    """Validate that parameter values don't contain AMQP wildcards when using queue bindings.
+
+    AMQP queue names are literal - they don't support pattern matching.
+    Only topic exchange routing keys support wildcards (* and #).
+
+    Args:
+        param_values: Dictionary of parameter values to check
+
+    Raises:
+        ValueError: If any parameter value contains wildcard characters
+    """
+    wildcards_found: list[str] = []
+    for param_name, param_value in param_values.items():
+        if "*" in param_value or "#" in param_value:
+            wildcards_found.append(f"{param_name}={param_value}")
+
+    if wildcards_found:
+        raise ValueError(
+            f"AMQP queue bindings do not support wildcard patterns ('*' or '#'). "
+            f"Found wildcards in parameters: {', '.join(wildcards_found)}. "
+            f"Use 'is: routingKey' with a topic exchange for pattern matching, "
+            f"or provide concrete parameter values for queue bindings."
+        )
 
 
 def resolve_amqp_config(
@@ -123,6 +152,8 @@ def resolve_amqp_config(
 
         # Channel address pattern (with parameter substitution)
         case (False, None, address, _) if address:
+            # Validate no wildcards for implicit queue binding
+            _validate_no_wildcards_in_queue(param_values)
             resolved_address = substitute_parameters(address, param_values)
             return AmqpConfig(
                 queue_name=resolved_address,
@@ -134,6 +165,8 @@ def resolve_amqp_config(
 
         # Operation name pattern (fallback)
         case (False, None, None, op_name) if op_name:
+            # Validate no wildcards for implicit queue binding
+            _validate_no_wildcards_in_queue(param_values)
             return AmqpConfig(
                 queue_name=op_name,
                 exchange_name="",  # Default exchange
@@ -157,6 +190,9 @@ def resolve_queue_binding(
     operation_name: str,
 ) -> AmqpConfig:
     """Resolve AMQP queue binding configuration"""
+
+    # Validate no wildcards in queue binding parameters
+    _validate_no_wildcards_in_queue(param_values)
 
     # Determine queue name with precedence
     match (getattr(binding, "queue", None), channel.address, operation_name):

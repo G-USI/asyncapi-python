@@ -78,6 +78,9 @@ channels:
           properties:
             userId:
               type: string
+    bindings:
+      amqp:
+        is: routingKey
 operations:
   sendUser:
     action: send
@@ -138,6 +141,9 @@ channels:
           properties:
             userId:
               type: string
+    bindings:
+      amqp:
+        is: queue
 operations:
   myOp:
     action: send
@@ -289,5 +295,158 @@ operations:
 
     assert any(
         "must be 'send' or 'receive'" in error.message
+        for error in exc_info.value.errors
+    )
+
+
+def test_amqp_parameterized_channel_without_binding_type_fails(tmp_path: Path):
+    """Test that parameterized channel without AMQP binding type fails validation."""
+    spec_file = tmp_path / "amqp_no_binding_type.yaml"
+    spec_file.write_text("""
+asyncapi: 3.0.0
+channels:
+  weatherAlerts:
+    address: weather.{location}.{severity}
+    parameters:
+      location:
+        location: $message.payload#/location
+      severity:
+        location: $message.payload#/severity
+    messages:
+      alert:
+        payload:
+          type: object
+          properties:
+            location:
+              type: string
+            severity:
+              type: string
+    bindings:
+      amqp:
+        # Missing 'is' field!
+        exchange:
+          name: weather_alerts
+          type: topic
+operations:
+  publishAlert:
+    action: send
+    channel:
+      $ref: '#/channels/weatherAlerts'
+""")
+
+    with pytest.raises(ValidationError) as exc_info:
+        extract_all_operations(spec_file)
+
+    assert any(
+        "lacks 'is' field" in error.message for error in exc_info.value.errors
+    )
+
+
+def test_amqp_parameterized_channel_with_routing_key_passes(tmp_path: Path):
+    """Test that parameterized channel with is: routingKey passes validation."""
+    spec_file = tmp_path / "amqp_routing_key.yaml"
+    spec_file.write_text("""
+asyncapi: 3.0.0
+channels:
+  weatherAlerts:
+    address: weather.{location}.{severity}
+    parameters:
+      location:
+        location: $message.payload#/location
+      severity:
+        location: $message.payload#/severity
+    messages:
+      alert:
+        payload:
+          type: object
+          properties:
+            location:
+              type: string
+            severity:
+              type: string
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: weather_alerts
+          type: topic
+operations:
+  publishAlert:
+    action: send
+    channel:
+      $ref: '#/channels/weatherAlerts'
+""")
+
+    # Should not raise
+    operations = extract_all_operations(spec_file)
+    assert "publishAlert" in operations
+
+
+def test_amqp_parameterized_channel_with_queue_passes(tmp_path: Path):
+    """Test that parameterized channel with is: queue passes validation."""
+    spec_file = tmp_path / "amqp_queue.yaml"
+    spec_file.write_text("""
+asyncapi: 3.0.0
+channels:
+  userNotifications:
+    address: user.{userId}.notifications
+    parameters:
+      userId:
+        location: $message.payload#/userId
+    messages:
+      notification:
+        payload:
+          type: object
+          properties:
+            userId:
+              type: string
+    bindings:
+      amqp:
+        is: queue
+operations:
+  sendNotification:
+    action: send
+    channel:
+      $ref: '#/channels/userNotifications'
+""")
+
+    # Should not raise
+    operations = extract_all_operations(spec_file)
+    assert "sendNotification" in operations
+
+
+def test_amqp_parameterized_channel_with_invalid_binding_type_fails(tmp_path: Path):
+    """Test that parameterized channel with invalid binding type fails validation."""
+    spec_file = tmp_path / "amqp_invalid_type.yaml"
+    spec_file.write_text("""
+asyncapi: 3.0.0
+channels:
+  myChannel:
+    address: my.{param}.channel
+    parameters:
+      param:
+        location: $message.payload#/param
+    messages:
+      msg:
+        payload:
+          type: object
+          properties:
+            param:
+              type: string
+    bindings:
+      amqp:
+        is: topic  # Invalid! Should be 'routingKey' or 'queue'
+operations:
+  myOp:
+    action: send
+    channel:
+      $ref: '#/channels/myChannel'
+""")
+
+    with pytest.raises(ValidationError) as exc_info:
+        extract_all_operations(spec_file)
+
+    assert any(
+        "invalid" in error.message and "binding type" in error.message
         for error in exc_info.value.errors
     )

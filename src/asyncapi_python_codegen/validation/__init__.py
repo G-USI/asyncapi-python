@@ -58,6 +58,9 @@ def validate_spec(
     # Import core rules to ensure they're registered
     from . import core  # noqa: F401  # pyright: ignore[reportUnusedImport]
 
+    # Import protocol-specific rules (AMQP, etc.)
+    from . import protocol  # noqa: F401  # pyright: ignore[reportUnusedImport]
+
     # Create validation context
     context = ValidationContext(spec=spec, spec_path=spec_path, operations=operations)
 

@@ -1,4 +1,5 @@
 from typing import TypedDict
+from typing_extensions import NotRequired
 
 __all__ = ["EndpointParams", "HandlerParams"]
 
@@ -16,4 +17,6 @@ class EndpointParams(TypedDict, total=False):
 class HandlerParams(TypedDict):
     """Parameters for message handlers"""
 
-    pass  # Currently empty, but extensible for future parameters like queue, routing_key, etc.
+    parameters: NotRequired[
+        dict[str, str]
+    ]  # Channel parameter values for subscription (e.g., {"location": "*", "severity": "high"})

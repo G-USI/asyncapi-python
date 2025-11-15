@@ -138,7 +138,9 @@ class AbstractEndpoint(ABC):
         """
         address = self._operation.channel.address
         if address is None:
-            raise ValueError("Channel address is None, cannot build parameterized address")
+            raise ValueError(
+                "Channel address is None, cannot build parameterized address"
+            )
         for param_name, param_value in parameters.items():
             address = address.replace(f"{{{param_name}}}", param_value)
         return address

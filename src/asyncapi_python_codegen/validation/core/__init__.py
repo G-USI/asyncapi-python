@@ -430,7 +430,9 @@ def channel_id_no_braces(ctx: ValidationContext) -> list[ValidationIssue]:
 
 
 @rule("core")
-def channel_has_address_if_not_reference(ctx: ValidationContext) -> list[ValidationIssue]:
+def channel_has_address_if_not_reference(
+    ctx: ValidationContext,
+) -> list[ValidationIssue]:
     """Validate that channels have an address field (can be null for reusable channels)."""
     issues = []
 
