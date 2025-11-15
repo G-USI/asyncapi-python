@@ -1,9 +1,9 @@
 import json
 from enum import Enum
 from types import ModuleType
-from typing import ClassVar, Type
+from typing import Any, ClassVar, Type
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, RootModel, ValidationError
 
 from asyncapi_python.kernel.codec import Codec, CodecFactory
 from asyncapi_python.kernel.document.message import Message
@@ -31,13 +31,16 @@ class JsonCodec(Codec[BaseModel, bytes]):
     def extract_field(self, payload: BaseModel, location: str) -> str:
         """Extract field from Pydantic model using location path.
 
+        Handles both regular BaseModel and RootModel wrappers. RootModel instances
+        are automatically unwrapped (recursively) to access the underlying data.
+
         Examples:
             "$message.payload#/userId" → payload.userId → "123"
             "$message.payload#/user/id" → payload.user.id → "456"
             "$message.payload#/items" → payload.items → "[1, 2, 3]"
 
         Args:
-            payload: Pydantic BaseModel instance
+            payload: Pydantic BaseModel instance (may be RootModel wrapper)
             location: Location expression like "$message.payload#/userId"
 
         Returns:
@@ -56,18 +59,29 @@ class JsonCodec(Codec[BaseModel, bytes]):
         parts = [p for p in path.split("/") if p]
 
         try:
-            value = payload
+            value: Any = payload
             for part in parts:
-                value = getattr(value, part)
+                # Recursively unwrap any RootModel wrappers before accessing attributes
+                while isinstance(value, RootModel):
+                    value = value.root  # type: ignore[assignment, misc]
+                value = getattr(value, part)  # type: ignore[arg-type]
+
+            # Unwrap final value if it's a RootModel
+            while isinstance(value, RootModel):
+                value = value.root  # type: ignore[assignment, misc]
 
             # Convert to string
-            if isinstance(value, (str, int, float, bool)):
-                return str(value)
-            elif isinstance(value, Enum):
+            # Check Enum FIRST (before str/int/etc) because str/int Enums are also instances of str/int
+            if isinstance(value, Enum):
                 # Handle Enum types - extract the value attribute
                 return str(value.value)
+            elif isinstance(value, (str, int, float, bool)):
+                return str(value)
+            elif isinstance(value, BaseModel):
+                # Pydantic models: dump to dict then JSON serialize
+                return json.dumps(value.model_dump())
             else:
-                # Complex types: JSON serialize
+                # Other complex types: JSON serialize directly
                 return json.dumps(value)
 
         except AttributeError as e:

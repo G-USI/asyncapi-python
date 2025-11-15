@@ -1,6 +1,6 @@
 [project]
 name = "asyncapi-python"
-version = "0.3.0rc8"
+version = "0.3.0rc9"
 license = { text = "Apache-2.0" }
 description = "Easily generate type-safe and async Python applications from AsyncAPI 3 specifications."
 authors = [{ name = "Yaroslav Petrov", email = "yaroslav.v.petrov@gmail.com" }]
