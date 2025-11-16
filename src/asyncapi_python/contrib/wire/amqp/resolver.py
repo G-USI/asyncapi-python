@@ -314,7 +314,11 @@ def resolve_routing_key_binding(
 
     # Extract exchange arguments
     arguments: dict[str, Any] = {}
-    if exchange_config and hasattr(exchange_config, "arguments") and exchange_config.arguments:
+    if (
+        exchange_config
+        and hasattr(exchange_config, "arguments")
+        and exchange_config.arguments
+    ):
         arguments = exchange_config.arguments
 
     # Determine routing key - this is where wildcards are allowed
@@ -383,7 +387,11 @@ def resolve_exchange_binding(
 
     # Extract exchange arguments
     arguments: dict[str, Any] = {}
-    if exchange_config and hasattr(exchange_config, "arguments") and exchange_config.arguments:
+    if (
+        exchange_config
+        and hasattr(exchange_config, "arguments")
+        and exchange_config.arguments
+    ):
         arguments = exchange_config.arguments
 
     # Extract binding arguments for headers exchange from dataclass
