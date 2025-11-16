@@ -31,6 +31,7 @@ class AmqpProducer(Producer[AmqpWireMessage]):
         exchange_type: str = "direct",
         routing_key: str = "",
         queue_properties: dict[str, Any] | None = None,
+        arguments: dict[str, Any] | None = None,
     ):
         self._connection = connection
         self._queue_name = queue_name
@@ -38,6 +39,7 @@ class AmqpProducer(Producer[AmqpWireMessage]):
         self._exchange_type = exchange_type
         self._routing_key = routing_key
         self._queue_properties = queue_properties or {}
+        self._arguments = arguments or {}
         self._channel: AbstractChannel | None = None
         self._target_exchange: AbstractExchange | None = None
         self._started = False
@@ -61,27 +63,40 @@ class AmqpProducer(Producer[AmqpWireMessage]):
                         durable=self._queue_properties.get("durable", True),
                         exclusive=self._queue_properties.get("exclusive", False),
                         auto_delete=self._queue_properties.get("auto_delete", False),
+                        arguments=self._arguments,
                     )
 
             # Named exchange patterns
             case (exchange_name, "direct"):
                 self._target_exchange = await self._channel.declare_exchange(
-                    name=exchange_name, type=ExchangeType.DIRECT, durable=True
+                    name=exchange_name,
+                    type=ExchangeType.DIRECT,
+                    durable=True,
+                    arguments=self._arguments,
                 )
 
             case (exchange_name, "topic"):
                 self._target_exchange = await self._channel.declare_exchange(
-                    name=exchange_name, type=ExchangeType.TOPIC, durable=True
+                    name=exchange_name,
+                    type=ExchangeType.TOPIC,
+                    durable=True,
+                    arguments=self._arguments,
                 )
 
             case (exchange_name, "fanout"):
                 self._target_exchange = await self._channel.declare_exchange(
-                    name=exchange_name, type=ExchangeType.FANOUT, durable=True
+                    name=exchange_name,
+                    type=ExchangeType.FANOUT,
+                    durable=True,
+                    arguments=self._arguments,
                 )
 
             case (exchange_name, "headers"):
                 self._target_exchange = await self._channel.declare_exchange(
-                    name=exchange_name, type=ExchangeType.HEADERS, durable=True
+                    name=exchange_name,
+                    type=ExchangeType.HEADERS,
+                    durable=True,
+                    arguments=self._arguments,
                 )
 
             case (exchange_name, unknown_type):

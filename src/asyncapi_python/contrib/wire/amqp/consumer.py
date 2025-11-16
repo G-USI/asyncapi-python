@@ -36,6 +36,7 @@ class AmqpConsumer(Consumer[AmqpIncomingMessage]):
         binding_type: AmqpBindingType = AmqpBindingType.QUEUE,
         queue_properties: dict[str, Any] | None = None,
         binding_arguments: dict[str, Any] | None = None,
+        arguments: dict[str, Any] | None = None,
     ):
         self._connection = connection
         self._queue_name = queue_name
@@ -45,6 +46,7 @@ class AmqpConsumer(Consumer[AmqpIncomingMessage]):
         self._binding_type = binding_type
         self._queue_properties = queue_properties or {}
         self._binding_arguments = binding_arguments or {}
+        self._arguments = arguments or {}
         self._channel: AbstractChannel | None = None
         self._queue: AbstractQueue | None = None
         self._exchange: AbstractExchange | None = None
@@ -67,6 +69,7 @@ class AmqpConsumer(Consumer[AmqpIncomingMessage]):
                     durable=self._queue_properties.get("durable", True),
                     exclusive=self._queue_properties.get("exclusive", False),
                     auto_delete=self._queue_properties.get("auto_delete", False),
+                    arguments=self._arguments,
                 )
 
             # Simple queue binding pattern (default exchange)
@@ -76,6 +79,7 @@ class AmqpConsumer(Consumer[AmqpIncomingMessage]):
                     durable=self._queue_properties.get("durable", True),
                     exclusive=self._queue_properties.get("exclusive", False),
                     auto_delete=self._queue_properties.get("auto_delete", False),
+                    arguments=self._arguments,
                 )
 
             # Routing key binding pattern (pub/sub with named exchange)
@@ -87,24 +91,28 @@ class AmqpConsumer(Consumer[AmqpIncomingMessage]):
                             name=self._exchange_name,
                             type=ExchangeType.DIRECT,
                             durable=True,
+                            arguments=self._arguments,
                         )
                     case "topic":
                         self._exchange = await self._channel.declare_exchange(
                             name=self._exchange_name,
                             type=ExchangeType.TOPIC,
                             durable=True,
+                            arguments=self._arguments,
                         )
                     case "fanout":
                         self._exchange = await self._channel.declare_exchange(
                             name=self._exchange_name,
                             type=ExchangeType.FANOUT,
                             durable=True,
+                            arguments=self._arguments,
                         )
                     case "headers":
                         self._exchange = await self._channel.declare_exchange(
                             name=self._exchange_name,
                             type=ExchangeType.HEADERS,
                             durable=True,
+                            arguments=self._arguments,
                         )
                     case unknown_type:
                         raise ValueError(f"Unsupported exchange type: {unknown_type}")
@@ -115,6 +123,7 @@ class AmqpConsumer(Consumer[AmqpIncomingMessage]):
                     durable=self._queue_properties.get("durable", False),
                     exclusive=self._queue_properties.get("exclusive", True),
                     auto_delete=self._queue_properties.get("auto_delete", True),
+                    arguments=self._arguments,
                 )
 
                 # Bind queue to exchange with routing key
@@ -129,24 +138,28 @@ class AmqpConsumer(Consumer[AmqpIncomingMessage]):
                             name=self._exchange_name,
                             type=ExchangeType.FANOUT,
                             durable=True,
+                            arguments=self._arguments,
                         )
                     case "headers":
                         self._exchange = await self._channel.declare_exchange(
                             name=self._exchange_name,
                             type=ExchangeType.HEADERS,
                             durable=True,
+                            arguments=self._arguments,
                         )
                     case "topic":
                         self._exchange = await self._channel.declare_exchange(
                             name=self._exchange_name,
                             type=ExchangeType.TOPIC,
                             durable=True,
+                            arguments=self._arguments,
                         )
                     case "direct":
                         self._exchange = await self._channel.declare_exchange(
                             name=self._exchange_name,
                             type=ExchangeType.DIRECT,
                             durable=True,
+                            arguments=self._arguments,
                         )
                     case unknown_type:
                         raise ValueError(f"Unsupported exchange type: {unknown_type}")
@@ -157,6 +170,7 @@ class AmqpConsumer(Consumer[AmqpIncomingMessage]):
                     durable=self._queue_properties.get("durable", False),
                     exclusive=self._queue_properties.get("exclusive", True),
                     auto_delete=self._queue_properties.get("auto_delete", True),
+                    arguments=self._arguments,
                 )
 
                 # Bind queue to exchange with binding arguments (for headers exchange)
