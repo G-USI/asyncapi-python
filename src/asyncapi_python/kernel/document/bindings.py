@@ -26,13 +26,14 @@ class AmqpExchange:
     durable: Optional[bool] = None
     auto_delete: Optional[bool] = None
     vhost: Optional[str] = None
+    arguments: Optional[Dict[str, Any]] = None
 
     def __repr__(self) -> str:
         """Custom repr to handle enum properly for code generation."""
         from asyncapi_python.kernel.document.bindings import AmqpExchangeType
 
         _ = AmqpExchangeType  # Explicitly reference the import
-        return f"spec.AmqpExchange(name={self.name!r}, type=spec.AmqpExchangeType.{self.type.name}, durable={self.durable!r}, auto_delete={self.auto_delete!r}, vhost={self.vhost!r})"
+        return f"spec.AmqpExchange(name={self.name!r}, type=spec.AmqpExchangeType.{self.type.name}, durable={self.durable!r}, auto_delete={self.auto_delete!r}, vhost={self.vhost!r}, arguments={self.arguments!r})"
 
 
 @dataclass
@@ -44,10 +45,11 @@ class AmqpQueue:
     exclusive: Optional[bool] = None
     auto_delete: Optional[bool] = None
     vhost: Optional[str] = None
+    arguments: Optional[Dict[str, Any]] = None
 
     def __repr__(self) -> str:
         """Custom repr for code generation."""
-        return f"spec.AmqpQueue(name={self.name!r}, durable={self.durable!r}, exclusive={self.exclusive!r}, auto_delete={self.auto_delete!r}, vhost={self.vhost!r})"
+        return f"spec.AmqpQueue(name={self.name!r}, durable={self.durable!r}, exclusive={self.exclusive!r}, auto_delete={self.auto_delete!r}, vhost={self.vhost!r}, arguments={self.arguments!r})"
 
 
 @dataclass
@@ -159,6 +161,7 @@ def create_amqp_binding_from_dict(binding_dict: Dict[str, Any]) -> AmqpChannelBi
             exclusive=queue_config.get("exclusive"),
             auto_delete=queue_config.get("auto_delete"),
             vhost=queue_config.get("vhost"),
+            arguments=queue_config.get("arguments"),
         )
     elif binding_type == "routingKey" and "exchange" in binding_dict:
         exchange_config = binding_dict["exchange"]
@@ -176,6 +179,7 @@ def create_amqp_binding_from_dict(binding_dict: Dict[str, Any]) -> AmqpChannelBi
             durable=exchange_config.get("durable"),
             auto_delete=exchange_config.get("auto_delete"),
             vhost=exchange_config.get("vhost"),
+            arguments=exchange_config.get("arguments"),
         )
 
     return binding

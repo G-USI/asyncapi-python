@@ -25,6 +25,7 @@ class AmqpConfig:
     binding_type: AmqpBindingType = AmqpBindingType.QUEUE
     queue_properties: dict[str, Any] = field(default_factory=lambda: {})
     binding_arguments: dict[str, Any] = field(default_factory=lambda: {})
+    arguments: dict[str, Any] = field(default_factory=lambda: {})
 
     def to_producer_args(self) -> dict[str, Any]:
         """Convert to AmqpProducer constructor arguments"""
@@ -34,6 +35,7 @@ class AmqpConfig:
             "exchange_type": self.exchange_type,
             "routing_key": self.routing_key,
             "queue_properties": self.queue_properties,
+            "arguments": self.arguments,
         }
 
     def to_consumer_args(self) -> dict[str, Any]:
@@ -46,4 +48,5 @@ class AmqpConfig:
             "binding_type": self.binding_type,
             "queue_properties": self.queue_properties,
             "binding_arguments": self.binding_arguments,
+            "arguments": self.arguments,
         }

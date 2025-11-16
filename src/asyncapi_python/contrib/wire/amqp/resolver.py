@@ -116,6 +116,7 @@ def resolve_amqp_config(
                     "exclusive": True,
                     "auto_delete": True,
                 },
+                arguments={},
             )
 
         # Reply channel with explicit address - check if direct queue or topic exchange
@@ -133,6 +134,7 @@ def resolve_amqp_config(
                         "exclusive": True,
                         "auto_delete": True,
                     },
+                    arguments={},
                 )
             else:
                 # Topic-based reply pattern - shared exchange with filtering
@@ -143,6 +145,7 @@ def resolve_amqp_config(
                     routing_key=app_id,  # Filter messages by app_id
                     binding_type=AmqpBindingType.REPLY,
                     queue_properties={"durable": True, "exclusive": False},
+                    arguments={},
                 )
 
         # Reply channel with binding - defer to binding resolution
@@ -192,6 +195,7 @@ def resolve_amqp_config(
                 routing_key=resolved_address,
                 binding_type=AmqpBindingType.QUEUE,
                 queue_properties={"durable": True, "exclusive": False},
+                arguments={},
             )
 
         # Operation name pattern (fallback)
@@ -204,6 +208,7 @@ def resolve_amqp_config(
                 routing_key=op_name,
                 binding_type=AmqpBindingType.QUEUE,
                 queue_properties={"durable": True, "exclusive": False},
+                arguments={},
             )
 
         # No match - reject creation
@@ -245,6 +250,7 @@ def resolve_queue_binding(
     # Extract queue properties
     queue_config = getattr(binding, "queue", None)
     queue_properties = {"durable": True, "exclusive": False}  # Defaults
+    arguments: dict[str, Any] = {}
     if queue_config:
         if hasattr(queue_config, "durable"):
             queue_properties["durable"] = queue_config.durable
@@ -252,6 +258,8 @@ def resolve_queue_binding(
             queue_properties["exclusive"] = queue_config.exclusive
         if hasattr(queue_config, "auto_delete"):
             queue_properties["auto_delete"] = queue_config.auto_delete
+        if hasattr(queue_config, "arguments") and queue_config.arguments:
+            arguments = queue_config.arguments
 
     return AmqpConfig(
         queue_name=queue_name,
@@ -259,6 +267,7 @@ def resolve_queue_binding(
         routing_key=queue_name,  # For default exchange, routing_key = queue_name
         binding_type=AmqpBindingType.QUEUE,
         queue_properties=queue_properties,
+        arguments=arguments,
     )
 
 
@@ -303,6 +312,11 @@ def resolve_routing_key_binding(
     if exchange_config and hasattr(exchange_config, "type"):
         exchange_type = exchange_config.type
 
+    # Extract exchange arguments
+    arguments: dict[str, Any] = {}
+    if exchange_config and hasattr(exchange_config, "arguments") and exchange_config.arguments:
+        arguments = exchange_config.arguments
+
     # Determine routing key - this is where wildcards are allowed
     match (getattr(binding, "routingKey", None), channel.address, operation_name):
         case (routing_key, _, _) if routing_key:
@@ -327,6 +341,7 @@ def resolve_routing_key_binding(
         routing_key=resolved_routing_key,
         binding_type=AmqpBindingType.ROUTING_KEY,
         queue_properties={"durable": False, "exclusive": True, "auto_delete": True},
+        arguments=arguments,
     )
 
 
@@ -366,6 +381,11 @@ def resolve_exchange_binding(
     if exchange_config and hasattr(exchange_config, "type"):
         exchange_type = exchange_config.type
 
+    # Extract exchange arguments
+    arguments: dict[str, Any] = {}
+    if exchange_config and hasattr(exchange_config, "arguments") and exchange_config.arguments:
+        arguments = exchange_config.arguments
+
     # Extract binding arguments for headers exchange from dataclass
     binding_args: dict[str, Any] = {}
     # Note: bindingKeys is not part of AmqpChannelBinding spec
@@ -379,4 +399,5 @@ def resolve_exchange_binding(
         binding_type=AmqpBindingType.EXCHANGE,
         queue_properties={"durable": False, "exclusive": True, "auto_delete": True},
         binding_arguments=binding_args,
+        arguments=arguments,
     )
