@@ -11,7 +11,8 @@ dependencies = ["pydantic>=2", "pytz"]
 [project.optional-dependencies]
 codegen = [
     "jinja2>=3.1.4",
-    "typer[all]>=0.12.5",
+    "typer>=0.15.0",
+    "click>=8.0.0",
     "pyyaml",
     "datamodel-code-generator[http]>=0.26.4",
     "black",
