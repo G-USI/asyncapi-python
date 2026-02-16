@@ -64,7 +64,7 @@ wheels = [
 
 [[package]]
 name = "asyncapi-python"
-version = "0.3.0rc10"
+version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic" },
@@ -77,6 +77,7 @@ amqp = [
 ]
 codegen = [
     { name = "black" },
+    { name = "click" },
     { name = "datamodel-code-generator", extra = ["http"] },
     { name = "jinja2" },
     { name = "pyyaml" },
@@ -100,12 +101,13 @@ dev = [
 requires-dist = [
     { name = "aio-pika", marker = "extra == 'amqp'" },
     { name = "black", marker = "extra == 'codegen'" },
+    { name = "click", marker = "extra == 'codegen'", specifier = ">=8.0.0" },
     { name = "datamodel-code-generator", extras = ["http"], marker = "extra == 'codegen'", specifier = ">=0.26.4" },
     { name = "jinja2", marker = "extra == 'codegen'", specifier = ">=3.1.4" },
     { name = "pydantic", specifier = ">=2" },
     { name = "pytz" },
     { name = "pyyaml", marker = "extra == 'codegen'" },
-    { name = "typer", extras = ["all"], marker = "extra == 'codegen'", specifier = ">=0.12.5" },
+    { name = "typer", marker = "extra == 'codegen'", specifier = ">=0.15.0" },
 ]
 provides-extras = ["codegen", "amqp"]
 
