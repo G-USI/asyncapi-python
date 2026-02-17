@@ -1,7 +1,7 @@
 # AsyncAPI Python Code Generator
 >
 > [!IMPORTANT]
-> Although commits to dev branch might seem infrequent, the project is under active development **as of January 2026**.
+> Although commits to dev branch might seem infrequent, the project is under active development **as of March 2026**.
 >
 > We currently produce only those changes that are required to satisfy our personal use cases.
 >
