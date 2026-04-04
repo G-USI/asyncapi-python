@@ -14,7 +14,7 @@ codegen = [
     "typer>=0.15.0",
     "click>=8.0.0",
     "pyyaml",
-    "datamodel-code-generator[http]>=0.26.4",
+    "datamodel-code-generator[http]>=0.44.0",
     "black",
 ]
 amqp = ["aio-pika"]
