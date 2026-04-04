@@ -1,7 +1,7 @@
 # AsyncAPI Python Code Generator
 >
 > [!IMPORTANT]
-> Although commits to dev branch might seem infrequent, the project is under active development **as of March 2026**.
+> Although commits to dev branch might seem infrequent, the project is under active development **as of April 2026**.
 >
 > We currently produce only those changes that are required to satisfy our personal use cases.
 >
@@ -105,7 +105,7 @@ asyncapi-python[amqp]
 ```toml
 # pants.toml
 plugins = [
-  "asyncapi_python[codegen]==0.2.5",  # Plugin version MUST match the version of your python clients
+  "asyncapi_python[codegen]==0.3.1",  # Plugin version MUST match the version of your python clients
   ...
 ]
 backend_packages = [
